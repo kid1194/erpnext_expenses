@@ -9,19 +9,21 @@
 frappe.ui.form.on('Expense Item', {
     setup: function(frm) {
         Expenses.init(frm);
-        E.each(
-            ('expense_section cost min_cost max_cost '
-            + 'expense_column qty min_qty max_qty').split(' '),
-            function(f) {
-                frm.get_docfield('expense_accounts', f).hidden = 0;
-            }
-        );
         frm.E = {
             last_type: '',
             accounts_companies: new Expenses.UniqueArray()
         };
     },
     onload: function(frm) {
+        E.each(
+            ('expense_section cost min_cost max_cost '
+            + 'expense_column qty min_qty max_qty').split(' '),
+            function(f, i) {
+                let df = frm.get_docfield('expense_accounts', f);
+                df.hidden = 0;
+                if (i === 1 || i === 5) df.in_list_view = 1;
+            }
+        );
         frm.set_query('expense_type', function() {
             return {filters: {is_group: 0}};
         });
