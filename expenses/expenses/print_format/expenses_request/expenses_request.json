@@ -1,0 +1,22 @@
+{
+ "align_labels_right": 0,
+ "creation": "2022-04-04 04:04:04.119400",
+ "custom_format": 0,
+ "default_print_language": "en",
+ "disabled": 0,
+ "doc_type": "Expenses Request",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "font": "Default",
+ "idx": 0,
+ "line_breaks": 0, 
+ "modified": "2022-04-04 04:04:04.119400",
+ "modified_by": "Administrator",
+ "module": "Expenses",
+ "name": "Expenses Request",
+ "owner": "Administrator",
+ "print_format_builder": 0,
+ "print_format_type": "Jinja",
+ "show_section_headings": 0,
+ "standard": "Yes"
+}

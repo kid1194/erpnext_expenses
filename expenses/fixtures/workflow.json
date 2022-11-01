@@ -1,0 +1,154 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Workflow",
+  "document_type": "Expenses Request",
+  "is_active": 1,
+  "modified": "2022-04-04 04:04:04.119400",
+  "name": "Expenses Review",
+  "override_status": 0,
+  "parent": null,
+  "parentfield": null,
+  "parenttype": null,
+  "send_email_alert": 0,
+  "states": [
+   {
+    "allow_edit": "Accounts User",
+    "doc_status": "0",
+    "is_optional_state": 0,
+    "message": "Draft",
+    "next_action_email_template": "Expenses Request Review",
+    "parent": "Expenses Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Draft",
+    "update_field": "status",
+    "update_value": "Draft"
+   },
+   {
+    "allow_edit": "Accounts User",
+    "doc_status": "0",
+    "is_optional_state": 0,
+    "message": "Pending",
+    "next_action_email_template": "Expenses Request Review",
+    "parent": "Expenses Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Pending",
+    "update_field": "status",
+    "update_value": "Pending"
+   },
+   {
+    "allow_edit": "Accounts User",
+    "doc_status": "2",
+    "is_optional_state": 1,
+    "message": "Cancelled",
+    "next_action_email_template": "Expenses Request Review",
+    "parent": "Expenses Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Cancelled",
+    "update_field": "status",
+    "update_value": "Cancelled"
+   },
+   {
+    "allow_edit": "Expenses Reviewer",
+    "doc_status": "1",
+    "is_optional_state": 1,
+    "message": "Approved",
+    "next_action_email_template": "Expenses Request Review",
+    "parent": "Expenses Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Approved",
+    "update_field": "status",
+    "update_value": "Approved"
+   },
+   {
+    "allow_edit": "Expenses Reviewer",
+    "doc_status": "2",
+    "is_optional_state": 1,
+    "message": "Rejected",
+    "next_action_email_template": "Expenses Request Review",
+    "parent": "Expenses Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Rejected",
+    "update_field": "status",
+    "update_value": "Rejected"
+   },
+   {
+    "allow_edit": "Expenses Reviewer",
+    "doc_status": "1",
+    "is_optional_state": 1,
+    "message": "Processed",
+    "next_action_email_template": "Expenses Request Review",
+    "parent": "Expenses Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Processed",
+    "update_field": "status",
+    "update_value": "Processed"
+   }
+  ],
+  "transitions": [
+   {
+    "action": "Submit",
+    "allow_self_approval": 1,
+    "allowed": "Accounts User",
+    "condition": null,
+    "next_state": "Pending",
+    "parent": "Expenses Review",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "state": "Draft"
+   },
+   {
+    "action": "Cancel",
+    "allow_self_approval": 1,
+    "allowed": "Accounts User",
+    "condition": null,
+    "next_state": "Cancelled",
+    "parent": "Expenses Review",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "state": "Pending"
+   },
+   {
+    "action": "Approve",
+    "allow_self_approval": 0,
+    "allowed": "Expenses Reviewer",
+    "condition": null,
+    "next_state": "Approved",
+    "parent": "Expenses Review",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "state": "Pending"
+   },
+   {
+    "action": "Reject",
+    "allow_self_approval": 0,
+    "allowed": "Expenses Reviewer",
+    "condition": null,
+    "next_state": "Rejected",
+    "parent": "Expenses Review",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "state": "Pending"
+   },
+   {
+    "action": "Make Entry",
+    "allow_self_approval": 0,
+    "allowed": "Expenses Reviewer",
+    "condition": null,
+    "next_state": "Processed",
+    "parent": "Expenses Review",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "state": "Approved"
+   }
+  ],
+  "workflow_name": "Expenses Review",
+  "workflow_state_field": "workflow_state"
+ }
+]

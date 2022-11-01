@@ -1,0 +1,360 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "allow_import": 1,
+ "autoname": "format:EXP-ENT{YYYY}-{#####}",
+ "creation": "2022-04-04 04:04:04.119400",
+ "description": "Expenses entry",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "main_section",
+  "company",
+  "mode_of_payment",
+  "main_column",
+  "posting_date",
+  "dimensions_section",
+  "default_project",
+  "dimensions_column",
+  "default_cost_center",
+  "expenses_section",
+  "expenses",
+  "remarks",
+  "total_section",
+  "payment_account",
+  "payment_target",
+  "payment_currency",
+  "total_in_payment_currency",
+  "total_section",
+  "exchange_rate",
+  "total",
+  "info_section",
+  "payment_reference",
+  "info_column",
+  "clearance_date",
+  "attachments_section",
+  "attachments",
+  "amended_from",
+  "amendment_date",
+  "expenses_request_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "main_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "default": ":Company",
+   "reqd": 1,
+   "bold": 1,
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "in_list_view": 1,
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "in_preview": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Mode of Payment",
+   "options": "Mode of Payment",
+   "reqd": 1,
+   "bold": 1,
+   "read_only_depends_on": "eval:!doc.company",
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "in_list_view": 1,
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "in_preview": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "main_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "default": "Today",
+   "reqd": 1,
+   "bold": 1,
+   "in_list_view": 1,
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "in_preview": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions",
+   "depends_on": "eval:doc.company",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "default_project",
+   "fieldtype": "Link",
+   "label": "Default Project",
+   "description": "Use only if expenses are project related. Applies to all listed expenses, unless specified differently",
+   "options": "Project",
+   "in_preview": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "dimensions_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "default_cost_center",
+   "fieldtype": "Link",
+   "label": "Default Cost Center",
+   "description": "Applies to all listed expenses, unless specified differently",
+   "options": "Cost Center",
+   "default": ":Company",
+   "in_preview": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "expenses_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "expenses",
+   "fieldtype": "Table",
+   "label": "Expenses",
+   "options": "Expenses Entry Account",
+   "read_only_depends_on": "eval:doc.expenses_request_ref",
+   "mandatory_depends_on": "eval:!doc.expenses_request_ref",
+   "bold": 1,
+   "in_preview": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Text",
+   "label": "Remarks",
+   "in_preview": 1
+  },
+  {
+   "fieldname": "total_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "payment_account",
+   "fieldtype": "Link",
+   "label": "Payment Account",
+   "options": "Account",
+   "hidden": 1,
+   "print_hide": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "payment_target",
+   "fieldtype": "Data",
+   "label": "Payment Target",
+   "fetch_from": "mode_of_payment.type",
+   "hidden": 1,
+   "print_hide": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "payment_currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "fetch_from": "payment_account.account_currency",
+   "read_only": 1,
+   "print_hide": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "total_in_payment_currency",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "options": "payment_currency",
+   "bold": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_preview": 1
+  },
+  {
+   "fieldname": "total_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "default": "1",
+   "precision": "9",
+   "non_negative": 1,
+   "in_preview": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "total In Company Currency",
+   "options": "Company:company:default_currency",
+   "bold": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "info_section",
+   "fieldtype": "Section Break",
+   "collapsible_depends_on": "eval:doc.payment_target == 'Cash'"
+  },
+  {
+   "fieldname": "payment_reference",
+   "fieldtype": "Data",
+   "label": "Payment Reference",
+   "read_only_depends_on": "eval:doc.payment_target == 'Cash'",
+   "mandatory_depends_on": "eval:doc.payment_target != 'Cash'",
+   "in_list_view": 1,
+   "in_preview": 1
+  },
+  {
+   "fieldname": "info_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "clearance_date",
+   "fieldtype": "Date",
+   "label": "Reference / Clearance Date",
+   "read_only_depends_on": "eval:doc.payment_target == 'Cash'",
+   "mandatory_depends_on": "eval:doc.payment_target != 'Cash'",
+   "in_list_view": 1,
+   "in_preview": 1
+  },
+  {
+   "fieldname": "attachments_section",
+   "fieldtype": "Section Break",
+   "label": "Expenses Attachments",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Table",
+   "label": "Attachments",
+   "options": "Expense Attachment"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Expenses Entry",
+   "read_only": 1,
+   "hidden": 1,
+   "only_select": 1,
+   "allow_on_submit": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "amendment_date",
+   "fieldtype": "Date",
+   "label": "Amendment Date",
+   "read_only": 1,
+   "hidden": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "expenses_request_ref",
+   "fieldtype": "Link",
+   "label": "Expenses Request Reference",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "icon": "fa fa-file-text",
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2022-04-04 04:04:04.119400",
+ "modified_by": "Administrator",
+ "module": "Expenses",
+ "name": "Expenses Entry",
+ "naming_rule": "By Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Expenses Reviewer",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "posting_date",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "default_print_format": "Expenses Entry",
+ "track_changes": 1
+}

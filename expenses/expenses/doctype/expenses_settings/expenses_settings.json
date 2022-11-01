@@ -1,0 +1,158 @@
+{
+ "actions": [],
+ "creation": "2022-04-04 04:04:04.119400",
+ "description": "Expenses settings",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "update_section",
+  "auto_check_for_update",
+  "send_update_notification",
+  "update_notification_sender",
+  "update_notification_receivers",
+  "update_column",
+  "update_note",
+  "has_update",
+  "latest_version",
+  "latest_check",
+  "check_for_update"
+ ],
+ "fields": [
+  {
+   "fieldname": "update_section",
+   "fieldtype": "Section Break",
+   "label": "Update Settings"
+  },
+  {
+   "fieldname": "auto_check_for_update",
+   "fieldtype": "Check",
+   "label": "Auto Check",
+   "description": "Auto check for new version daily",
+   "default": "1"
+  },
+  {
+   "fieldname": "send_update_notification",
+   "fieldtype": "Check",
+   "label": "Send Update Notification",
+   "default": "1",
+   "read_only_depends_on": "eval:!doc.auto_check_for_update"
+  },
+  {
+   "fieldname": "update_notification_sender",
+   "fieldtype": "Link",
+   "label": "Update Notification Sender",
+   "options": "User",
+   "read_only_depends_on": "eval:!doc.send_update_notification",
+   "mandatory_depends_on": "eval:doc.send_update_notification"
+  },
+  {
+   "fieldname": "update_notification_receivers",
+   "fieldtype": "Table MultiSelect",
+   "label": "Update Notification Receivers",
+   "options": "Expenses Notification Receiver",
+   "read_only_depends_on": "eval:!doc.send_update_notification",
+   "mandatory_depends_on": "eval:doc.send_update_notification"
+  },
+  {
+   "fieldname": "update_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "update_note",
+   "fieldtype": "HTML",
+   "label": "Update Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "has_update",
+   "fieldtype": "Check",
+   "label": "Has Update",
+   "hidden": 1,
+   "is_virtual": 1
+  },
+  {
+   "fieldname": "latest_version",
+   "fieldtype": "Data",
+   "label": "Latest Version",
+   "read_only": 1
+  },
+  {
+   "fieldname": "latest_check",
+   "fieldtype": "Data",
+   "label": "Latest Check",
+   "read_only": 1
+  },
+  {
+   "fieldname": "check_for_update",
+   "fieldtype": "Button",
+   "label": "Check Now",
+   "description": "Check for new version manually"
+  }
+ ],
+ "icon": "fa fa-cog",
+ "issingle": 1,
+ "links": [],
+ "modified": "2022-04-04 04:04:04.119400",
+ "modified_by": "Administrator",
+ "module": "Expenses",
+ "name": "Expenses Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

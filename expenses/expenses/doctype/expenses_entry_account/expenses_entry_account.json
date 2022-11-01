@@ -1,0 +1,247 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "allow_import": 1,
+ "autoname": "hash",
+ "creation": "2022-04-04 04:04:04.119400",
+ "description": "Link between expenses entry and expense account",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "main_section",
+  "account",
+  "main_column",
+  "description",
+  "expense_section",
+  "account_currency",
+  "cost_in_account_currency",
+  "expense_column",
+  "exchange_rate",
+  "cost",
+  "dimensions_section",
+  "project",
+  "dimensions_column",
+  "cost_center",
+  "type_section",
+  "is_paid",
+  "paid_by",
+  "type_column",
+  "is_advance",
+  "type_adv_column",
+  "party_section",
+  "party_type",
+  "party_column",
+  "party",
+  "expense_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "main_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "label": "Expense Account",
+   "options": "Account",
+   "reqd": 1,
+   "bold": 1,
+   "only_select": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "main_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expense_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "account_currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "fetch_from": "account.account_currency",
+   "read_only": 1,
+   "print_hide": 1,
+   "report_hide": 1,
+   "only_select": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "cost_in_account_currency",
+   "fieldtype": "Currency",
+   "label": "Cost",
+   "options": "account_currency",
+   "reqd": 1,
+   "bold": 1,
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expense_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "default": "1",
+   "precision": "9",
+   "non_negative": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "cost",
+   "fieldtype": "Currency",
+   "label": "Cost In Company Currency",
+   "options": "Company:company:default_currency",
+   "non_negative": 1,
+   "bold": 1,
+   "read_only": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "description": "Use only if expense is project related",
+   "options": "Project",
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "dimensions_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "default": ":Company",
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "type_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "is_paid",
+   "fieldtype": "Check",
+   "label": "Is Paid",
+   "default": "0",
+   "search_index": 1
+  },
+  {
+   "fieldname": "paid_by",
+   "fieldtype": "Link",
+   "label": "Paid By",
+   "options": "User",
+   "read_only_depends_on": "eval:!doc.is_paid",
+   "mandatory_depends_on": "eval:doc.is_paid",
+   "only_select": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "type_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "is_advance",
+   "fieldtype": "Check",
+   "label": "Is Advance",
+   "default": "0",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "type_adv_column",
+   "fieldtype": "Column Break",
+   "width": "50%",
+   "hidden": 1
+  },
+  {
+   "fieldname": "party_section",
+   "fieldtype": "Section Break",
+   "label": "Expense Party",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "label": "Party Type",
+   "description": "Use only if expense is party related",
+   "options": "DocType",
+   "only_select": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "party_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "label": "Party",
+   "description": "Use only if expense is party related",
+   "options": "party_type",
+   "read_only_depends_on": "eval:!doc.party_type",
+   "mandatory_depends_on": "eval:doc.party_type",
+   "only_select": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "expense_ref",
+   "fieldtype": "Link",
+   "label": "Expense Reference",
+   "options": "Expense",
+   "hidden": 1,
+   "print_hide": 1,
+   "report_hide": 1,
+   "only_select": 1,
+   "search_index": 1,
+   "ignore_user_permissions": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2022-04-04 04:04:04.119400",
+ "modified_by": "Administrator",
+ "module": "Expenses",
+ "name": "Expenses Entry Account",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

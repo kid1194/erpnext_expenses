@@ -1,0 +1,64 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "allow_import": 1,
+ "editable_grid": 1,
+ "autoname": "hash",
+ "creation": "2022-04-04 04:04:04.119400",
+ "description": "Expense attachment",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "file",
+  "main_column",
+  "description",
+  "expenses_entry_row_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "File",
+   "reqd": 1,
+   "bold": 1,
+   "in_list_view": 1,
+   "allow_in_quick_entry": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "main_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "in_list_view": 1,
+   "allow_in_quick_entry": 1,
+   "columns": 6
+  },
+  {
+   "fieldname": "expenses_entry_row_ref",
+   "fieldtype": "Data",
+   "label": "Expenses Entry Row Reference",
+   "hidden": 1,
+   "read_only": 1,
+   "print_hide": 1,
+   "report_hide": 6
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2022-04-04 04:04:04.119400",
+ "modified_by": "Administrator",
+ "module": "Expenses",
+ "name": "Expense Attachment",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

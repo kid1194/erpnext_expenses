@@ -1,0 +1,85 @@
+{%- from "templates/print_formats/standard_macros.html" import add_header -%}
+<style>
+    .table-bordered td.top-bottom {border-top: none !important; border-bottom: none !important;}
+    .table-bordered td.right{border-right: none !important;}
+    .table-bordered td.left{border-left: none !important;}
+</style>
+<div>
+    {%- if not doc.get("select_print_heading")
+        and doc.set("select_print_heading", _("Expenses Entry")) -%}{%- endif -%}
+    {{ add_header(0, 1, doc, None, no_letterhead, print_settings) }}
+    <div class="row margin-bottom">
+        <div class="col-xs-6">
+            <table>
+                <tr><td><strong>{{ _("Name") }}: </strong></td><td>{{ doc.name }}</td></tr>
+                <tr><td><strong>{{ _("Company") }}: </strong></td><td>{{ doc.company }}</td></tr>
+                <tr><td><strong>{{ _("Mode of Payment") }}: </strong></td><td>{{ doc.mode_of_payment }}</td></tr>
+                {% if doc.expenses_request_ref %}
+                <tr><td><strong>{{ _("Request Reference") }}: </strong></td><td>{{ doc.expenses_request_ref }}</td></tr>
+                {% endif %}
+                {% if doc.payment_reference %}
+                <tr><td><strong>{{ _("Payment Reference") }}: </strong></td><td>{{ doc.payment_reference }}</td></tr>
+                {% endif %}
+                {% if doc.amended_from and doc.amendment_date %}
+                <tr><td><strong>{{ _("Amended From") }}: </strong></td><td>{{ doc.amended_from }}</td></tr>
+                {% endif %}
+            </table>
+        </div>
+        <div class="col-xs-6">
+            <table>
+                <tr><td><strong>{{ _("Creator") }}: </strong></td><td>{{ doc.owner }}</td></tr>
+                <tr><td><strong>{{ _("Posting Date") }}: </strong></td><td>{{ frappe.utils.format_date(doc.posting_date) }}</td></tr>
+                <tr><td><strong>{{ _("Payment Account") }}: </strong></td><td>{{ doc.mode_of_payment_account }}</td></tr>
+                {% if doc.expense_request %}
+                {% set request_date = frappe.get_value('Expenses Request', doc.expense_request, 'creation') %}
+                <tr><td><strong>{{ _("Request Date") }}: </strong></td><td>{{ frappe.utils.format_date(request_date) }}</td></tr>
+                {% endif %}
+                {% if doc.clearance_date %}
+                <tr><td><strong>{{ _("Reference / Clearance Date") }}: </strong></td><td>{{ frappe.utils.format_date(doc.clearance_date) }}</td></tr>
+                {% endif %}
+                {% if doc.amended_from and doc.amendment_date %}
+                <tr><td><strong>{{ _("Amendment Date") }}: </strong></td><td>{{ frappe.utils.format_date(doc.amendment_date) }}</td></tr>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+    <div class="row margin-bottom">
+        <div class="col-xs-12">
+            <strong>{{ _("Expenses") }}</strong>
+        </div>
+    </div>
+    <div class="margin-top">
+        <table class="table table-bordered table-condensed">
+            <tr>
+                <th>{{ _("Expense Account") }}</th>
+                <th>{{ _("Description") }}</th>
+                <th class="text-center">{{ _("Coat") }}</th>
+                <th class="text-center">{{ _("Is Advance") }}</th>
+            </tr>
+            {% for exp in doc.expenses %}
+            <tr>
+                <td class="right top-bottom">{{ exp.account }}</td>
+                <td class="right top-bottom">{{ exp.description }}</td>
+                <td class="right top-bottom text-center">{{ frappe.format(exp.cost, {fieldtype: "Currency", options: "Company:company:default_currency"}) }}</td>
+                <td class="top-bottom text-center">{{ _("Yes") if exp.is_advance else _("No") }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td class="right top-bottom text-right" colspan="2"><strong>{{ _("Exchange Rate") }}</strong></td>
+                <td class="left top-bottom" colspan="2"><strong>{{ frappe.format(doc.exchange_rate, {fieldtype: "Float", precision: "9"}) }}</strong></td>
+            </tr>
+            <tr>
+                <td class="right top-bottom text-right" colspan="2"><strong>{{ _("Total") }}</strong></td>
+                <td class="left top-bottom" colspan="2"><strong>{{ frappe.format(doc.total, {fieldtype: "Currency", options: "Company:company:default_currency"}) }}</strong></td>
+            </tr>
+            {% if doc.remarks %}
+            <tr>
+                <td class="top-bottom" colspan="4"><strong>{{ _("Remarks") }}</strong></td>
+            </tr>
+            <tr>
+                <td class="top-bottom" colspan="4"><strong>{{ doc.remarks }}</strong></td>
+            </tr>
+            {% endif %}
+        </table>
+    <div>
+</div>

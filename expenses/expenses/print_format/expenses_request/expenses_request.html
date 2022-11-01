@@ -1,0 +1,72 @@
+{%- from "templates/print_formats/standard_macros.html" import add_header -%}
+<style>
+    .table-bordered td.top-bottom {border-top: none !important; border-bottom: none !important;}
+    .table-bordered td.right{border-right: none !important;}
+    .table-bordered td.left{border-left: none !important;}
+</style>
+<div>
+    {%- if not doc.get("select_print_heading")
+        and doc.set("select_print_heading", _("Expenses Request")) -%}{%- endif -%}
+    {{ add_header(0, 1, doc, None, no_letterhead, print_settings) }}
+    <div class="row margin-bottom">
+        <div class="col-xs-6">
+            <table>
+                <tr><td><strong>{{ _("Name") }}: </strong></td><td>{{ doc.name }}</td></tr>
+                <tr><td><strong>{{ _("Company") }}: </strong></td><td>{{ doc.company }}</td></tr>
+            </table>
+        </div>
+        <div class="col-xs-6">
+            <table>
+                <tr><td><strong>{{ _("Creator") }}: </strong></td><td>{{ doc.owner }}</td></tr>
+                <tr><td><strong>{{ _("Posting Date") }}: </strong></td><td>{{ frappe.utils.format_date(doc.posting_date) }}</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="row margin-bottom">
+        <div class="col-xs-12">
+            <strong>{{ _("Expenses") }}</strong>
+        </div>
+    </div>
+    <div class="margin-top">
+        <table class="table table-bordered table-condensed">
+            <tr>
+                <th>{{ _("Expense") }}</th>
+                <th>{{ _("Expense Item") }}</th>
+                <th>{{ _("Description") }}</th>
+                <th>{{ _("Total") }}</th>
+                <th>{{ _("Is Advance") }}</th>
+            </tr>
+            {% for exp in doc.expenses %}
+            <tr>
+                <td class="right top-bottom">{{ exp.expense }}</td>
+                <td class="right top-bottom">{{ exp.item }}</td>
+                <td class="right top-bottom">{{ exp.description }}</td>
+                <td class="right top-bottom">{{ frappe.format(exp.total, {fieldtype: "Currency", options: "currency"}) }}</td>
+                <td class="top-bottom">{{ _("Yes") if exp.is_advance else _("No") }}</td>
+            </tr>
+            {% endfor %}
+            {% if doc.remarks %}
+            <tr>
+                <td class="top-bottom" colspan="5"><strong>{{ _("Remarks") }}</strong></td>
+            </tr>
+            <tr>
+                <td class="top-bottom" colspan="5"><strong>{{ doc.remarks }}</strong></td>
+            </tr>
+            {% endif %}
+            {% if doc.reviewer %}
+            <tr>
+                <td class="right top-bottom"><strong>{{ _("Reviewer") }}</strong></td>
+                <td class="left top-bottom" colspan="4"><strong>{{ doc.reviewer }}</strong></td>
+            </tr>
+            <tr>
+                <td class="right top-bottom"><strong>{{ _("Status") }}</strong></td>
+                <td class="left top-bottom" colspan="4"><strong>{{ _(doc.status) }}</strong></td>
+            </tr>
+            <tr>
+                <td class="right top-bottom"><strong>{{ _("Date") }}</strong></td>
+                <td class="left top-bottom" colspan="4"><strong>{{ frappe.utils.format_date(doc.modified) }}</strong></td>
+            </tr>
+            {% endif %}
+        </table>
+    <div>
+</div>

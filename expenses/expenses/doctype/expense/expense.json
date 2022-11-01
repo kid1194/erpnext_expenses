@@ -1,0 +1,340 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "allow_import": 1,
+ "autoname": "format:EXP-{YYYY}-{#####}",
+ "creation": "2022-04-04 04:04:04.119400",
+ "description": "Expense data",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "main_section",
+  "company",
+  "expense_item",
+  "expense_account",
+  "main_column",
+  "required_by",
+  "description",
+  "expense_section",
+  "currency",
+  "cost",
+  "expense_column",
+  "qty",
+  "total",
+  "type_section",
+  "is_paid",
+  "paid_by",
+  "type_column",
+  "is_advance",
+  "type_adv_column",
+  "party_section",
+  "party_type",
+  "party_column",
+  "party",
+  "dimensions_section",
+  "project",
+  "dimensions_column",
+  "attachments_section",
+  "attachments",
+  "is_requested"
+ ],
+ "fields": [
+  {
+   "fieldname": "main_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "bold": 1,
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "in_list_view": 1,
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "in_preview": 1,
+   "search_index": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "expense_item",
+   "fieldtype": "Link",
+   "label": "Expense",
+   "options": "Expense Item",
+   "reqd": 1,
+   "bold": 1,
+   "only_select": 1,
+   "in_list_view": 1,
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "in_preview": 1,
+   "search_index": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "expense_account",
+   "fieldtype": "Link",
+   "label": "Expense Account",
+   "options": "Account",
+   "hidden": 1,
+   "report_hide": 1,
+   "only_select": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "main_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "required_by",
+   "fieldtype": "Date",
+   "label": "Required By",
+   "default": "Today",
+   "reqd": 1,
+   "bold": 1,
+   "in_list_view": 1,
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "in_preview": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "expense_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "fetch_from": "expense_account.account_currency",
+   "read_only": 1,
+   "report_hide": 1,
+   "only_select": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "cost",
+   "fieldtype": "Currency",
+   "label": "Cost",
+   "options": "currency",
+   "reqd": 1,
+   "bold": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "expense_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "label": "Quantity",
+   "precision": "4",
+   "default": "1",
+   "reqd": 1,
+   "bold": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "options": "currency",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_preview": 1
+  },
+  {
+   "fieldname": "type_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "is_paid",
+   "fieldtype": "Check",
+   "label": "Is Paid",
+   "default": "0",
+   "search_index": 1
+  },
+  {
+   "fieldname": "paid_by",
+   "fieldtype": "Link",
+   "label": "Paid By",
+   "options": "User",
+   "read_only_depends_on": "eval:!doc.is_paid",
+   "mandatory_depends_on": "eval:doc.is_paid",
+   "only_select": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "type_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "is_advance",
+   "fieldtype": "Check",
+   "label": "Is Advance",
+   "default": "0",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "type_adv_column",
+   "fieldtype": "Column Break",
+   "width": "50%",
+   "hidden": 1
+  },
+  {
+   "fieldname": "party_section",
+   "fieldtype": "Section Break",
+   "label": "Expense Party",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "label": "Party Type",
+   "description": "Use only if expense is party related",
+   "options": "DocType",
+   "only_select": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "party_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "label": "Party",
+   "description": "Use only if expense is party related",
+   "options": "party_type",
+   "read_only_depends_on": "eval:!doc.party_type",
+   "mandatory_depends_on": "eval:doc.party_type",
+   "only_select": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "description": "Use only if expense is project related",
+   "options": "Project",
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "dimensions_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "attachments_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Table",
+   "label": "Attachments",
+   "options": "Expense Attachment"
+  },
+  {
+   "fieldname": "is_requested",
+   "fieldtype": "Check",
+   "label": "Is Requested",
+   "default": "0",
+   "hidden": 1,
+   "report_hide": 1,
+   "search_index": 1
+  }
+ ],
+ "icon": "fa fa-file-text",
+ "links": [],
+ "modified": "2022-04-04 04:04:04.119400",
+ "modified_by": "Administrator",
+ "module": "Expenses",
+ "name": "Expense",
+ "naming_rule": "By Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "permlevel": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "permlevel": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "title_field": "name",
+ "search_fields": "description, company, mode_of_payment, party_type, party, paid_by",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "default_print_format": "Expense",
+ "states": [],
+ "max_attachments": 10,
+ "show_name_in_global_search": 1,
+ "track_changes": 1
+}
