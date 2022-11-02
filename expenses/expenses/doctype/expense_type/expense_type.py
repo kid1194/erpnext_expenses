@@ -170,6 +170,7 @@ class ExpenseType(NestedSet):
             return {"error": "{0} with existing expense items cannot be converted to a group".format(self.doctype)}
         
         self.is_group = 1
+        self.expense_accounts.clear()
         self.save()
         return 1
     

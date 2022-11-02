@@ -96,7 +96,17 @@ frappe.ui.form.on('Expense Type', {
             cint(frm.doc.is_group)
             && frm.doc.expense_accounts.length
         ) {
-            E.clear_table('expense_accounts');
+            frappe.confirm(
+                __('The expense accounts table will be cleared, do you want to continue?'),
+                function() {
+                    E.clear_table('expense_accounts');
+                    frm.trigger('toggle_disabled_desc');
+                },
+                function() {
+                    frm.set_value('is_group', 0);
+                }
+            );
+            return;
         }
         frm.trigger('toggle_disabled_desc');
     },
