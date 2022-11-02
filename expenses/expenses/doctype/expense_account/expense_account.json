@@ -87,6 +87,7 @@
    "options": "currency",
    "default": "0",
    "hidden": 1,
+   "read_only_depends_on": "eval:flt(doc.cost) > 0",
    "allow_in_quick_entry": 1
   },
   {
@@ -97,6 +98,7 @@
    "options": "currency",
    "default": "0",
    "hidden": 1,
+   "read_only_depends_on": "eval:flt(doc.cost) > 0",
    "allow_in_quick_entry": 1
   },
   {
@@ -125,6 +127,7 @@
    "precision": "4",
    "non_negative": 1,
    "hidden": 1,
+   "read_only_depends_on": "eval:flt(doc.qty) > 0",
    "allow_in_quick_entry": 1
   },
   {
@@ -136,6 +139,7 @@
    "precision": "4",
    "non_negative": 1,
    "hidden": 1,
+   "read_only_depends_on": "eval:flt(doc.qty) > 0",
    "allow_in_quick_entry": 1
   }
  ],

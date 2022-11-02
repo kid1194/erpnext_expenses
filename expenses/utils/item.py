@@ -6,10 +6,7 @@
 
 import frappe
 
-from .account import (
-    get_company_account_data_by_parent,
-    get_account_data_by_parents
-)
+from .account import get_company_account_data_by_parent
 from .common import error, get_cache, set_cache, get_cached_value
 from .search import filter_search
 from .type import (

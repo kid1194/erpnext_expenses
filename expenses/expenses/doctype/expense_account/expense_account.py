@@ -4,16 +4,16 @@
 # Licence: Please refer to license.txt
 
 
-import frappe
 from frappe.model.document import Document
+
+from expenses.utils import get_cached_value
 
 
 class ExpenseAccount(Document):
     @property
     def currency(self):
         if not self._currency and self.account:
-            self._currency = frappe.get_cached_value(
-                "Account", self.account,
-                "account_currency", pluck=True
+            self._currency = get_cached_value(
+                "Account", self.account, "account_currency"
             )
         return self._currency
