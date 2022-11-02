@@ -389,11 +389,9 @@ Expenses.QuickEntry = class ExpensesQuickEntry {
         this._on_make = [];
         this._on_ready = [];
         this._on_clear = [];
+        this._to_remove = [];
         this._properties = {};
-        this._dialog = new frappe.ui.Dialog({
-            title: __(this._title),
-            indicator: this._indicator || 'green',
-        });
+        this._dialog = null;
         this._custom_btns = {};
         
         this._setup_fields();
@@ -463,6 +461,31 @@ Expenses.QuickEntry = class ExpensesQuickEntry {
         });
         return me;
     }
+    remove_field(name) {
+        if (!this._ready) {
+            return this._add_on_make('remove_field', arguments);
+        }
+        this._fields = this._fields.filter(function(f) { return f.fieldname !== name; });
+        if (this._fields_by_name[name]) {
+            this._fields_by_ref.splice(this._fields_by_name[name], 1);
+            delete this._fields_by_name[name];
+        }
+        return this;
+    }
+    remove_fields(names) {
+        if (!this._ready) {
+            return this._add_on_make('remove_fields', arguments);
+        }
+        this._fields = this._fields.filter(function(f) { return names.indexOf(f.fieldname) < 0; });
+        var me = this;
+        E.each(names, function(n) {
+            if (me._fields_by_name[n]) {
+                me._fields_by_ref.splice(me._fields_by_name[n], 1);
+                delete me._fields_by_name[n];
+            }
+        });
+        return this;
+    }
     set_field_property(name, key, value) {
         if (!this._ready) {
             return this._add_on_make('set_field_property', arguments);
@@ -488,6 +511,25 @@ Expenses.QuickEntry = class ExpensesQuickEntry {
             me.set_field_properties(name, props);
         });
         return me;
+    }
+    remove_properties(data) {
+        if (!this._ready) {
+            return this._add_on_make('remove_properties', arguments);
+        }
+        E.each(this._fields_by_ref, function(f) {
+            E.each(data, function(k) { delete f[k]; });
+        });
+        return this;
+    }
+    sort_fields(fields) {
+        if (!this._ready) return this._add_on_make('sort_fields', arguments);
+        var new_fields = {};
+        E.each(this._fields, function(f, i) {
+            let idx = fields.indexOf(f.fieldname);
+            if (idx >= 0) new_fields[idx] = f;
+        });
+        this._fields = Object.values(new_fields);
+        return this;
     }
     _add_on_ready(fn, args) {
         var me = this;
@@ -557,11 +599,6 @@ Expenses.QuickEntry = class ExpensesQuickEntry {
     _make() {
         if (this._ready) return;
         this._ready = true;
-        try {
-            this._dialog.$wrapper.modal('destroy');
-            this._dialog.$wrapper.remove();
-            this._dialog = null;
-        } catch(e) {}
         var me = this;
         if (this._on_make.length) {
             frappe.run_serially(this._on_make)
@@ -589,6 +626,11 @@ Expenses.QuickEntry = class ExpensesQuickEntry {
             this.$alert.alert();
         }
     }
+    set_title(text) {
+        if (!this._ready) return this._add_on_ready('set_title', arguments);
+        this._dialog.set_title(__(text));
+        return this;
+    }
     show() {
         if (!this._ready) return this._add_on_ready('show');
         this._dialog.show();
@@ -601,13 +643,13 @@ Expenses.QuickEntry = class ExpensesQuickEntry {
         return this;
     }
     get_field(name) {
-        return this._dialog.get_field(name);
+        return this._dialog && this._dialog.get_field(name);
     }
     get_values() {
-        return this._dialog.get_values();
+        return this._dialog && this._dialog.get_values();
     }
     get_value(name) {
-        return this._dialog.get_value(name);
+        return this._dialog && this._dialog.get_value(name);
     }
     set_value(name, value) {
         if (!this._ready) return this._add_on_ready('set_value', arguments);
@@ -621,20 +663,20 @@ Expenses.QuickEntry = class ExpensesQuickEntry {
     }
     set_invalid(name, error) {
         this.set_df_property(name, 'invalid', true);
-        let f = this._dialog.get_field(name);
+        let f = this._dialog && this._dialog.get_field(name);
         if (f && f.set_invalid) f.set_invalid();
         if (is_str(error) && f && f.set_new_description) f.set_new_description(error);
         return this;
     }
     set_valid(name) {
         this.set_df_property(name, 'invalid', false);
-        let f = this._dialog.get_field(name);
+        let f = this._dialog && this._dialog.get_field(name);
         if (f && f.set_invalid) f.set_invalid();
         if (f && f.set_description) f.set_description();
         return this;
     }
     get_all_fields() {
-        return this._dialog.fields_dict || {};
+        return (this._dialog && this._dialog.fields_dict) || {};
     }
     set_df_property(name, prop, value) {
         if (!this._ready) return this._add_on_ready('set_df_property', arguments);

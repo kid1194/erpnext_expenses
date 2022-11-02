@@ -11,7 +11,7 @@ frappe.ui.form.on('Expenses Request', {
         Expenses.init(frm);
         frm.E = {
             add_expenses: null,
-            qe: new ExpensesQuickEntry('Expense', 'Expense Info', 'blue'),
+            qe: new Expenses.QuickEntry('Expense', 'Expense Info', 'blue'),
         };
         
         frm.E.qe
@@ -72,11 +72,11 @@ frappe.ui.form.on('Expenses Request', {
             target: frm,
             add_filters_group: 0,
             date_field: 'required_by',
-            columns: ['name', 'expense_item', 'description', 'total', 'is_advance'],
+            columns: ['name', 'expense_item', 'description', 'total', 'is_advance', 'required_by'],
             get_query: function() {
                 let existing = [],
                 filters = {
-                    required_by: frm.doc.posting_date,
+                    date: frm.doc.posting_date,
                     company: frm.doc.company
                 };
                 E.each(frm.doc.expenses, function(r) {

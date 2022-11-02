@@ -9,6 +9,7 @@ from frappe import _
 
 from .account import *
 from .common import error, get_cache, set_cache
+from .search import filter_search, prepare_data
 
 
 _TYPE = "Expense Type"
@@ -75,7 +76,7 @@ def type_children_exists(name):
 ## Expense Item Form
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def search_type_companies(doctype, txt, searchfield, start, page_len, filters, as_dict):
+def search_type_companies(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     if not isinstance(filters, dict) or not filters.get("expense_type"):
         return []
     
@@ -85,12 +86,11 @@ def search_type_companies(doctype, txt, searchfield, start, page_len, filters, a
         _TYPE_ACCOUNTS
     )
     
-    qry = filter_search(doc, qry, dt, txt, doc.company, "company")
+    qry, trans_doctypes = filter_search(doc, qry, dt, txt, doc.company, "company")
     
-    data = qry.run(as_dict=True)
+    data = qry.run(as_dict=as_dict)
     
-    if not as_dict:
-        data = [[v.company, v.company] for v in data]
+    data = prepare_data(data, "company", txt, as_dict)
     
     return data
 

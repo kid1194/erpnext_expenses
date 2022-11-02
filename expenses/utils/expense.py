@@ -8,7 +8,7 @@ import frappe
 
 from .attachment import get_attachments_by_parents
 from .common import parse_json_if_valid, log_error, get_cached_doc
-from .search import filter_search
+from .search import filter_search, prepare_data
 
 
 _EXPENSE = "Expense"
@@ -75,7 +75,7 @@ def is_expenses_belongs_to_company(names, company):
 ## Expenses Request Form
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def search_company_expenses(doctype, txt, searchfield, start, page_len, filters, as_dict):
+def search_company_expenses(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     if not filters or not isinstance(filters.get("company"), str):
         return []
     
@@ -86,7 +86,8 @@ def search_company_expenses(doctype, txt, searchfield, start, page_len, filters,
             doc.expense_item,
             doc.description,
             doc.total,
-            doc.is_advance
+            doc.is_advance,
+            doc.required_by
         )
         .where(doc.company == filters.get("company"))
         .where(doc.is_requested == 0)
@@ -100,10 +101,13 @@ def search_company_expenses(doctype, txt, searchfield, start, page_len, filters,
         if existing and isinstance(existing, list):
             qry = qry.where(doc.name.notin(existing))
     
-    data = qry.run(as_dict=True)
+    if (date := filters.get("date")):
+        if isinstance(date, str):
+            qry = qry.where(doc.required_by.lte(date))
     
-    if not as_dict:
-        data = [[v.name, v.expense_item, v.description, v.total, v.is_advance] for v in data]
+    data = qry.run(as_dict=as_dict)
+    
+    data = prepare_data(data, "name", txt, as_dict)
     
     return data
 

@@ -8,7 +8,7 @@ import frappe
 
 from .account import get_company_account_data_by_parent
 from .common import error, get_cache, set_cache, get_cached_value
-from .search import filter_search
+from .search import filter_search, prepare_data
 from .type import (
     get_types_filter_query,
     get_type_company_account_data,
@@ -41,7 +41,7 @@ def items_of_expense_type_exists(expense_type):
 ## Expense List
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict):
+def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     doc = frappe.qb.DocType(_ITEM)
     qry = (frappe.qb.from_(doc)
         .select(doc.name)
@@ -52,10 +52,9 @@ def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict):
     type_qry = get_types_filter_query()
     qry = qry.where(doc.expense_type.isin(type_qry))
     
-    data = qry.run(as_dict=True)
+    data = qry.run(as_dict=as_dict)
     
-    if not as_dict:
-        data = [[v.name, v.name] for v in data]
+    data = prepare_data(data, "name", txt, as_dict)
     
     return data
 

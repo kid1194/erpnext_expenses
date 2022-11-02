@@ -4,7 +4,10 @@
 # Licence: Please refer to license.txt
 
 
+import re
+
 import frappe
+from frappe.utils import cstr
 from frappe.query_builder.functions import Locate
 from pypika.enums import Order
 from pypika.terms import Criterion
@@ -51,3 +54,27 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
         qry = qry.where(doc.disabled != 1)
     
     return qry
+
+
+def prepare_data(data, column, txt, as_dict):
+    if txt and dt in frappe.get_hooks("translated_search_doctypes"):
+        data = (
+            v
+            for v in data
+			if re.search(f"{re.escape(txt)}.*", _(v.get(column) if as_dict else v[0]), re.IGNORECASE)
+		)
+	
+	data = sorted(data, key=lambda x: relevance_sorter(x, txt, as_dict))
+    
+    if as_dict:
+        for r in data:
+            r.pop("_relevance")
+    else:
+        data = [r[:-1] for r in data]
+        
+    return data
+
+
+def relevance_sorter(key, query, as_dict):
+    value = _(key.name if as_dict else key[0])
+    return (cstr(value).lower().startswith(query.lower()) is not True, value)
