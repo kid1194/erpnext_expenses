@@ -11,7 +11,7 @@ frappe.ui.form.on('Expense Item', {
         Expenses.init(frm);
         frm.E = {
             last_type: '',
-            accounts_companies: new Expenses.UniqueArray()
+            accounts_companies: new Expenses.UniqueArray(),
         };
     },
     onload: function(frm) {
@@ -24,9 +24,7 @@ frappe.ui.form.on('Expense Item', {
                 if (i === 1 || i === 5) df.in_list_view = 1;
             }
         );
-        frm.set_query('expense_type', function() {
-            return {filters: {is_group: 0}};
-        });
+        frm.set_query('expense_type', {filters: {is_group: 0}});
         frm.set_query('company', 'expense_accounts', function() {
             return {
                 query: E.path('search_type_companies'),
@@ -45,31 +43,23 @@ frappe.ui.form.on('Expense Item', {
     expense_type: function(frm) {
         var type = frm.doc.expense_type;
         if (type === frm.E.last_type) return;
-        (new Promise(function(resolve, reject) {
-            if (
-                !frm.E.last_type
-                || !frm.doc.expense_accounts.length
-            ) {
-                resolve();
-                return;
-            }
-            frappe.confirm(
-                __(
-                    'Changing the Expense Type will clear the Expense Accounts table. '
-                    + 'Do you want to continue?'
-                ),
-                function() { resolve(); },
-                function() {
-                    frm.doc.expense_type = frm.E.last_type;
-                    E.refresh_field('expense_type');
-                    reject();
-                }
-            );
-        })).then(function() {
+        function change(f) {
             frm.E.last_type = type;
             frm.E.accounts_companies.clear();
-            E.clear_table('expense_accounts');
-        });
+            if (f) E.clear_table('expense_accounts');
+        }
+        if (!frm.E.last_type && !frm.doc.expense_accounts.length) {
+            change();
+            return;
+        }
+        frappe.confirm(
+            __(
+                'Changing the Expense Type will clear the Expense Accounts table. '
+                + 'Do you want to continue?'
+            ),
+            function() { change(1); },
+            function() { frm.set_value('expense_type', frm.E.last_type); }
+        );
     },
 });
 
@@ -85,89 +75,84 @@ frappe.ui.form.on('Expense Account', {
             E.refresh_row_field('expense_accounts', cdn, 'account');
             return;
         }
-        if (frm.E.accounts_companies.has(row.company)) {
-            E.error(
-                'The expense account for {0} has already been set',
-                [row.company]
-            );
-            row.company = '';
-            E.refresh_row_field('expense_accounts', cdn, 'company');
+        if (!frm.E.accounts_companies.has(row.company)) {
+            frm.E.accounts_companies.rpush(row.company, cdn);
             return;
         }
-        frm.E.accounts_companies.rpush(row.company, cdn);
+        E.error(
+            'The expense account for {0} has already been set',
+            [row.company]
+        );
+        row.company = '';
+        E.refresh_row_field('expense_accounts', cdn, 'company');
     },
     account: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (row.account && !row.company) {
-            E.error('Please select a company first');
-            row.account = '';
-            E.refresh_row_field('expense_accounts', cdn, 'account');
-        }
+        if (!row.account || row.company) return;
+        E.error('Please select a company first');
+        row.account = '';
+        E.refresh_row_field('expense_accounts', cdn, 'account');
     },
     cost: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (flt(row.cost) > 0) {
-            row.min_cost = 0;
-            row.max_cost = 0;
-            E.refresh_row_field('expense_accounts', cdn, 'min_cost', 'max_cost');
+        if (!flt(row.cost)) return;
+        if (flt(row.cost) < 0) {
+            row.cost = 0;
+            E.refresh_row_field('expense_accounts', cdn, 'cost');
+            return;
         }
+        row.min_cost = 0;
+        row.max_cost = 0;
+        E.refresh_row_field('expense_accounts', cdn, 'min_cost', 'max_cost');
     },
     min_cost: function(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-        if (
-            (flt(row.cost) > 0 && flt(row.min_cost) > 0)
-            || (
-                flt(row.min_cost) > 0 && flt(row.max_cost) > 0
-                && flt(row.min_cost) >= flt(row.max_cost)
-            )
-        ) {
+        let row = locals[cdt][cdn],
+        val = flt(row.min_cost);
+        if (!val) return;
+        let max = flt(row.max_cost);
+        if (val < 0 || flt(row.cost) > 0 || (max > 0 && val >= max)) {
             row.min_cost = 0;
             E.refresh_row_field('expense_accounts', cdn, 'min_cost');
         }
     },
     max_cost: function(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-        if (
-            (flt(row.cost) > 0 && flt(row.min_cost) > 0)
-            || (
-                flt(row.min_cost) > 0 && flt(row.max_cost) > 0
-                && flt(row.min_cost) <= flt(row.max_cost)
-            )
-        ) {
+        let row = locals[cdt][cdn],
+        val = flt(row.max_cost);
+        if (!val) return;
+        let min = flt(row.min_cost);
+        if (val < 0 || flt(row.cost) > 0 || (min > 0 && val <= min)) {
             row.max_cost = 0;
             E.refresh_row_field('expense_accounts', cdn, 'max_cost');
         }
     },
     qty: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (flt(row.qty) > 0) {
-            row.min_qty = 0;
-            row.max_qty = 0;
-            E.refresh_row_field('expense_accounts', cdn, 'min_qty', 'max_qty');
+        if (!flt(row.qty)) return;
+        if (flt(row.qty) < 0) {
+            row.qty = 0;
+            E.refresh_row_field('expense_accounts', cdn, 'qty');
+            return;
         }
+        row.min_qty = 0;
+        row.max_qty = 0;
+        E.refresh_row_field('expense_accounts', cdn, 'min_qty', 'max_qty');
     },
     min_qty: function(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-        if (
-            (flt(row.qty) > 0 && flt(row.min_qty) > 0)
-            || (
-                flt(row.min_qty) > 0 && flt(row.max_qty) > 0
-                && flt(row.min_qty) >= flt(row.max_qty)
-            )
-        ) {
+        let row = locals[cdt][cdn],
+        val = flt(row.min_qty);
+        if (!val) return;
+        let max = flt(row.max_qty);
+        if (val < 0 || flt(row.qty) > 0 || (max > 0 && val >= max)) {
             row.min_qty = 0;
             E.refresh_row_field('expense_accounts', cdn, 'min_qty');
         }
     },
     max_qty: function(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-        if (
-            (flt(row.qty) > 0 && flt(row.max_qty) > 0)
-            || (
-                flt(row.min_qty) > 0 && flt(row.max_qty) > 0
-                && flt(row.max_qty) <= flt(row.min_qty)
-            )
-        ) {
+       let row = locals[cdt][cdn],
+        val = flt(row.max_qty);
+        if (!val) return;
+        let min = flt(row.min_qty);
+        if (val < 0 || flt(row.qty) > 0 || (min > 0 && val <= min)) {
             row.max_qty = 0;
             E.refresh_row_field('expense_accounts', cdn, 'max_qty');
         }

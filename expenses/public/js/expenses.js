@@ -217,7 +217,7 @@ class Expenses {
         this.refresh_field(table);
     }
     get_row_field(table, cdn, name) {
-        return this._frm.get_field(table).grid.get_grid_row(cdn).get_field(name);
+        return this._frm.get_field(table).grid.get_row(cdn).get_field(name);
     }
     clear_table(table) {
         this._frm.set_value(table, []);
@@ -247,6 +247,23 @@ class Expenses {
     set_dfs_properties(fields, props, table, cdn) {
         for (var k in props)
             this.set_dfs_property(fields, k, props[k], table, cdn);
+    }
+    set_row_df_property(table, cdn, field, key, val) {
+        this._frm.get_field(table).grid.get_row(cdn)
+            .set_field_property(field, key, val);
+    }
+    set_row_df_properties(table, cdn, field, props) {
+        for (var k in props)
+            this.set_row_df_property(table, cdn, field, k, props[k]);
+    }
+    set_row_dfs_property(table, cdn, fields, key, val) {
+        this.each(fields, function(f) {
+            this.set_row_df_property(table, cdn, f, key, val);
+        });
+    }
+    set_row_dfs_properties(table, cdn, fields, props) {
+        for (var k in props)
+            this.set_row_dfs_property(table, cdn, fields, k, props[k]);
     }
     
     // JS Helpers
@@ -280,13 +297,7 @@ Expenses.each = function(data, fn, bind) {
 };
 Expenses.clone = function(data) {
     if (!is_arr(data) && !is_obj(data)) return data;
-    if (is_arr(data)) {
-        if (!data.length) return [];
-        return data.clone();
-    }
-    let ret = {};
-    Expenses.each(data, function(v, k) { ret[k] = Expenses.clone(v); });
-    return ret;
+    return JSON.parse(JSON.stringify(data));
 };
 Expenses.array_diff = function(a, b) {
     if (!is_arr(a) || !a.length) return is_arr(b) ? b : [];
