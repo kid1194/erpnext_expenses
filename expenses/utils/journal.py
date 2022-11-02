@@ -8,8 +8,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, today
 
-from .common import get_cached_doc, error
-from .entry import _Entry
+from .common import error
+from .entry import get_entry_data
 
 
 ## Expenses Entry
@@ -24,7 +24,7 @@ def enqueue_journal_entry(expenses_entry):
 
 
 def make_journal_entry(expenses_entry):
-    entry = get_cached_doc(_Entry, expenses_entry)
+    entry = get_entry_data(expenses_entry)
     
     if cint(entry.docstatus) != 1:
         return 0
@@ -36,20 +36,20 @@ def make_journal_entry(expenses_entry):
     multi_currency = 0
     accounts = []
     for v in entry.expenses:
-        if v.expense_currency != entry.total_currency:
+        if v.account_currency != entry.payment_currency:
             multi_currency = 1
         
-        expense_data = get_item_expense_data(v.item, entry.company)
         accounts.append({
-            "account": expense_data.account,
+            "account": v.account,
             "party_type": v.party_type,
             "party": v.party,
             "cost_center": v.cost_center,
             "project": v.project,
-            "account_currency": expense_data.currency,
-            "exchange_rate": v.exchange_rate,
-            "debit_in_account_currency": flt(v.expense_total),
-            "is_advance": v.is_advance,
+            "account_currency": v.account_currency,
+            "exchange_rate": flt(v.exchange_rate),
+            "debit_in_account_currency": flt(v.cost_in_account_currency),
+            "debt": flt(v.cost),
+            "is_advance": cint(v.is_advance),
             "user_remark": str(v.description),
         })
     
@@ -63,17 +63,18 @@ def make_journal_entry(expenses_entry):
         error(_("Payment Reference and Date are Required for all non-cash payments"))
     
     else:
-        entry.clearance_date = ""
         entry.payment_reference = ""
+        entry.clearance_date = ""
     
     if not entry.payment_account:
         error(_("The selected Mode of Payment has no linked account"))
     
     accounts.append({
         "account": entry.payment_account,
-        "account_currency": entry.total_currency,
-        "exchange_rate": entry.exchange_rate,
-        "credit_in_account_currency": flt(entry.total),
+        "account_currency": entry.payment_currency,
+        "exchange_rate": flt(entry.exchange_rate),
+        "credit_in_account_currency": flt(entry.total_in_payment_currency),
+        "credit": flt(entry.total),
     })
     
     try:
@@ -94,7 +95,7 @@ def make_journal_entry(expenses_entry):
                 "multi_currency": multi_currency,
             })
             .insert(ignore_permissions=True, ignore_mandatory=True)
-            .submit(ignore_permissions=True))
+            .submit())
     
     except Exception:
         error(

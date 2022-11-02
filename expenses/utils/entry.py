@@ -9,7 +9,7 @@ from frappe import _
 
 from erpnext.setup.utils import get_exchange_rate
 
-from .common import error, get_cached_value
+from .common import error, get_cached_doc, get_cached_value
 from .search import filter_search
 
 
@@ -77,3 +77,8 @@ def get_current_exchange_rate(from_currency, to_currency, date=None):
         rate = 1.0
     
     return rate
+
+
+## Self Journal
+def get_entry_data(name):
+    return get_cached_doc(_Entry, name)
