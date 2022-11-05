@@ -6,9 +6,10 @@
 
 import frappe
 from frappe import _
+from pypika.terms import Criterion
 
 from .account import *
-from .common import error, get_cache, set_cache
+from .common import error, get_cache, set_cache, get_cached_doc
 from .search import filter_search, prepare_data
 
 
@@ -68,53 +69,49 @@ def add_type_node(args=None):
     return doc.name
 
 
-## Expense Type
-def type_children_exists(name):
-    return frappe.db.exists(_TYPE, {_TYPE_PARENT: name})
-
-
+## Expense Type Form
 ## Expense Item Form
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def search_type_companies(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-    if not isinstance(filters, dict) or not filters.get("expense_type"):
-        return []
+def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+    doc = frappe.qb.DocType(_TYPE)
+    qry = (frappe.qb.from_(doc)
+        .select(doc.name)
+        .where(doc.disabled == 0))
     
-    dt, doc, qry = get_companies_filter_query_by_parent(
-        filters.get("expense_type"),
-        _TYPE,
-        _TYPE_ACCOUNTS
-    )
+    qry = filter_search(doc, qry, _TYPE, txt, doc.name, "name")
     
-    qry, trans_doctypes = filter_search(doc, qry, dt, txt, doc.company, "company")
+    pdoc = frappe.qb.DocType(_TYPE).as_("parent")
+    parent_qry = (frappe.qb.from_(pdoc)
+        .select(pdoc.name)
+        .where(pdoc.disabled == 0)
+        .where(pdoc.is_group == 1)
+        .where(pdoc.lft.lt(doc.lft))
+        .where(pdoc.rgt.gt(doc.rgt))
+        .orderby(doc.lft, order=Order.desc))
+    qry = qry.where(Criterion.any(
+        doc.parent_type == "",
+        doc.parent_type.isin(parent_qry)
+    ))
+    
+    if (is_not := filters.get("is_not")):
+        qry = qry.where(doc.name != is_not)
+    
+    if filters.get("is_group") == 1:
+        qry = qry.where(doc.is_group == 1)
+    else:
+        qry = qry.where(doc.is_group == 0)
     
     data = qry.run(as_dict=as_dict)
     
-    data = prepare_data(data, "company", txt, as_dict)
+    data = prepare_data(data, "name", txt, as_dict)
     
     return data
 
 
-## Expense Item
-@frappe.whitelist(methods=["POST"])
-def get_type_companies(name):
-    if not name:
-        return []
-    
-    ckey = f"{name}-companies"
-    cache = get_cache(_TYPE, ckey)
-    if cache and isinstance(cache, list):
-        return cache
-    
-    data = get_companies_by_parent(name, _TYPE, _TYPE_ACCOUNTS)
-    
-    if not data or not isinstance(data, list):
-        error(_("Unable to get the type companies of {0}").format(name))
-    
-    data = [v.company for v in data]
-    set_cache(_TYPE, ckey, data)
-    
-    return data
+## Expense Type
+def type_children_exists(name):
+    return frappe.db.exists(_TYPE, {_TYPE_PARENT: name})
 
 
 ## Self Item
@@ -129,6 +126,12 @@ def get_type_company_account_data(name, company):
     
     data = get_company_account_data_by_parent(company, name, _TYPE, _TYPE_ACCOUNTS)
     
+    if not data:
+        for parent in get_cached_doc(_TYPE, name).get_ancestors():
+            data = get_company_account_data_by_parent(company, parent, _TYPE, _TYPE_ACCOUNTS)
+            if data and isinstance(data, dict):
+                break
+            
     if not data or not isinstance(data, dict):
         error(
             (_("Unable to get the account data of the type {0} and company {1}")

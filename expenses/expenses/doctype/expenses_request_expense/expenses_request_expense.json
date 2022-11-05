@@ -2,6 +2,7 @@
  "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
+ "editable_grid": 1,
  "autoname": "hash",
  "creation": "2022-04-04 04:04:04.119400",
  "description": "Link between expenses request and expense",
@@ -12,12 +13,13 @@
   "main_section",
   "expense",
   "expense_item",
-  "description",
-  "main_column",
   "currency",
   "total",
+  "main_column",
+  "paid_by",
   "is_advance",
-  "show_info"
+  "party",
+  "required_by"
  ],
  "fields": [
   {
@@ -38,20 +40,27 @@
   },
   {
    "fieldname": "expense_item",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Expense Item",
-   "options": "Expense Item",
    "fetch_from": "expense.expense_item",
    "is_virtual": 1,
    "read_only": 1,
-   "in_list_view": 1,
-   "ignore_user_permissions": 1
+   "in_list_view": 1
   },
   {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description",
-   "fetch_from": "expense.description",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "fetch_from": "expense.currency",
+   "is_virtual": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "options": "currency",
+   "fetch_from": "expense.total",
    "is_virtual": 1,
    "read_only": 1,
    "in_list_view": 1
@@ -62,20 +71,10 @@
    "width": "50%"
   },
   {
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency",
-   "fetch_from": "expense.currency",
-   "is_virtual": 1,
-   "hidden": 1
-  },
-  {
-   "fieldname": "total",
-   "fieldtype": "Currency",
-   "label": "Total Cost",
-   "options": "currency",
-   "fetch_from": "expense.total",
+   "fieldname": "paid_by",
+   "fieldtype": "Data",
+   "label": "Paid By",
+   "fetch_from": "expense.paid_by",
    "is_virtual": 1,
    "read_only": 1,
    "in_list_view": 1
@@ -90,10 +89,21 @@
    "in_list_view": 1
   },
   {
-   "fieldname": "show_info",
-   "fieldtype": "Button",
-   "label": "Info",
+   "fieldname": "party",
+   "fieldtype": "Data",
+   "label": "Party",
+   "fetch_from": "expense.party",
    "is_virtual": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "required_by",
+   "fieldtype": "Data",
+   "label": "Required By",
+   "fetch_from": "expense.required_by",
+   "is_virtual": 1,
+   "read_only": 1,
    "in_list_view": 1
   }
  ],

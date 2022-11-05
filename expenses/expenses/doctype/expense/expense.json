@@ -37,7 +37,8 @@
   "dimensions_column",
   "attachments_section",
   "attachments",
-  "is_requested"
+  "is_requested",
+  "is_approved"
  ],
  "fields": [
   {
@@ -263,6 +264,15 @@
    "fieldname": "is_requested",
    "fieldtype": "Check",
    "label": "Is Requested",
+   "default": "0",
+   "hidden": 1,
+   "report_hide": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "is_approved",
+   "fieldtype": "Check",
+   "label": "Is Approved",
    "default": "0",
    "hidden": 1,
    "report_hide": 1,

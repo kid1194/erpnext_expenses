@@ -11,25 +11,13 @@ from .common import error, get_cache, set_cache, get_cached_value
 from .search import filter_search, prepare_data
 from .type import (
     get_types_filter_query,
-    get_type_company_account_data,
-    get_types_accounts
+    get_type_company_account_data
 )
 
 
 _ITEM = "Expense Item"
 _ITEM_TYPE = "expense_type"
 _ITEM_ACCOUNTS = "expense_accounts"
-
-
-## Expense Type
-def disable_items_of_expense_types(expense_types):
-    doc = frappe.qb.DocType(_ITEM)
-    (
-        frappe.qb.update(doc)
-        .set(doc.disabled, 1)
-        .where(doc.disabled != 1)
-        .where(doc.expense_type.isin(expense_types))
-    ).run()
 
 
 ## Expense Type
@@ -62,7 +50,6 @@ def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
 ## Expense Form
 ## Expense List
 ## Expense
-## Expenses Entry Form
 @frappe.whitelist(methods=["POST"])
 def get_item_company_account_data(item, company):
     if (
@@ -85,6 +72,8 @@ def get_item_company_account_data(item, company):
             _ITEM_ACCOUNTS
         )):
             if isinstance(item_data, dict):
+                item_data.account = data.account
+                item_data.currency = data.currency
                 data.update(item_data)
     
     else:

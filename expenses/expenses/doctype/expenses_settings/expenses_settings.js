@@ -7,9 +7,6 @@
 
 
 frappe.ui.form.on('Expenses Settings', {
-    setup: function(frm) {
-        Expenses.init(frm);
-    },
     refresh: function(frm) {
         frm.get_field('update_note').$wrapper.html(
             cint(frm.doc.has_update)
@@ -22,7 +19,7 @@ frappe.ui.form.on('Expenses Settings', {
             'check_for_update',
             function(ret) {
                 frm.reload_doc();
-                E.refresh_field('latest_version', 'latest_check');
+                E.refresh('latest_version', 'latest_check');
             }
         );
     },

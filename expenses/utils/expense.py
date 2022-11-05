@@ -130,8 +130,22 @@ def release_request_expenses(expenses):
     (
         frappe.qb.update(doc)
         .set(doc.is_requested, 0)
+        .set(doc.is_approved, 0)
         .where(doc.name.isin(expenses))
         .where(doc.is_requested == 1)
+        .where(doc.docstatus != 2)
+    ).run()
+
+
+## Expenses Request
+def approve_request_expenses(expenses):
+    doc = frappe.qb.DocType(_EXPENSE)
+    (
+        frappe.qb.update(doc)
+        .set(doc.is_approved, 1)
+        .where(doc.name.isin(expenses))
+        .where(doc.is_requested == 1)
+        .where(doc.is_approved == 0)
         .where(doc.docstatus != 2)
     ).run()
 
@@ -178,4 +192,4 @@ def get_expenses_data(expenses):
 
 # Expenses Request Expense
 def get_expense(name):
-    return get_cached_doc(_EXPENSE, name)
+    return get_cached_doc(_EXPENSE, name).as_dict()

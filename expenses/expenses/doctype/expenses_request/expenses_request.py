@@ -14,7 +14,8 @@ from expenses.utils import (
     clear_document_cache,
     is_expenses_belongs_to_company,
     reserve_request_expenses,
-    release_request_expenses
+    release_request_expenses,
+    approve_request_expenses
 )
 
 
@@ -32,12 +33,11 @@ class ExpensesRequest(Document):
     
     def validate(self):
         if not self.company:
-            error(_("The company field is mandatory"))
+            error(_("The company is mandatory"))
         if not self.posting_date:
-            error(_("The posting date field is mandatory"))
+            error(_("The posting date is mandatory"))
         if not self.expenses:
-            error(_("The expenses table must have at least one expense"))
-        
+            error(_("The expenses table must have at least one entry"))
         if cint(self.docstatus) == 0:
             self.validate_expenses()
         else:
@@ -50,18 +50,30 @@ class ExpensesRequest(Document):
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
         )
-        
         if self.is_new():
             self._reserve_expenses = True
     
     
+    def before_submit(self):
+        clear_document_cache(self.doctype, self.name)
+        self.check_changes()
+        if self.status === "Approved":
+            self._approve_expenses = True
+    
+    
     def on_update(self):
-       self.handle_expenses()
+        self.handle_expenses()
     
     
     def before_update_after_submit(self):
         clear_document_cache(self.doctype, self.name)
         self.check_changes()
+        if self.status === "Approved":
+            self._approve_expenses = True
+    
+    
+    def on_update_after_submit(self):
+        self.handle_expenses()
     
     
     def before_cancel(self):
@@ -92,7 +104,7 @@ class ExpensesRequest(Document):
             self.company
         )):
             error(
-                (_("The some of the expenses does not belong to {0}")
+                (_("Some of the expenses does not belong to {0}")
                     .format(self.company))
             )
     
@@ -110,13 +122,16 @@ class ExpensesRequest(Document):
         old_expenses = [v.expense for v in old.expenses]
         for v in self.expenses:
             if v.expense not in old_expenses:
-                error(_("The expenses cannot be modified after submit"))
+                error(_("The expenses table cannot be modified after submit"))
     
     
     def handle_expenses(self):
-         if self._reserve_expenses:
+        if self._reserve_expenses:
             self._reserve_expenses = False
             reserve_request_expenses([v.expense for v in self.expenses])
-         elif self._release_expenses:
+        elif self._release_expenses:
             self._release_expenses = False
             release_request_expenses([v.expense for v in self.expenses])
+        elif self._approve_expenses:
+            self._approve_expenses = False
+            approve_request_expenses([v.expense for v in self.expenses])

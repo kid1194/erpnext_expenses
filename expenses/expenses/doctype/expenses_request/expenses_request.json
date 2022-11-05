@@ -4,7 +4,7 @@
  "allow_import": 1,
  "autoname": "format:EXP-REQ-{YYYY}-{#####}",
  "creation": "2022-04-04 04:04:04.119400",
- "description": "Expense request",
+ "description": "Expenses request",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
@@ -64,8 +64,7 @@
   },
   {
    "fieldname": "expenses_section",
-   "fieldtype": "Section Break",
-   "depends_on": "eval:doc.company"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "expenses",
@@ -74,8 +73,6 @@
    "options": "Expenses Request Expense",
    "reqd": 1,
    "bold": 1,
-   "read_only": 1,
-   "cannot_add_rows": 1,
    "in_preview": 1
   },
   {

@@ -2,6 +2,7 @@
  "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
+ "editable_grid": 1,
  "autoname": "hash",
  "creation": "2022-04-04 04:04:04.119400",
  "description": "Expenses notification receiver",

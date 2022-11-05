@@ -2,7 +2,7 @@
  "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
- "autoname": "format:EXP-ENT{YYYY}-{#####}",
+ "autoname": "format:EXP-ENT-{YYYY}-{#####}",
  "creation": "2022-04-04 04:04:04.119400",
  "description": "Expenses entry",
  "doctype": "DocType",
@@ -207,7 +207,8 @@
    "label": "total In Company Currency",
    "options": "Company:company:default_currency",
    "bold": 1,
-   "read_only": 1
+   "read_only": 1,
+   "print_hide": 1
   },
   {
    "fieldname": "info_section",
@@ -351,7 +352,7 @@
    "write": 1
   }
  ],
- "search_fields": "posting_date",
+ "title_field": "name",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

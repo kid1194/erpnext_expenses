@@ -12,39 +12,55 @@ from expenses.utils import get_expense
 class ExpensesRequestExpense(Document):
     @property
     def expense_item(self):
-        self.get_virtuals();
-        return self._expense_item
+        return self.get_expense("expense_item")
+    
+    
+    @property
+    def required_by(self):
+        return self.get_expense("required_by")
     
     
     @property
     def description(self):
-        self.get_virtuals();
-        return self._description
+        return self.get_expense("description")
     
     
     @property
     def currency(self):
-        self.get_virtuals();
-        return self._currency
+        return self.get_expense("currency")
     
     
     @property
     def total(self):
-        self.get_virtuals();
-        return self._total
+        return self.get_expense("total")
+    
+    
+    @property
+    def is_paid(self):
+        return self.get_expense("is_paid")
+    
+    
+    @property
+    def paid_by(self):
+        return self.get_expense("paid_by")
     
     
     @property
     def is_advance(self):
-        self.get_virtuals();
-        return self._is_advance
+        return self.get_expense("is_advance")
     
     
-    def get_virtuals(self):
-        if not self._expense_item:
-            doc = get_expense(self.expense)
-            self._expense_item = doc.expense_item
-            self._description = doc.description
-            self._currency = doc.currency
-            self._total = doc.total
-            self._is_advance = doc.is_advance
+    @property
+    def party_type(self):
+        return self.get_expense("party_type")
+    
+    
+    @property
+    def party(self):
+        return self.get_expense("party")
+    
+    
+    def get_expense(self, key):
+        if not self._expense:
+            self._expense = get_expense(self.expense)
+        return self._expense.get(key)

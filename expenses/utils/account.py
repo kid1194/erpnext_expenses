@@ -12,28 +12,6 @@ _ACCOUNT = "Expense Account"
 
 
 ## Self Type
-## Self
-def get_companies_filter_query_by_parent(parent, parenttype, parentfield, only_query=False):
-    doc = frappe.qb.DocType(_ACCOUNT)
-    qry = (frappe.qb.from_(doc)
-        .select(doc.company)
-        .where(doc.parent == parent)
-        .where(doc.parenttype == parenttype)
-        .where(doc.parentfield == parentfield))
-    
-    if only_query:
-        return qry
-    
-    return _ACCOUNT, doc, qry
-
-
-## Self Type
-def get_companies_by_parent(parent, parenttype, parentfield):
-    qry = get_companies_filter_query_by_parent(parent, parenttype, parentfield, True)
-    return qry.run(as_dict=True)
-
-
-## Self Type
 ## Self Item
 def get_company_account_data_by_parent(company, parent, parenttype, parentfield):
     doc = frappe.qb.DocType(_ACCOUNT)

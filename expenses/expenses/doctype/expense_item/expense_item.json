@@ -27,7 +27,8 @@
    "label": "Name",
    "reqd": 1,
    "bold": 1,
-   "in_preview": 1
+   "in_preview": 1,
+   "translatable": 1
   },
   {
    "fieldname": "disabled",
@@ -63,9 +64,8 @@
    "fieldname": "expense_accounts",
    "fieldtype": "Table",
    "label": "Expense Accounts",
-   "description": "Use to override the expense accounts of the expense type",
-   "options": "Expense Account",
-   "read_only_depends_on": "eval:!doc.expense_type"
+   "description": "Use to customize the expense defaults",
+   "options": "Expense Account"
   }
  ],
  "icon": "fa fa-file-alt",

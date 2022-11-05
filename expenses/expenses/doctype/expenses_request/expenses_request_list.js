@@ -10,6 +10,7 @@ frappe.provide("frappe.listview_settings");
 
 
 frappe.listview_settings['Expenses Request'] = {
+    hide_name_column: true,
     get_indicator: function(doc) {
         let status = {
             'Draft': 'gray',
@@ -20,8 +21,8 @@ frappe.listview_settings['Expenses Request'] = {
             'Processed': 'green',
         };
         for (var k in status) {
-            if (doc.status === k) return [__(k), status[k], 'status,=,' + k];
+            if (doc.status === k) return [k, status[k], 'status,=,' + k];
         }
-        return [__(doc.status), 'gray', 'status,=,' + doc.status];
+        return [doc.status, 'gray', 'status,=,' + doc.status];
     },
 };

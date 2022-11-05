@@ -6,14 +6,20 @@
 */
 
 
+frappe.provide('frappe.model');
+frappe.provide('frappe.datetime');
+frappe.provide('frappe.perm');
 frappe.provide('frappe.session');
 
 
 frappe.ui.form.on('Expense', {
     setup: function(frm) {
-        Expenses.init(frm);
+        E.frm(frm);
         frm.E = {
-            is_requested: false,
+            is_requested: !!cint(frm.doc.is_requested),
+            is_approved: !!cint(frm.doc.is_approved),
+            is_super: (frm.is_new() && frappe.perm.has_perm(frm.doctype, 1, 'create'))
+                || (!frm.is_new() && frappe.perm.has_perm(frm.doctype, 1, 'write')),
             expense_data: {},
             expense_cost: null,
             expense_qty: null,
@@ -21,69 +27,49 @@ frappe.ui.form.on('Expense', {
             del_files: [],
         };
         E.call('has_hrm', function(ret) {
-            if (!!ret) {
-                E.set_dfs_property(
-                    ['is_paid', 'paid_by', 'type_column'], 'hidden', 1
-                );
-                E.set_df_property('type_adv_column', 'hidden', 0);
-            }
+            if (!ret) return;
+            E.set_dfs(['is_paid', 'paid_by', 'type_column'], 'hidden', 1);
+            E.set_df('type_adv_column', 'hidden', 0);
         });
+        if (!frm.E.is_super) {
+            let today = frappe.datetime.moment_to_date_obj(moment());
+            E.set_df('required_by', 'options', {startDate: today, minDate: today});
+        }
     },
     onload: function(frm) {
-        if (cint(frm.doc.is_requested)) return;
-        frm.set_query('company', {filters: {is_group: 0}});
-        frm.set_query('expense_item', {query: E.path('search_items')});
+        if (!frm.E.is_requested) {
+            frm.set_query('company', {filters: {is_group: 0}});
+            frm.set_query('expense_item', {query: E.path('search_items')});
+            return;
+        }
+        
+        frm.disable_form();
+        frm.set_intro(
+            __(
+                'The expense cannot be modified after being included in '
+                + 'an Expenses Request'
+            ),
+            'red'
+        );
+        
+        if (
+            frm.E.is_approved
+            || !frappe.model.can_create(frm.doctype)
+            || !frappe.model.can_write(frm.doctype)
+            || (frm.doc.owner && frm.doc.owner !== frappe.session.user)
+        ) return;
+        
+        E.set_df_props('attachments', {
+            read_only: 0,
+            cannot_delete_rows: 1,
+            allow_bulk_edit: 0,
+        });
+        frm.get_field('attachments').grid.df.cannot_delete_rows = 1;
     },
     refresh: function(frm) {
-        if (cint(frm.doc.is_requested) && !frm.E.is_requested) {
-            frm.E.is_requested = true;
-            frm.disable_form();
-            frm.set_intro(
-                __(
-                    frm.doctype
-                    + ' cannot be modified after being included in '
-                    + 'an Expenses Request'
-                ),
-                'red'
-            );
-            if (
-                !frappe.model.can_create(frm.doctype)
-                || !frappe.model.can_write(frm.doctype)
-                || (frm.doc.owner && frm.doc.owner !== frappe.session.user)
-            ) return;
-            frm.E.attach_row = new Expenses.QuickEntry(
-                'Expense Attachment',
-                'Attach Row',
-                'blue'
-            );
-            frm.E.attach_row
-                .add_custom_action(
-                    'Save & Add',
-                    function() {
-                        let row = this.get_values();
-                        if (row && row.file) frm.add_child('attachments', row);
-                        this.clear();
-                    },
-                    'start'
-                )
-                .set_primary_action(
-                    'Save',
-                    function() {
-                        let row = this.get_values();
-                        if (row && row.file) frm.add_child('attachments', row);
-                        this.hide();
-                    }
-                )
-                .set_secondary_action('Cancel', function() { this.hide(); });
-            frm.get_field('attachments').grid.add_custom_button(
-                __('Attach Row'),
-                function() { frm.E.attach_row.show(); }
-            ).removeClass('hidden btn-default').addClass('btn-secondary');
-            return;
-		}
-		if (cint(frm.doc.is_requested)) return;
-		if (frm.is_new()) frm.trigger('add_save_button');
-	    else frm.trigger('add_toolbar_button');
+        if (frm.E.is_requested) return;
+        if (frm.is_new()) frm.trigger('add_save_button');
+        else frm.trigger('add_toolbar_button');
     },
     company: function(frm) {
         frm.trigger('set_account_data');
@@ -92,7 +78,7 @@ frappe.ui.form.on('Expense', {
         frm.trigger('set_account_data');
     },
     set_account_data: function(frm) {
-        if (!frm.is_dirty()) return;
+        if (frm.E.is_requested || !frm.is_dirty()) return;
         var company = frm.doc.company,
         item = frm.doc.expense_item;
         if (!company || !item) {
@@ -101,29 +87,7 @@ frappe.ui.form.on('Expense', {
             frm.E.expense_cost = frm.E.expense_qty = null;
             return;
         }
-        var ckey = frm.E.ckey(company, item);
-        (new Promise(function(resolve, reject) {
-            if (frm.E.expense_data[ckey]) {
-                resolve(frm.E.expense_data[ckey]);
-                return;
-            }
-            E.call(
-                'get_item_company_account_data',
-                {item, company},
-                function(ret) {
-                    if (
-                        !ret || !$.isPlainObject(ret)
-                        || !ret.account || !ret.currency
-                    ) {
-                        E.error('Unable to get the currencies of {0}', [item]);
-                        reject();
-                        return;
-                    }
-                    frm.E.expense_data[ckey] = ret;
-                    resolve(ret);
-                }
-            );
-        })).then(function(v) {
+        function resolve(v) {
             frm.set_value('expense_account', v.account);
             frm.set_value('currency', v.currency);
             if (flt(v.cost) > 0) {
@@ -138,19 +102,30 @@ frappe.ui.form.on('Expense', {
             } else if (flt(v.min_qty) > 0 || flt(v.max_qty) > 0) {
                 frm.E.expense_qty = {min: flt(v.min_qty), max: flt(v.max_qty)};
             }
-        });
-    },
-    required_by: function(frm) {
-        if (
-            frm.doc.required_by
-            && cint(moment(frm.doc.required_by, frappe.defaultDateFormat)
-                .diff(moment(), 'days')) < 0
-        ) {
-            E.error('The required by date must not be a previous date');
-            frm.set_value('required_by', moment().format(frappe.defaultDateFormat));
         }
+        var ckey = frm.E.ckey(company, item);
+        if (frm.E.expense_data[ckey]) {
+            resolve(frm.E.expense_data[ckey]);
+            return;
+        }
+        E.call(
+            'get_item_company_account_data',
+            {item, company},
+            function(ret) {
+                if (
+                    !ret || !E.is_obj(ret)
+                    || !ret.account || !ret.currency
+                ) {
+                    E.error('Unable to get the currencies of {0}', [item]);
+                    return;
+                }
+                frm.E.expense_data[ckey] = ret;
+                resolve(ret);
+            }
+        );
     },
     cost: function(frm) {
+        if (frm.E.is_requested) return;
         let cost = flt(frm.doc.cost),
         limit = frm.E.expense_cost;
         if (cost <= 0) {
@@ -164,6 +139,7 @@ frappe.ui.form.on('Expense', {
         }
     },
     qty: function(frm) {
+        if (frm.E.is_requested) return;
         let qty = flt(frm.doc.qty),
         limit = frm.E.expense_qty;
         if (qty <= 0) {
@@ -177,12 +153,21 @@ frappe.ui.form.on('Expense', {
         }
     },
     update_total: function(frm) {
+        if (frm.E.is_requested) return;
         let cost = flt(frm.doc.cost),
         qty = flt(frm.doc.qty);
         frm.set_value('total', flt(cost * qty));
     },
+    validate: function(frm) {
+        if (!frm.E.is_super) {
+            if (cint(moment(frm.doc.required_by, frappe.defaultDateFormat)
+                .diff(moment(), 'days')) < 0) {
+                E.error('The minimum date for expense required by is today', true);
+            }
+        }
+    },
     after_save: function(frm) {
-        if (!cint(frm.doc.is_requested) && frm.E.del_files.length) {
+        if (!frm.E.is_requested && frm.E.del_files.length) {
             E.call(
                 'delete_attach_files',
                 {files: frm.E.del_files},
@@ -205,7 +190,7 @@ frappe.ui.form.on('Expense', {
         }
     },
     add_toolbar_button: function(frm) {
-        let add_btn = __('Add');
+        let add_btn = __('Add New');
         if (!frm.custom_buttons[add_btn]) {
             frm.clear_custom_buttons();
             frm.add_custom_button(add_btn, function () {
@@ -230,7 +215,7 @@ frappe.ui.form.on('Expense', {
 frappe.ui.form.on('Expense Attachment', {
     before_attachments_remove: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (cint(frm.doc.is_requested)) {
+        if (frm.E.is_requested) {
             E.error('Removing attachments is not allowed', true);
             return;
         }

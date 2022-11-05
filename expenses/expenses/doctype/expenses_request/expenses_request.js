@@ -8,63 +8,68 @@
 
 frappe.ui.form.on('Expenses Request', {
     setup: function(frm) {
-        Expenses.init(frm);
+        E.frm(frm);
         frm.E = {
             add_expenses: null,
-            qe: new Expenses.QuickEntry('Expense', 'Expense Info', 'blue'),
         };
-        
-        frm.E.qe
-            .set_secondary_action('Close', function() { this.hide(); })
-            .disable_all_fields();
     },
     onload: function(frm) {
         if (frm.is_new() || frm.doc.status === 'Draft') {
             frm.set_query('company', {filters: {is_group: 0}});
-            frm.E.add_expenses = frm.get_field('expenses').grid.add_custom_button(
-                __('Add Expenses'),
-                function() {
-                    frm.trigger('toggle_add_expenses');
-                },
-                'top'
-            );
-            frm.E.add_expenses.removeClass('btn-default').addClass('btn-success');
-            if (!frm.doc.company) frm.E.add_expenses.prop('disabled', true);
-            
-            E.each(
-                ['expense_item', 'description', 'currency', 'total', 'is_advance'],
-                function(f) {
-                    frm.add_fetch('expense', f, f, 'Expenses Request Expense');
-                }
-            );
+        }
+        E.each(
+            'expense_item currency total paid_by is_advance party required_by'.split(' '),
+            function(f) { frm.add_fetch('expense', f, f, 'Expenses Request Expense'); }
+        );
+        if (frm.doc.status !== 'Draft') {
+            frm.disable_form();
+            E.set_df_props('expenses', {
+                read_only: 1,
+                in_place_edit: 1,
+                cannot_add_rows: 1,
+                cannot_delete_rows: 1,
+            });
+        } else {
+            E.set_df_props('expenses', {
+                in_place_edit: 1,
+                cannot_add_rows: 1,
+            });
         }
         if (frm.is_new()) {
             let req = E.pop_cache('make-expenses-request');
             if (
-                req && $.isPlainObject(req)
-                && req.company && typeof req.company === 'string'
-                && Array.isArray(req.expenses) && req.expenses.length
+                req && E.is_obj(req)
+                && req.company && E.is_str(req.company)
+                && E.is_arr(req.expenses) && req.expenses.length
             ) {
                 frm.set_value('company', req.company);
                 frm.toggle_enable('company', 0);
+                frm.toggle_enable('expenses', 0);
                 E.each(req.expenses, function(v) {
-                    if (typeof v === 'string') frm.add_child('expenses', {expense: v});
+                    if (v && E.is_str(v)) frm.add_child('expenses', {expense: v});
                 });
-                E.refresh_field('expenses');
+                E.refresh_df('expenses');
             }
             req = null;
         }
-        if (frm.doc.status !== 'Draft') {
-            frm.disable_form();
+    },
+    refresh: function(frm) {
+        if (frm.doc.status !== 'Draft') return;
+        if (!frm.E.add_expenses) {
+            let grid = frm.get_field('expenses').grid;
+            grid.wrapper.find('.grid-add-row, .grid-add-multiple-rows')
+                .addClass('hidden').prop('disabled', true).toggle(false);
+            grid.wrapper.find('.grid-footer').toggle(true);
+            frm.E.add_expenses = grid.add_custom_button(
+                __('Add Expenses'),
+                function() { frm.trigger('toggle_add_expenses'); }
+            );
+            if (!frm.doc.company) frm.E.add_expenses.prop('disabled', true);
         }
     },
     company: function(frm) {
-        if (!frm.doc.company) {
-            E.clear_table('expenses');
-        }
-        if (frm.E.add_expenses) {
-            frm.E.add_expenses.prop('disabled', !!frm.doc.company);
-        }
+        if (!frm.doc.company) E.clear_table('expenses');
+        frm.E.add_expenses && frm.E.add_expenses.prop('disabled', !!frm.doc.company);
     },
     toggle_add_expenses: function(frm) {
         new frappe.ui.form.MultiSelectDialog({
@@ -89,11 +94,11 @@ frappe.ui.form.on('Expenses Request', {
                 };
             },
             action: function(vals) {
-                if (Array.isArray(vals) && vals.length) {
+                if (E.is_arr(vals) && vals.length) {
                     E.each(vals, function(v) {
-                        if (typeof v === 'string')
-                            frm.add_child('expenses', {expense: v});
+                        if (v && E.is_str(v)) frm.add_child('expenses', {expense: v});
                     });
+                    E.refresh_df('expenses');
                 }
             }
         });
@@ -119,7 +124,7 @@ frappe.ui.form.on('Expenses Request', {
                     frm.E.workflow.reason = v.reason;
                     resolve();
                 },
-                __('Reject Expenses Request'),
+                __('Reject Request'),
                 __('Submit')
             );
         });
@@ -165,25 +170,8 @@ frappe.ui.form.on('Expenses Request', {
             E.call(
                 'set_request_reviewer',
                 {name: frm.doc.name},
-                function() {
-                    frm.reload_doc();
-                }
+                function() { frm.reload_doc(); }
             );
-        }
-    },
-});
-
-frappe.ui.form.on('Expenses Request Expense', {
-    show_info: function(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-        if (row.expense) {
-            E.get_doc('Expense', row.expense, function(ret) {
-                if (!$.isPlainObject(ret)) {
-                    E.error('Unable to get the expense data of {0}', [row.expense]);
-                    return;
-                }
-                frm.E.qe.set_values(ret).show();
-            });
         }
     },
 });

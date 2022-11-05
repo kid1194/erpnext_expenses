@@ -48,6 +48,10 @@ class ExpensesEntry(Document):
                         )
                     if flt(v.cost_in_account_currency) and not flt(v.cost):
                         v.cost = flt(flt(v.cost_in_account_currency) * flt(v.exchange_rate))
+                    if self.default_project and not v.project:
+                        v.project = self.default_project
+                    if self.default_cost_center and not v.cost_center:
+                        v.cost_center = self.default_cost_center
             
                 if not flt(self.total):
                     total = 0
@@ -61,18 +65,18 @@ class ExpensesEntry(Document):
     
     def validate(self):
         if not self.company:
-            error(_("The company field is mandatory"))
+            error(_("The company is mandatory"))
         if not self.mode_of_payment:
-            error(_("The mode of payment field is mandatory"))
+            error(_("The mode of payment is mandatory"))
         if not self.posting_date:
-            error(_("The posting date field is mandatory"))
+            error(_("The posting date is mandatory"))
         if not self.expenses:
             error(_("The expenses table must have at least one entry"))
         if self.payment_target == "Bank":
             if not self.payment_reference:
-                error(_("The payment reference field is mandatory"))
+                error(_("The payment reference is mandatory"))
             if not self.clearance_date:
-                error(_("The reference / clearance date field is mandatory"))
+                error(_("The reference / clearance date is mandatory"))
         
         if cint(self.docstatus) == 0:
             self.validate_expenses()
@@ -92,8 +96,7 @@ class ExpensesEntry(Document):
     
     
     def after_submit(self):
-        #enqueue_journal_entry(self.name)
-        pass
+        enqueue_journal_entry(self.name)
     
     
     def on_cancel(self):
@@ -114,7 +117,7 @@ class ExpensesEntry(Document):
     def validate_expenses(self):
         accounts = [v.account for v in self.expenses]
         for account in accounts:
-            if frappe.db.get_value("Account", account, "company", pluck=True) != self.company:
+            if get_cached_value("Account", account, "company") != self.company:
                 error(_("The expense account {0} does not belong to {0}").format(
                     account, self.company
                 ))

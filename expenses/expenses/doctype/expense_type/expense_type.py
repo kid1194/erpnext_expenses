@@ -11,8 +11,8 @@ from frappe.utils.nestedset import NestedSet
 
 from expenses.utils import (
     error,
+    get_cached_value
     clear_document_cache,
-    disable_items_of_expense_types,
     type_children_exists,
     items_of_expense_type_exists
 )
@@ -28,32 +28,28 @@ class ExpenseType(NestedSet):
     
     
     def before_validate(self):
-        if cint(self.is_group):
-            self.expense_accounts.clear()
-        else:
+        if self.expense_accounts:
             existing = []
             for v in self.expense_accounts:
-                if (
-                    not v.company or
-                    v.company in existing or
-                    not v.account
-                ):
+                if not v.company or not v.account or v.company in existing:
                     self.expense_accounts.remove(v)
                 else:
                     existing.append(v.company)
-                    if flt(v.cost) != 0:
-                        v.cost = 0
-                    if flt(v.qty) != 0:
-                        v.qty = 0
+                    v.cost = 0
+                    v.min_cost = 0
+                    v.max_cost = 0
+                    v.qty = 0
+                    v.min_qty = 0
+                    v.max_qty = 0
     
     
     def validate(self):
         if not self.type_name:
-            error(_("The name field is mandatory"))
+            error(_("The name is mandatory"))
         if not cint(self.is_group) and not self.parent_type:
-            error(_("The parent type field is mandatory"))
+            error(_("The parent type is mandatory"))
         if frappe.db.exists(self.doctype, self.name):
-            error(_("{0} expense type already exist").format(self.name))
+            error(_("{0} already exist").format(self.name))
         
         self.validate_parent()
         self.validate_group_or_item()
@@ -65,18 +61,18 @@ class ExpenseType(NestedSet):
             parent_type = self.parent_type
         
         if parent_type:
-            par = frappe.db.get_value(self.doctype, parent_type, ["name", "is_group"], as_dict=1)
+            par = get_cached_value(self.doctype, parent_type, ["name", "is_group"])
             if not par:
-                error(_("The expense type parent \"{0}\" does not exist").format(parent_type))
+                error(_("The parent type \"{0}\" does not exist").format(parent_type))
             elif par.name == self.name:
-                error(_("The expense type \"{0}\" cannot be the parent of itself").format(self.name))
+                error(_("{0} cannot be the parent of itself").format(self.name))
             elif not cint(par.is_group):
-                error(_("The expense type parent \"{0}\" must be a group").format(parent_type))
+                error(_("The parent type \"{0}\" must be a group").format(parent_type))
     
     
     def validate_group_or_item(self):
         if not self.is_new():
-            existing_is_group = frappe.db.get_value(self.doctype, self.name, "is_group", pluck=True)
+            existing_is_group = get_cached_value(self.doctype, self.name, "is_group")
             is_group = cint(self.is_group)
             if is_group != cint(existing_is_group):
                 if is_group and self.check_if_items_exist():
@@ -86,16 +82,13 @@ class ExpenseType(NestedSet):
     
     
     def validate_accounts(self):
-        if not cint(self.is_group):
-            if not self.expense_accounts:
-                error(_("The expense type must have at least one company expense account"))
-            else:
-                for v in self.expense_accounts:
-                    if frappe.db.get_value("Account", v.account, "company") != v.company:
-                        error(
-                            (_("The expense account \"{0}\" does not belong to the company \"{1}\"")
-                                .format(v.account, v.company))
-                        )
+        if self.expense_accounts:
+            for v in self.expense_accounts:
+                if get_cached_value("Account", v.account, "company") != v.company:
+                    error(
+                        (_("The expense account \"{0}\" does not belong to the company \"{1}\"")
+                            .format(v.account, v.company))
+                    )
     
     
     def before_save(self):
@@ -115,22 +108,13 @@ class ExpenseType(NestedSet):
     def on_update(self):
         if self._disable_descendants:
             self._disable_descendants = False
-            types = frappe.get_all(
-                self.doctype,
-                fields=["name"],
-                filters={
-                    "disabled": 0,
-                    "lft": [">", self.lft],
-                    "rgt": ["<", self.rgt],
-                },
-                pluck="name"
-            )
-            disable_items_of_expense_types(types)
             doc = frappe.qb.DocType(self.doctype)
             (
                 frappe.qb.update(doc)
                 .set(doc.disabled, 1)
-                .where(doc.name.isin(types))
+                .where(doc.disabled == 0)
+                .where(doc.lft.gt(self.lft))
+                .where(doc.rgt.lt(self.rgt))
             ).run()
         
         if not frappe.local.flags.ignore_update_nsm:
@@ -170,7 +154,6 @@ class ExpenseType(NestedSet):
             return {"error": "{0} with existing expense items cannot be converted to a group".format(self.doctype)}
         
         self.is_group = 1
-        self.expense_accounts.clear()
         self.save()
         return 1
     

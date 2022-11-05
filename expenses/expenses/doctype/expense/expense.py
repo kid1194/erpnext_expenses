@@ -6,7 +6,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, getdate
 from frappe.model.document import Document
 
 from expenses.utils import (
@@ -19,28 +19,54 @@ from expenses.utils import (
 
 class Expense(Document):
     def before_validate(self):
-        if self.is_new():
-            if not self.expense_account or not self.currency:
+        if not cint(self.is_requested):
+            if self.expense_item and self.company:
                 temp = get_item_company_account_data(self.expense_item, self.company)
-                self.expense_account = temp.get("account")
-                self.currency = temp.get("currency")
-                t_cost = flt(temp.get("cost"))
-                t_qty = flt(temp.get("qty"))
-                if t_cost or t_qty:
-                    if t_cost:
-                        self.cost = t_cost
-                    if t_qty:
-                        self.qty = t_qty
-                    self.total = flt(t_cost * t_qty)
+                if not self.expense_account or not self.currency:
+                    self.expense_account = temp.get("account")
+                    self.currency = temp.get("currency")
                 
-        
-        if self.attachments and not cint(self.is_requested):
-            existing = []
-            for v in self.attachments:
-                if not v.file or v.file in existing:
-                    self.attachments.remove(v)
-                else:
-                    existing.append(v.file)
+                old_cost = flt(self.cost)
+                old_qty = flt(self.qty)
+                
+                t_cost = flt(temp.get("cost"))
+                t_min_cost = flt(temp.get("min_cost")
+                t_max_cost = flt(temp.get("max_cost")
+                if t_cost:
+                    self.cost = t_cost
+                elif t_min_cost or t_max_cost:
+                    if t_min_cost and flt(self.cost) < t_min_cost:
+                        self.cost = t_min_cost
+                    elif t_max_cost and flt(self.cost) > t_max_cost:
+                        self.cost = t_max_cost
+                
+                t_qty = flt(temp.get("qty"))
+                t_min_qty = flt(temp.get("min_qty")
+                t_max_qty = flt(temp.get("max_qty")
+                if t_qty:
+                    self.qty = t_qty
+                elif t_min_qty or t_max_qty:
+                    if t_min_qty and flt(self.qty) < t_min_qty:
+                        self.qty = t_min_qty
+                    elif t_max_qty and flt(self.qty) > t_max_qty:
+                        self.qty = t_max_qty
+                
+                if old_cost != flt(self.cost) or old_qty != flt(self.qty):
+                    self.total = flt(flt(self.cost) * flt(self.qty))
+            
+            if not cint(self.is_paid):
+                self.paid_by = None
+            
+            if not self.party_type:
+                self.party = None
+            
+            if self.attachments:
+                existing = []
+                for v in self.attachments:
+                    if not v.file or v.file in existing:
+                        self.attachments.remove(v)
+                    else:
+                        existing.append(v.file)
     
     
     def validate(self):
@@ -50,6 +76,8 @@ class Expense(Document):
             error(_("The expense item is mandatory"))
         if not self.required_by:
             error(_("The required by date is mandatory"))
+        elif getdate(self.required_by) < getdate():
+            error(_("The minimum required by date is today"))
         if not self.currency:
             error(_("The currency is mandatory"))
         if flt(self.cost) <= 0:
@@ -78,15 +106,15 @@ class Expense(Document):
     
     
     def check_changes(self):
-        if not self.is_new() and cint(self.is_requested):
+        if cint(self.is_requested):
             self.load_doc_before_save()
             old = self.get_doc_before_save()
             keys = [
                 "company", "expense_item", "required_by", "description",
-                "currency", "paid_by", "project"
+                "currency", "paid_by", "project", "party_type", "party"
             ]
             for k in keys:
-                if self.get(k) != old.get(k):
+                if str(self.get(k)) != str(old.get(k)):
                     error(_("The expense cannot be modified after adding it to an expenses request"))
             
             if (

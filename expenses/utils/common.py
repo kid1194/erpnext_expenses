@@ -91,15 +91,19 @@ def get_cached_doc(dt, name=None, for_update=False):
     return frappe.get_cached_doc(dt, name, for_update=for_update)
 
 
-def get_cached_value(dt, name, field):
-    val = frappe.get_cached_value(dt, name, field)
+def get_cached_value(dt, filters, field):
+    val = None
+    if isinstance(filters, str):
+        val = frappe.get_cached_value(dt, filters, field)
     if not val:
-        val = frappe.get_value(dt, filters={"name": name}, fieldname=field)
+        as_dict = 1 if isinstance(field, list) : 0
+        val = frappe.db.get_value(dt, filters, field, as_dict=as_dict)
     if val and isinstance(val, list):
         val = val.pop()
     if not val:
-        error(_("Unable to get get the value of {0} from {1} with id {2}").format(
-            field, dt, name
+        error(_("Unable to get get the value or values of {0} from {1}, filtered by {2}").format(
+            to_json_if_valid(field), dt,
+            filters.keys() if isinstance(filters, dict) else "name"
         ))
     return val
 

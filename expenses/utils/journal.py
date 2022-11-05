@@ -23,6 +23,7 @@ def enqueue_journal_entry(expenses_entry):
     )
 
 
+## Self
 def make_journal_entry(expenses_entry):
     entry = get_entry_data(expenses_entry)
     
