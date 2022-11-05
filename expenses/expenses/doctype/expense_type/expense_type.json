@@ -78,8 +78,7 @@
    "fieldname": "expense_accounts",
    "fieldtype": "Table",
    "label": "Expense Accounts",
-   "options": "Expense Account",
-   "mandatory_depends_on": "eval:!doc.is_group"
+   "options": "Expense Account"
   },
   {
    "fieldname": "lft",
