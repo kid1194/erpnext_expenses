@@ -81,9 +81,9 @@ class Expense(Document):
         if not self.currency:
             error(_("The currency is mandatory"))
         if flt(self.cost) <= 0:
-            error(_("The cost is mandatory and must be greater than zero"))
+            error(_("The cost is mandatory"))
         if flt(self.qty) <= 0:
-            error(_("The quantity is mandatory and must be greater than zero"))
+            error(_("The quantity is mandatory"))
         if cint(self.is_paid) and not self.paid_by:
             error(_("The paid by is mandatory"))
         if self.party_type and not self.party:

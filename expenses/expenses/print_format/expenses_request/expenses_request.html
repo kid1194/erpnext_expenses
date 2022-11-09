@@ -1,75 +1,96 @@
 {%- from "templates/print_formats/standard_macros.html" import add_header -%}
+<style>
+    .table {
+        table-layout: auto;
+        margin-bottom: 0;
+    }
+    .table th,
+    .table td {
+        vertical-align: middle;
+        white-space: nowrap;
+        text-align: center;
+        width: auto;
+    }
+    .table th.w-15,
+    .table td.w-15 {
+        width: 15%;
+    }
+    .table th.fit,
+    .table td.fit {
+        width: 1%;
+    }
+    .subheader {
+        font-size: 1.1rem;
+    }
+</style>
 <div class="page-break">
     {%- if not doc.get("print_heading") and not doc.get("select_print_heading")
         and doc.set("select_print_heading", _("Expenses Request")) -%}{%- endif -%}
     {{ add_header(0, 1, doc, letter_head, no_letterhead, print_settings) }}
-    {%- for fcol, scol in (
-        ((_("Name"), doc.name), (_("Creator"), doc.owner)),
-        ((_("Company"), doc.company), (_("Posting Date"), frappe.utils.format_date(doc.posting_date))),
-    ) -%}
-    <div class="row">
-        <div class="col-xs-3 col-md-2">
-            <label class="text-left strong">{{ fcol[0] }}</label>
-        </div>
-        <div class="col-xs-3 col-md-4">{{ fcol[1] }}</div>
-        <div class="col-xs-3 col-md-2">
-            <label class="text-left strong">{{ scol[0] }}</label>
-        </div>
-        <div class="col-xs-3 col-md-4">{{ scol[1] }}</div>
-    </div>
-    {%- endfor -%}
-    <hr/>
-    <div class="row">
-        <div class="col-xs-12 strong">{{ _("Expenses") }}</div>
-    </div>
-    <div class="row">
-        <div class="col-xs-12">
-            <table class="table table-bordered table-condensed">
+    <div class="row my-4">
+        <div class="col-12">
+            <table class="table table-sm table-borderless table-condensed">
+                {%- for fcol, scol in (
+                    ((_("Name"), doc.name), (_("Date"), frappe.format_date(doc.posting_date))),
+                    ((_("Company"), doc.company), (_("Status"),  _(doc.status))),
+                ) -%}
                 <tr>
-                    <th>{{ _("Expense") }}</th>
-                    <th>{{ _("Expense Item") }}</th>
-                    <th>{{ _("Description") }}</th>
-                    <th class="text-center">{{ _("Total") }}</th>
-                    <th class="text-center">{{ _("Is Advance") }}</th>
-                </tr>
-                {% for ex in doc.expenses %}
-                <tr>
-                    <td>{{ ex.expense }}</td>
-                    <td>{{ ex.expense_item }}</td>
-                    <td>{{ ex.description }}</td>
-                    <td class="text-center">{{ ex.get_formatted("total") }}</td>
-                    <td class="text-center">{{ _("Yes") if cint(ex.is_advance) else _("No") }}</td>
+                    <td scope="row" class="fit text-left font-weight-bold">{{ fcol[0] }}</td>
+                    <td class="fit">:</td>
+                    <td>{{ fcol[1] }}</td>
+                    <td class="fit text-left font-weight-bold">{{ scol[0] }}</td>
+                    <td class="fit">:</td>
+                    <td>{{ scol[1] }}</td>
                 </tr>
                 {%- endfor -%}
             </table>
         </div>
     </div>
-    {% if doc.remarks %}
-    <div class="row mt-2">
-        <div class="col-xs-12 col-md-4">
-            <label class="text-left strong">{{ _("Remarks") }}</label>
-        </div>
-        <div class="col-xs-12 col-md-8 text-justify">{{ doc.remarks }}</div>
-    </div>
-    {% endif %}
-    {% if doc.reviewer %}
     <hr/>
-    <div class="row">
-        <div class="col-xs-3 col-md-2">
-            <label class="text-left strong">{{ _("Reviewer") }}</label>
-        </div>
-        <div class="col-xs-3 col-md-4">{{ doc.reviewer }}</div>
-        <div class="col-xs-3 col-md-2">
-            <label class="text-left strong">{{ _("Status") }}</label>
-        </div>
-        <div class="col-xs-3 col-md-4">{{ doc.status }}</div>
+    <div class="row mt-4">
+        <div class="col-12 display-4 subheader">{{ _("Expenses") }}</div>
     </div>
-    <div class="row">
-        <div class="col-xs-3 col-md-2">
-            <label class="text-left strong">{{ _("Date") }}</label>
+    <div class="row my-4">
+        <div class="col-12">
+            <table class="table table-sm table-bordered table-condensed">
+                <tr>
+                    <th scope="col" class="font-weight-bold text-left">{{ _("Expense") }}</th>
+                    <th scope="col" class="font-weight-bold text-left">{{ _("Expense Item") }}</th>
+                    <th scope="col" class="font-weight-bold">{{ _("Description") }}</th>
+                    <th scope="col" class="fit font-weight-bold">{{ _("Total") }}</th>
+                    <th scope="col" class="fit font-weight-bold">{{ _("Is Advance") }}</th>
+                    <th scope="col" class="fit font-weight-bold">{{ _("Required By") }}</th>
+                </tr>
+                {% set expenses = frappe.get_all('Expense', filters={'name': ["in", [v.expense for v in doc.expenses]]}, fields=["name", "expense_item", "description", "total", "is_advance", "required_by"]) %}
+                {% for exp in expenses %}
+                
+                <tr>
+                    <td scope="row" class="text-left">{{ exp.name }}</td>
+                    <td class="text-left">{{ exp.expense_item }}</td>
+                    <td class="text-justify">{{ exp.description }}</td>
+                    <td class="fit">{{ frappe.format(exp.total, {"fieldtype": "Currency"}) }}</td>
+                    <td class="fit">{{ _("Yes") if exp.is_advance else _("No") }}</td>
+                    <td class="fit">{{ frappe.format_date(exp.required_by) }}</td>
+                </tr>
+                {% endfor %}
+            </table>
         </div>
-        <div class="col-xs-3 col-md-4">{{ frappe.utils.format_date(doc.modified) }}</div>
-        <div class="col-xs-6 col-md-6"></div>
+    </div>
+    {% if doc.remarks %}
+    <hr/>
+    <div class="row my-4">
+        <div class="col-12">
+            <label class="display-4 subheader">{{ _("Remarks") }}</label>
+        </div>
+        <div class="col-12 mt-2 text-justify">
+            {{ doc.remarks }}
+        </div>
     </div>
     {% endif %}
+    <hr/>
+    <div class="row my-4">
+        <div class="col-12">
+            <label class="display-4 subheader">{{ doc.owner }}</label>
+        </div>
+    </div>
 </div>

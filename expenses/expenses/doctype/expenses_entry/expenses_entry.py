@@ -15,14 +15,14 @@ from expenses.utils import (
     get_cached_value,
     get_mode_of_payment_data,
     get_current_exchange_rate,
-    cancel_request,
+    reject_request,
     enqueue_journal_entry
 )
 
 
 class ExpensesEntry(Document):
     def before_validate(self):
-        if self.company:
+        if self.docstatus == 0 and self.company:
             
             if self.mode_of_payment:
                 if not self.payment_account or not self.payment_currency:
@@ -37,15 +37,20 @@ class ExpensesEntry(Document):
                 self.exchange_rate = get_current_exchange_rate(
                     self.payment_currency, company_currency, self.posting_date
                 )
+                self.total_in_account_currency = 0
             
             if self.expenses:
                 for v in self.expenses:
                     if v.account and not v.account_currency:
                         v.account_currency = get_cached_value("Account", v.account, "account_currency")
                     if v.account_currency and not flt(v.exchange_rate):
-                        v.exchange_rate = get_current_exchange_rate(
+                        v.exchange_rate = flt(get_current_exchange_rate(
                             v.account_currency, company_currency, self.posting_date
-                        )
+                        ))
+                        v.cost = 0
+                        self.total_in_account_currency = 0
+                        self.total = 0
+                        
                     if flt(v.cost_in_account_currency) and not flt(v.cost):
                         v.cost = flt(flt(v.cost_in_account_currency) * flt(v.exchange_rate))
                     if self.default_project and not v.project:
@@ -102,7 +107,7 @@ class ExpensesEntry(Document):
     def on_cancel(self):
         clear_document_cache(self.doctype, self.name)
         is self.expenses_request_ref:
-            cancel_request(self.expenses_request_ref)
+            reject_request(self.expenses_request_ref)
     
     
     def on_trash(self):

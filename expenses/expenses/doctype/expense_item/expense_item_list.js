@@ -11,9 +11,4 @@ frappe.provide("frappe.listview_settings");
 
 frappe.listview_settings['Expense Item'] = {
     hide_name_column: true,
-    get_indicator: function(doc) {
-        return cint(doc.disabled)
-            ? [__('Disabled'), 'red', 'disabled,=,Yes']
-            : [__('Enabled'), 'green', 'disabled,=,No'];
-    },
 };

@@ -18,17 +18,19 @@ frappe.treeview_settings['Expense Type'] = {
     get_tree_nodes: E.path('get_type_children'),
     add_tree_node: E.path('add_type_node'),
     onload: function(treeview) {
-        var settings = frappe.treeview_settings['Expense Type'];
+        var settings = frappe.treeview_settings[treeview.doctype];
         settings.treeview = treeview;
         settings.ET = {
-            qe: E.doc_dialog('Expense Type', 'Add New', 'blue'),
+            qe: E.doc_dialog(treeview.doctype, 'Add New', 'blue'),
             rows: [],
             companies: E.unique_array(),
         };
         settings.ET.qe
-            .extend('treeview', treeview)
-            .extend('doctype', treeview.doctype)
-            .extend('ET', settings.ET)
+            .extend({
+                'treeview': treeview,
+                'doctype': treeview.doctype,
+                'ET': settings.ET,
+            })
             .remove_fields(['disabled', 'parent_type'])
             .remove_properties([
                 'in_preview', 'in_list_view', 'in_filter', 'in_standard_filter',
@@ -37,19 +39,10 @@ frappe.treeview_settings['Expense Type'] = {
                 'translatable',
             ])
             .set_fields_properties({
-                is_group: {
-                    change: function() {
-                        if (!this || !this.get_value || !this.set_df_property) return;
-                        let val = cint(this.get_value('is_group'));
-                        this.set_df_property('expense_accounts', 'read_only', val ? 1 : 0);
-                        this.set_df_property('expense_accounts', 'reqd', val ? 0 : 1);
-                        this.set_df_property('expense_accounts', 'bold', val ? 0 : 1);
-                    },
-                },
                 company: {
                     get_query: function() {
                         var ET = this && this.ET;
-                        if (this && this.get_field && ET) {
+                        if (ET && this.get_field) {
                             let table = this.get_field('expense_accounts');
                             if (table && table.grid && table.grid.get_data) {
                                 let data = table.grid.get_data();
@@ -76,53 +69,55 @@ frappe.treeview_settings['Expense Type'] = {
                         return {filters};
                     },
                     change: function() {
-                        if (!this || !this.get_field) return;
-                        let table = this.get_field('expense_accounts');
-                        if (!table || !table.grid || !table.grid.get_row) return;
-                        let last = table.grid.get_row(-1);
-                        if (!last || !last.get_field) return;
-                        let field = last.get_field('company');
-                        if (!field || !field.get_value) return;
-                        let name = last.doc && last.doc.name || (last.doc && last.doc.idx || null),
-                        company = field.get_value();
+                        if (!this || !this.get_child_value) return;
+                        let company = this.get_child_value('expense_accounts', -1, 'company');
                         if (company == null) return;
-                        var ET = this.ET;
-                        if (ET && ET.companies.has(company)) {
-                            if (field.df) field.df.invalid = 1;
-                            field.set_value('');
-                            field.set_invalid();
-                            field.refresh && field.refresh();
-                            field.refresh_input && field.refresh_input();
-                            company = '';
-                        }
                         if (!company) {
-                            last.toggle_editable && last.toggle_editable('account', 0);
-                            last.get_field('account').set_value('');
+                            let row = this.get_row('expense_accounts', -1);
+                            row && row.toggle_editable && row.toggle_editable('account', 0);
+                            this.set_child_value('expense_accounts', -1, 'account', '');
                             return;
                         }
+                        var ET = this.ET;
+                        if (ET && ET.companies.has(company)) {
+                            this.set_child_invalid(
+                                'expense_accounts', -1, 'company',
+                                __('The expense account for {0} already exist', [company])
+                            );
+                            return;
+                        }
+                        this.set_child_valid('expense_accounts', -1, 'company');
+                        let name = this.get_row_name('expense_accounts', -1);
                         ET && ET.companies.rpush(company, name);
                         if (name && ET) ET.rows.push(name);
                     },
                 },
                 account: {
-                    get_query: function(doc, cdt, cdn) {
+                    get_query: function() {
                         var filters = {
                             is_group: 0,
                             root_type: 'Expense',
                         };
-                        if (this && this.get_field) {
-                            let table = this.get_field('expense_accounts');
-                            if (table && table.grid && table.grid.get_row) {
-                                let last = table.grid.get_row(-1);
-                                if (last && last.get_field) {
-                                    let field = last.get_field('company');
-                                    if (field && field.get_value) {
-                                        filters.company = field.get_value();
-                                    }
-                                }
-                            }
+                        if (this && this.get_child_value) {
+                            let company = this.get_child_value('expense_accounts', -1, 'company');
+                            if (company) filters.company = company;
                         }
                         return {filters};
+                    },
+                    change: function() {
+                        if (!this || !this.get_child_value) return;
+                        let account = this.get_child_value('expense_accounts', -1, 'account'),
+                        company = this.get_child_value('expense_accounts', -1, 'company');
+                        if (account == null || company == null) return;
+                        if (!account && company) {
+                            this.set_child_value('expense_accounts', -1, 'account', '');
+                            this.set_child_invalid(
+                                'expense_accounts', -1, 'account',
+                                __('Please select a company first')
+                            );
+                        } else {
+                            this.set_child_valid('expense_accounts', -1, 'account');
+                        }
                     },
                 },
             })
@@ -167,7 +162,7 @@ frappe.treeview_settings['Expense Type'] = {
     },
     post_render: function(treeview) {
         treeview.page.set_primary_action(__('New'), function() {
-            frappe.treeview_settings['Expense Type'].ET.qe
+            frappe.treeview_settings[treeview.doctype].ET.qe
                 .set_title('Add New')
                 .show();
         }, 'add');

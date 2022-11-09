@@ -3,7 +3,7 @@ class UniqueArray {
         this._d = E.is_arr(data) ? E.clone(data) : [];
         this._r = {};
     }
-    length() {
+    get length() {
         return this._d.length;
     }
     index(v) {
@@ -13,7 +13,7 @@ class UniqueArray {
         return (v != null && this.index(v) >= 0) || (r != null && this._r[r] != null);
     }
     push(v, r) {
-        if (!this.has(v, r)) {
+        if (v != null && !this.has(v, r)) {
             this._d.push(v);
             if (r != null) this._r[r] = v;
         }
@@ -30,7 +30,8 @@ class UniqueArray {
                     if (this._r[k] === v) return this.del(v, k);
                 }
             }
-            if (this.has(v)) this._d.del(v);
+            let idx = this.index(v);
+            if (idx >= 0) this._d.splice(idx, 1);
         }
         if (r != null) {
             if (v == null && this._r[r] != null) {
@@ -49,8 +50,8 @@ class UniqueArray {
         return list;
     }
     clear() {
-        this._d = [];
-        this._r = {};
+        E.clear(this._d);
+        E.clear(this._r);
         return this;
     }
 }

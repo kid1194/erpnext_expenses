@@ -21,21 +21,22 @@ _TYPE_ACCOUNTS = "expense_accounts"
 ## Expense Type Tree
 @frappe.whitelist()
 def get_type_children(doctype, parent, is_root=False):
-    fields = [
-        "name as value",
-        "is_group as expandable",
-        _TYPE_PARENT + " as parent"
-    ]
-    filters = [
-        ["docstatus", "<", 2],
-        [
-            "ifnull(`{0}`,\"\")".format(_TYPE_PARENT),
-            "=",
-            "" if is_root else parent
+    return frappe.get_list(
+        _TYPE,
+        fields=[
+            "name as value",
+            "is_group as expandable",
+            _TYPE_PARENT + " as parent"
+        ],
+        filters=[
+            ["docstatus", "<", 2],
+            [
+                "ifnull(`{0}`,\"\")".format(_TYPE_PARENT),
+                "=",
+                "" if is_root else parent
+            ]
         ]
-    ]
-
-    return frappe.get_list(doctype, fields=fields, filters=filters)
+    )
 
 
 ## Expense Type Tree
@@ -90,6 +91,7 @@ def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
         .where(pdoc.rgt.gt(doc.rgt))
         .orderby(doc.lft, order=Order.desc))
     qry = qry.where(Criterion.any(
+        doc.parent_type.isnull(),
         doc.parent_type == "",
         doc.parent_type.isin(parent_qry)
     ))
@@ -97,10 +99,8 @@ def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
     if (is_not := filters.get("is_not")):
         qry = qry.where(doc.name != is_not)
     
-    if filters.get("is_group") == 1:
-        qry = qry.where(doc.is_group == 1)
-    else:
-        qry = qry.where(doc.is_group == 0)
+    is_group = 1 if filters.get("is_group") == 1 else 0
+    qry = qry.where(doc.is_group == is_group)
     
     data = qry.run(as_dict=as_dict)
     

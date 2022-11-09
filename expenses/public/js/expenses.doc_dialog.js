@@ -48,7 +48,7 @@ class ExpensesDocDialog {
                 }
             }, this);
             var callback = E.fn(function() {
-                tasks.clear();
+                E.clear(tasks);
                 this._make();
             }, this);
             if (tasks.length) {
@@ -86,6 +86,18 @@ class ExpensesDocDialog {
         }, this));
         return this;
     }
+    prepend_field(field) {
+        if (!this._ready) return this._on_make('prepend_field', arguments);
+        if (E.is_obj(field)) {
+            this._fields.splice(1, 0, field);
+            let name = field.fieldname;
+            if (!this._fields_by_name[name]) {
+                this._fields_by_name[name] = this._fields_by_ref.length;
+                this._fields_by_ref.push(field);
+            }
+        }
+        return this;
+    }
     remove_field(name) {
         if (!this._ready) return this._on_make('remove_field', arguments);
         this._fields = this._fields.filter(function(f) { return f.fieldname !== name; });
@@ -97,7 +109,7 @@ class ExpensesDocDialog {
     }
     remove_fields(names) {
         if (!this._ready) return this._on_make('remove_fields', arguments);
-        this._fields = this._fields.filter(function(f) { return names.indexOf(f.fieldname) < 0; });
+        this._fields = this._fields.filter(function(f) { return !E.has(names, f.fieldname); });
         E.each(names, function(n) {
             if (this._fields_by_name[n]) {
                 this._fields_by_ref.splice(this._fields_by_name[n], 1);
@@ -144,29 +156,27 @@ class ExpensesDocDialog {
         return this;
     }
     _on_ready(fn, args) {
-        this.__on_ready.push((function() {
+        this.__on_ready.push(E.fn(function() {
             if (args) this[fn].apply(this, args);
             else this[fn].call(this);
-        }).bind(this));
+        }, this));
         return this;
     }
     set_primary_action(label, callback) {
         if (!this._ready) return this._on_ready('set_primary_action', arguments);
-        callback = callback.bind(this);
-        this._dialog.set_primary_action(__(label), callback);
+        this._dialog.set_primary_action(__(label), E.fn(callback, this));
         return this;
     }
     set_secondary_action(label, callback) {
         if (!this._ready) return this._on_ready('set_secondary_action', arguments);
         this._dialog.set_secondary_action_label(__(label));
-        callback = callback.bind(this);
-        this._dialog.set_secondary_action(callback);
+        this._dialog.set_secondary_action(E.fn(callback, this));
         return this;
     }
     add_custom_action(label, callback, type, position) {
         if (!this._ready) return this._on_ready('add_custom_action', arguments);
         let pos = ['start', 'center', 'end'];
-        if (type && pos.indexOf(type) >= 0) {
+        if (type && E.has(pos, type)) {
             position = type;
             type = null;
         }
@@ -182,8 +192,7 @@ class ExpensesDocDialog {
         if (position === pos[0]) primary.parent().prepend(btn);
         else if (position === pos[2]) primary.parent().append(btn);
         else if (position === pos[1]) primary.after(btn);
-        callback = callback.bind(this);
-        btn.on('click', callback);
+        btn.on('click', E.fn(callback, this));
         return this;
     }
     _apply_field_properties(name) {
@@ -205,7 +214,7 @@ class ExpensesDocDialog {
         this._ready = true;
         if (this.__on_make.length) {
             frappe.run_serially(this.__on_make)
-            .finally((function() { this.__on_make.clear(); }).bind(this));
+            .finally(E.fn(function() { E.clear(this.__on_make); }, this));
         }
         this._dialog = new frappe.ui.Dialog({
             title: __(this._title),
@@ -214,7 +223,7 @@ class ExpensesDocDialog {
         });
         if (this.__on_ready.length) {
             frappe.run_serially(this.__on_ready)
-            .finally((function() { this.__on_ready.clear(); }).bind(this));
+            .finally(E.fn(function() { E.clear(this.__on_ready); }, this));
         }
         let f = this._dialog.get_field('error_message');
         if (f && f.$wrapper) {
@@ -264,9 +273,36 @@ class ExpensesDocDialog {
         this._dialog.set_values(values);
         return this;
     }
+    get_row(table, idx) {
+        let t = this.get_field(table);
+        return t && t.grid && t.grid.get_row ? t.get_row(idx) : null;
+    }
+    get_row_name(table, idx) {
+        let f = this.get_row(table, idx);
+        return (f && f.doc && (f.doc.name || f.doc.idx)) || null;
+    }
+    get_child_value(table, idx, name) {
+        let f = this.get_row(table, idx);
+        if (f && f.get_field) f = f.get_field(name);
+        return f && f.get_value && f.get_value();
+    }
+    set_child_value(table, idx, name, val) {
+        let f = this.get_row(table, idx);
+        if (f && f.get_field) f = f.get_field(name);
+        if (f && f.set_value) f.set_value(val);
+        return this;
+    }
     set_invalid(name, error) {
-        this.set_df_property(name, 'invalid', true);
+        this.set_df_property(name, 'invalid', 1);
         let f = this._dialog && this._dialog.get_field(name);
+        if (f && f.set_invalid) f.set_invalid();
+        if (E.is_str(error) && f && f.set_new_description) f.set_new_description(error);
+        return this;
+    }
+    set_child_invalid(table, idx, name, error) {
+        let f = this.get_row(table, idx);
+        if (f && f.get_field) f = f.get_field(name);
+        if (f && f.df) f.df.invalid = 1;
         if (f && f.set_invalid) f.set_invalid();
         if (E.is_str(error) && f && f.set_new_description) f.set_new_description(error);
         return this;
@@ -274,6 +310,14 @@ class ExpensesDocDialog {
     set_valid(name) {
         this.set_df_property(name, 'invalid', false);
         let f = this._dialog && this._dialog.get_field(name);
+        if (f && f.set_invalid) f.set_invalid();
+        if (f && f.set_description) f.set_description();
+        return this;
+    }
+    set_child_valid(table, idx, name) {
+        let f = this.get_row(table, idx);
+        if (f && f.get_field) f = f.get_field(name);
+        if (f && f.df) f.df.invalid = 0;
         if (f && f.set_invalid) f.set_invalid();
         if (f && f.set_description) f.set_description();
         return this;
@@ -314,7 +358,7 @@ class ExpensesDocDialog {
             frappe.ui.scroll(this.$alert);
         }
         this.set_df_property('error_message', 'hidden', 0);
-        window.setTimeout((function() { this.hide_error(); }).bind(this), 3000);
+        window.setTimeout(E.fn(function() { this.hide_error(); }, this), 3000);
     }
     hide_error() {
         if (this.$alert && this.$error) {
@@ -324,14 +368,14 @@ class ExpensesDocDialog {
         this.set_df_property('error_message', 'hidden', 1);
     }
     on_clear(fn) {
-        this.__on_clear.push(fn.bind(this));
+        this.__on_clear.push(E.fn(fn, this));
         return this;
     }
     clear() {
         if (!this._ready) return this._on_ready('clear');
         this._dialog.clear();
         frappe.run_serially(this.__on_clear)
-        .then((function() { this.__on_clear.clear(); }).bind(this));
+        .then(E.fn(function() { E.clear(this.__on_clear); }, this));
         return this;
     }
     extend(key, val) {
@@ -341,7 +385,7 @@ class ExpensesDocDialog {
             }, this);
             return this;
         }
-        if (E.is_str(key) && !this._extends.has(key)) {
+        if (E.is_str(key) && E.has(this._extends, key)) {
             this[key] = E.is_func(val) ? E.fn(val, this) : val;
             this._extends.push(key);
         }
@@ -349,7 +393,7 @@ class ExpensesDocDialog {
     }
     unset() {
         E.each(arguments, function(k) {
-            if (!this._extends.has(key)) return;
+            if (!E.has(this._extends, key)) return;
             delete this[key];
             this._extends.del(key);
         }, this);

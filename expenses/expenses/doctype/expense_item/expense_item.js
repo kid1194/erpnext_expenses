@@ -14,21 +14,11 @@ frappe.ui.form.on('Expense Item', {
         };
     },
     onload: function(frm) {
-        E.set_df_props('expense_accounts.account', {reqd: 0, bold: 0});
-        E.set_dfs_props(
-            ['expense_accounts.cost', 'expense_accounts.qty'],
-            {hidden: 0, in_list_view: 1}
-        );
-        E.set_dfs(
-            [
-                'expense_accounts.expense_section',
-                'expense_accounts.min_cost',
-                'expense_accounts.max_cost',
-                'expense_accounts.expense_column',
-                'expense_accounts.min_qty',
-                'expense_accounts.max_qty',
-            ],
-            'hidden', 0
+        E.df_properties('expense_accounts.account', {reqd: 0, bold: 0});
+        E.dfs_properties(['cost', 'qty'], {hidden: 0, in_list_view: 1}, 'expense_accounts');
+        E.dfs_property(
+            ['expense_section', 'min_cost', 'max_cost', 'expense_column', 'min_qty', 'max_qty'],
+            'hidden', 0, 'expense_accounts'
         );
         frm.set_query('expense_type', {query: E.path('search_types')});
         frm.set_query('company', 'expense_accounts', {filters: {is_group: 0}});

@@ -10,30 +10,13 @@ frappe.ui.form.on('Expenses Request', {
     setup: function(frm) {
         E.frm(frm);
         frm.E = {
+            et: {},
             add_expenses: null,
         };
     },
     onload: function(frm) {
         if (frm.is_new() || frm.doc.status === 'Draft') {
             frm.set_query('company', {filters: {is_group: 0}});
-        }
-        E.each(
-            'expense_item currency total paid_by is_advance party required_by'.split(' '),
-            function(f) { frm.add_fetch('expense', f, f, 'Expenses Request Expense'); }
-        );
-        if (frm.doc.status !== 'Draft') {
-            frm.disable_form();
-            E.set_df_props('expenses', {
-                read_only: 1,
-                in_place_edit: 1,
-                cannot_add_rows: 1,
-                cannot_delete_rows: 1,
-            });
-        } else {
-            E.set_df_props('expenses', {
-                in_place_edit: 1,
-                cannot_add_rows: 1,
-            });
         }
         if (frm.is_new()) {
             let req = E.pop_cache('make-expenses-request');
@@ -43,33 +26,117 @@ frappe.ui.form.on('Expenses Request', {
                 && E.is_arr(req.expenses) && req.expenses.length
             ) {
                 frm.set_value('company', req.company);
-                frm.toggle_enable('company', 0);
-                frm.toggle_enable('expenses', 0);
                 E.each(req.expenses, function(v) {
                     if (v && E.is_str(v)) frm.add_child('expenses', {expense: v});
                 });
-                E.refresh_df('expenses');
             }
             req = null;
         }
     },
     refresh: function(frm) {
-        if (frm.doc.status !== 'Draft') return;
-        if (!frm.E.add_expenses) {
-            let grid = frm.get_field('expenses').grid;
-            grid.wrapper.find('.grid-add-row, .grid-add-multiple-rows')
-                .addClass('hidden').prop('disabled', true).toggle(false);
-            grid.wrapper.find('.grid-footer').toggle(true);
-            frm.E.add_expenses = grid.add_custom_button(
-                __('Add Expenses'),
-                function() { frm.trigger('toggle_add_expenses'); }
-            );
-            if (!frm.doc.company) frm.E.add_expenses.prop('disabled', true);
-        }
+        if (!frm.E.et.table) frm.trigger('build_expenses_table');
     },
     company: function(frm) {
-        if (!frm.doc.company) E.clear_table('expenses');
-        frm.E.add_expenses && frm.E.add_expenses.prop('disabled', !!frm.doc.company);
+        if (!frm.doc.company) {
+            E.clear_table('expenses');
+            frm.E.et.table && frm.E.et.table.clear();
+        }
+    },
+    validate: function(frm) {
+        if (!frm.doc.expenses.length) {
+            E.error('The expenses table must have at least one expense', true);
+        }
+    },
+    build_expenses_table: function(frm) {
+        frm.E.et.dialog = E.doc_dialog('Expense', 'Expense Information', 'blue');
+        frm.E.et.dialog
+            .prepend_field({
+                fieldname: 'expense',
+                fieldtype: 'Data',
+                label: 'Expense',
+            })
+            .remove_fields(['company', 'attachments'])
+            .remove_properties([
+                'in_preview', 'in_list_view', 'in_filter', 'in_standard_filter',
+                'depends_on', 'read_only_depends_on', 'mandatory_depends_on',
+                'search_index', 'print_hide', 'report_hide', 'allow_in_quick_entry',
+                'translatable', 'reqd', 'bold',
+            ])
+            .disable_all_fields()
+            .set_secondary_action('Close', function() {
+                this.hide();
+            });
+        
+        frm.E.et.table = E.datatable(frm.get_field('expenses_html').$wrapper);
+        frm.E.et.table
+            .label('Expenses')
+            .column('expense', 'Expense')
+            .column('expense_item', 'Expense Item')
+            .column('total', 'Total')
+            .column('is_advance', 'Is Advance')
+            .column('required_by', 'Required By')
+            .action('info', 'info-circle', 'info', function(row, idx) {
+                frm.E.et.dialog
+                    .set_values(row)
+                    .show();
+            })
+            .layout('fluid')
+            .no_data_message('No Expenses')
+            .dynamic_row_height();
+            
+        if (frm.doc.status === 'Draft') {
+            frm.E.et.table
+                .action('remove', 'trash-o', 'danger', function(row, idx) {
+                    E.remove_row('expenses', row.cdn);
+                })
+                .column_checkbox()
+                .checked_row_status()
+                .on_remove(function(rows) {
+                    E.each(rows, function(v) {
+                        E.remove_row('expenses', v.cdn);
+                    });
+                })
+                .on_remove_all(function() {
+                    E.clear_table('expenses');
+                })
+                .on_add(function() {
+                    frm.trigger('toggle_add_expenses');
+                });
+        } else {
+            frm.E.et.table
+                .column_number()
+                .read_only();
+        }
+        frm.E.et.table.render();
+        frm.E.et.rows = {};
+        if (!frm.is_new()) frm.trigger('update_expenses_table');
+    },
+    update_expenses_table: function(frm) {
+        var expenses = {};
+        let names = [];
+        E.each(frm.doc.expenses, function(v) {
+            if (!frm.E.et.rows[v.expense]) {
+                expenses[v.expense] = v.name;
+                names.push(v.expense);
+            }
+        });
+        if (!names.length) return;
+        E.call(
+            'get_expenses_data',
+            {
+                expenses: names,
+            },
+            function(ret) {
+                E.each(ret, function(v) {
+                    let row = E.clone(v);
+                    row.cdn = expenses[v.name];
+                    row.expense = v.name;
+                    frm.E.et.table.add_row(row, 1);
+                    frm.E.et.rows[v.name] = 1;
+                });
+                frm.E.et.table.refresh();
+            }
+        );
     },
     toggle_add_expenses: function(frm) {
         new frappe.ui.form.MultiSelectDialog({
@@ -98,7 +165,7 @@ frappe.ui.form.on('Expenses Request', {
                     E.each(vals, function(v) {
                         if (v && E.is_str(v)) frm.add_child('expenses', {expense: v});
                     });
-                    E.refresh_df('expenses');
+                    frm.trigger('update_expenses_table');
                 }
             }
         });
@@ -151,22 +218,24 @@ frappe.ui.form.on('Expenses Request', {
             );
             return;
         }
-        if (w.action === 'Make Entry' && frm.doc.status === 'Approved') {
-            E.set_cache('make-expenses-entry', frm.doc.name);
-            frappe.set_route('Form', 'Expenses Entry');
+        if (w.action === 'Make Entry') {
+            if (frm.doc.status === 'Approved') {
+                E.set_cache('make-expenses-entry', frm.doc.name);
+                frappe.set_route('Form', 'Expenses Entry');
+            }
             return;
         }
-        let action = w.action;
-        if (action === 'Submit') action += 'ted';
-        else if (action === 'Cancel') action += 'led';
-        else if (action === 'Approve') action += 'd';
-        else if (action === 'Reject') action += 'ed';
-        action = action.toLowerCase();
+        let action = {
+            submit: ['submitted'],
+            cancel: ['cancelled'],
+            approve: ['approved', 1],
+            reject: ['rejected', 1],
+        }[w.action.toLowerCase()];
         frappe.show_alert({
             indicator: 'green',
-            message: __('Expenses request {0} successfully.', [action])
+            message: __('Expenses request {0} successfully.', [action[0]])
         });
-        if (w.action === 'Approve' || w.action === 'Reject') {
+        if (action[1]) {
             E.call(
                 'set_request_reviewer',
                 {name: frm.doc.name},

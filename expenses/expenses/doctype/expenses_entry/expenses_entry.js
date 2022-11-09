@@ -13,6 +13,18 @@ frappe.ui.form.on('Expenses Entry', {
             company_currency: frappe.boot.sysdefaults.currency,
             mops: {},
         };
+        
+        E.call('has_hrm', function(ret) {
+            if (!!ret) {
+                E.dfs_property(
+                    ['is_paid', 'paid_by', 'type_column'], 'hidden', 1, 'expenses'
+                );
+                E.df_property('type_adv_column', 'hidden', 0, 'expenses');
+            }
+        });
+        
+        if (frm.doc.docstatus > 0) return;
+        
         frm.E.update_exchange_rate = function(cdt, cdn) {
             let c = cdt && cdn ? locals[cdt][cdn].account_currency
                 : frm.doc.payment_currency;
@@ -41,8 +53,7 @@ frappe.ui.form.on('Expenses Entry', {
                 tasks.push(E.get_exchange_rate(r.account_currency, cc, function(v) {
                     if (v > flt(r.exchange_rate)) {
                         r.exchange_rate = v;
-                        r.cost = flt(flt(r.cost_in_account_currency) * r.exchange_rate);
-                        E.refresh_row_df('expenses', r.name, 'exchange_rate', 'cost');
+                        E.refresh_row_df('expenses', r.name, 'exchange_rate');
                     }
                 }));
             });
@@ -53,20 +64,14 @@ frappe.ui.form.on('Expenses Entry', {
             var cc = frm.E.company_currency;
             var total = 0;
             E.each(frm.doc.expenses, function(r) {
+                r.cost = flt(flt(r.cost_in_account_currency) * flt(r.exchange_rate));
                 total += flt(r.cost);
+                E.refresh_row_df('expenses', r.name, 'cost');
             });
             frm.set_value('total_in_payment_currency',
                 flt(total / flt(frm.doc.exchange_rate)));
             frm.set_value('total', total);
         };
-        E.call('has_hrm', function(ret) {
-            if (!!ret) {
-                E.set_dfs(
-                    ['is_paid', 'paid_by', 'type_column'], 'hidden', 1, 'expenses'
-                );
-                E.set_df('type_adv_column', 'hidden', 0, 'expenses');
-            }
-        });
     },
     onload: function(frm) {
         frm.add_fetch('mode_of_payment', 'type', 'payment_target', frm.doctype);
@@ -117,7 +122,7 @@ frappe.ui.form.on('Expenses Entry', {
                                 });
                             }
                         });
-                        E.refresh_df('company', 'expenses', 'attachments');
+                        E.refresh_df('company', 'remarks', 'expenses', 'attachments');
                         frm.E.update_exchange_rates();
                     }
                 );

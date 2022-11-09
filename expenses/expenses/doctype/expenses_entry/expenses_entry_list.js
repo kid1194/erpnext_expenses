@@ -11,4 +11,12 @@ frappe.provide("frappe.listview_settings");
 
 frappe.listview_settings['Expenses Entry'] = {
     hide_name_column: true,
+    formatters: {
+        payment_reference: function(v) {
+            return v || '';
+        },
+        clearance_date: function(v) {
+            return v || '';
+        },
+    },
 };

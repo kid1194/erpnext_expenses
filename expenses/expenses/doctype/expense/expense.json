@@ -16,6 +16,9 @@
   "main_column",
   "required_by",
   "description",
+  "dimensions_section",
+  "project",
+  "dimensions_column",
   "expense_section",
   "currency",
   "cost",
@@ -32,9 +35,6 @@
   "party_type",
   "party_column",
   "party",
-  "dimensions_section",
-  "project",
-  "dimensions_column",
   "attachments_section",
   "attachments",
   "is_requested",
@@ -110,6 +110,28 @@
    "label": "Description"
   },
   {
+   "fieldname": "dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "description": "Use only if expense is project related",
+   "options": "Project",
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "dimensions_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
    "fieldname": "expense_section",
    "fieldtype": "Section Break"
   },
@@ -176,6 +198,7 @@
    "read_only_depends_on": "eval:!doc.is_paid",
    "mandatory_depends_on": "eval:doc.is_paid",
    "only_select": 1,
+   "ignore_user_permissions": 1,
    "search_index": 1
   },
   {
@@ -210,6 +233,7 @@
    "description": "Use only if expense is party related",
    "options": "DocType",
    "only_select": 1,
+   "ignore_user_permissions": 1,
    "search_index": 1
   },
   {
@@ -226,29 +250,8 @@
    "read_only_depends_on": "eval:!doc.party_type",
    "mandatory_depends_on": "eval:doc.party_type",
    "only_select": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "dimensions_section",
-   "fieldtype": "Section Break",
-   "label": "Accounting Dimensions",
-   "collapsible": 1
-  },
-  {
-   "fieldname": "project",
-   "fieldtype": "Link",
-   "label": "Project",
-   "description": "Use only if expense is project related",
-   "options": "Project",
-   "only_select": 1,
-   "remember_last_selected_value": 1,
    "ignore_user_permissions": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "dimensions_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
   },
   {
    "fieldname": "attachments_section",
@@ -289,14 +292,38 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 0,
+   "cancel": 1,
+   "create":1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "if_owner": 1,
+   "import": 0,
+   "permlevel": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Accounts User",
+   "share": 0,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
-   "if_owner": 1,
+   "export": 1,
+   "if_owner": 0,
+   "import": 1,
+   "permlevel": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Accounts User",
+   "role": "Accounts Manager",
+   "set_user_permissions": 1,
    "share": 1,
    "submit": 1,
    "write": 1
@@ -308,6 +335,7 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "if_owner": 0,
    "import": 1,
    "permlevel": 1,
    "print": 1,
@@ -326,6 +354,7 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "if_owner": 0,
    "import": 1,
    "permlevel": 1,
    "print": 1,
@@ -339,7 +368,6 @@
   }
  ],
  "title_field": "name",
- "search_fields": "description, company, mode_of_payment, party_type, party, paid_by",
  "sort_field": "modified",
  "sort_order": "DESC",
  "default_print_format": "Expense",

@@ -15,6 +15,7 @@
   "posting_date",
   "expenses_section",
   "expenses",
+  "expenses_html",
   "remarks",
   "control_section",
   "reviewer",
@@ -68,10 +69,17 @@
   },
   {
    "fieldname": "expenses",
-   "fieldtype": "Table",
+   "fieldtype": "MultiSelect Table",
    "label": "Expenses",
    "options": "Expenses Request Expense",
-   "reqd": 1,
+   "hidden": 1,
+   "print_hide": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "expenses_html",
+   "fieldtype": "HTML",
+   "label": "Expenses",
    "bold": 1,
    "in_preview": 1
   },
@@ -96,6 +104,7 @@
    "only_select": 1,
    "allow_on_submit": 1,
    "in_list_view": 1,
+   "in_filter": 1,
    "in_standard_filter": 1,
    "ignore_user_permissions": 1,
    "search_index": 1
@@ -111,7 +120,6 @@
    "allow_on_submit": 1,
    "in_filter": 1,
    "in_standard_filter": 1,
-   "in_list_view": 1,
    "in_preview": 1,
    "search_index": 1
   },
@@ -153,7 +161,7 @@
    "permlevel": 0,
    "print": 1,
    "read": 1,
-   "report": 1,
+   "report": 0,
    "role": "Accounts User",
    "share": 0,
    "submit": 1,
@@ -176,7 +184,7 @@
    "set_user_permissions": 0,
    "share": 1,
    "submit": 0,
-   "write": 1
+   "write": 0
   },
   {
    "amend": 1,

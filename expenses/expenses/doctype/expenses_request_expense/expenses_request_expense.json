@@ -10,22 +10,9 @@
  "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
-  "main_section",
-  "expense",
-  "expense_item",
-  "currency",
-  "total",
-  "main_column",
-  "paid_by",
-  "is_advance",
-  "party",
-  "required_by"
+  "expense"
  ],
  "fields": [
-  {
-   "fieldname": "main_section",
-   "fieldtype": "Section Break"
-  },
   {
    "fieldname": "expense",
    "fieldtype": "Link",
@@ -37,74 +24,6 @@
    "in_list_view": 1,
    "search_index": 1,
    "ignore_user_permissions": 1
-  },
-  {
-   "fieldname": "expense_item",
-   "fieldtype": "Data",
-   "label": "Expense Item",
-   "fetch_from": "expense.expense_item",
-   "is_virtual": 1,
-   "read_only": 1,
-   "in_list_view": 1
-  },
-  {
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "fetch_from": "expense.currency",
-   "is_virtual": 1,
-   "hidden": 1
-  },
-  {
-   "fieldname": "total",
-   "fieldtype": "Currency",
-   "label": "Total",
-   "options": "currency",
-   "fetch_from": "expense.total",
-   "is_virtual": 1,
-   "read_only": 1,
-   "in_list_view": 1
-  },
-  {
-   "fieldname": "main_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
-  },
-  {
-   "fieldname": "paid_by",
-   "fieldtype": "Data",
-   "label": "Paid By",
-   "fetch_from": "expense.paid_by",
-   "is_virtual": 1,
-   "read_only": 1,
-   "in_list_view": 1
-  },
-  {
-   "fieldname": "is_advance",
-   "fieldtype": "Check",
-   "label": "Is Advance",
-   "fetch_from": "expense.is_advance",
-   "is_virtual": 1,
-   "read_only": 1,
-   "in_list_view": 1
-  },
-  {
-   "fieldname": "party",
-   "fieldtype": "Data",
-   "label": "Party",
-   "fetch_from": "expense.party",
-   "is_virtual": 1,
-   "read_only": 1,
-   "in_list_view": 1
-  },
-  {
-   "fieldname": "required_by",
-   "fieldtype": "Data",
-   "label": "Required By",
-   "fetch_from": "expense.required_by",
-   "is_virtual": 1,
-   "read_only": 1,
-   "in_list_view": 1
   }
  ],
  "istable": 1,

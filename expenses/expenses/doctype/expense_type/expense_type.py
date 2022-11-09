@@ -6,7 +6,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt
+from frappe.utils import cint
 from frappe.utils.nestedset import NestedSet
 
 from expenses.utils import (
@@ -20,11 +20,6 @@ from expenses.utils import (
 
 class ExpenseType(NestedSet):
     nsm_parent_field = "parent_type"
-    
-    
-    def autoname(self):
-        if self.type_name:
-            self.name = self.type_name
     
     
     def before_validate(self):
@@ -57,7 +52,7 @@ class ExpenseType(NestedSet):
     
     
     def validate_parent(self, parent_type=None):
-        if not parent_type:
+        if parent_type is None:
             parent_type = self.parent_type
         
         if parent_type:

@@ -9,8 +9,8 @@ import frappe
 
 def after_uninstall():
     data = {
-        "Role": "Expense Reviewer",
-        "Workflow": "Expense Review",
+        "Role": "Expenses Reviewer",
+        "Workflow": "Expenses Request Review",
         "Workflow State": [
             "Draft",
             "Pending",
@@ -33,28 +33,6 @@ def after_uninstall():
         else:
             for doc_name in name:
                 delete_doc(doctype, doc_name)
-
-
-def delete_accounting_workspace_link():
-    dt = "Workspace"
-    name = "Accounting"
-    if frappe.db.exists(dt, name):
-        doc = frappe.get_doc(dt, name)
-        key = "Expenses"
-        link = [v for v in doc.links if v.type == "Link" and v.label == key]
-        if not link:
-            doc.append("links", {
-                "dependencies": "",
-                "hidden": 0,
-                "is_query_report": 0,
-                "label": key,
-                "link_count": 0,
-                "link_to": key,
-                "link_type": "DocType",
-                "onboard": 0,
-                "type": "Link"
-            })
-            doc.save(ignore_permissions=True)
 
 
 def delete_doc(doctype, name):

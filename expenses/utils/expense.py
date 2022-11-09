@@ -72,7 +72,7 @@ def is_expenses_belongs_to_company(names, company):
     return len(data) == len(names)
 
 
-## Expenses Request Form
+## Expenses Request Form (MultiSelect Dialog)
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def search_company_expenses(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
@@ -150,8 +150,16 @@ def approve_request_expenses(expenses):
     ).run()
 
 
+## Expenses Request Form
 ## Self Request
+@frappe.whitelist(methods=["POST"])
 def get_expenses_data(expenses):
+    if isinstance(expenses, str):
+        expenses = parse_json_if_valid(expenses)
+    
+    if not expenses or not isinstance(expenses, list):
+        return []
+    
     doc = frappe.qb.DocType(_EXPENSE)
     data = (
         frappe.qb.from_(doc)
@@ -188,8 +196,3 @@ def get_expenses_data(expenses):
                 data[i]["attachments"] = attachments.get(data[i]["name"])
     
     return data
-
-
-# Expenses Request Expense
-def get_expense(name):
-    return get_cached_doc(_EXPENSE, name).as_dict()

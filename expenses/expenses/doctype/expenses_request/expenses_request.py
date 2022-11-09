@@ -37,7 +37,7 @@ class ExpensesRequest(Document):
         if not self.posting_date:
             error(_("The posting date is mandatory"))
         if not self.expenses:
-            error(_("The expenses table must have at least one entry"))
+            error(_("The expenses table must have at least one expense"))
         if cint(self.docstatus) == 0:
             self.validate_expenses()
         else:
@@ -57,8 +57,6 @@ class ExpensesRequest(Document):
     def before_submit(self):
         clear_document_cache(self.doctype, self.name)
         self.check_changes()
-        if self.status === "Approved":
-            self._approve_expenses = True
     
     
     def on_update(self):
@@ -88,7 +86,7 @@ class ExpensesRequest(Document):
     
     
     def on_trash(self):
-        if cint(self.docstatus) != 2:
+        if cint(self.docstatus) == 1:
             error(_("Cannot delete a non-cancelled expenses request"))
     
     

@@ -28,7 +28,11 @@ doctype_js = {
         "public/js/expenses.unique_array.js"
     ],
     "Expense": "public/js/expenses.js",
-    "Expenses Request": "public/js/expenses.js",
+    "Expenses Request": [
+        "public/js/expenses.js",
+        "public/js/expenses.doc_dialog.js"
+        "public/js/expenses.datatable.js"
+    ],
     "Expenses Entry": "public/js/expenses.js"
 }
 

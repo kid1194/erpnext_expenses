@@ -6,6 +6,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 from frappe.model.document import Document
 
 from expenses.utils import (
@@ -17,11 +18,6 @@ from expenses.utils import (
 
 
 class ExpenseItem(Document):
-    def autoname(self):
-        if self.item_name:
-            self.name = self.item_name
-    
-    
     def before_validate(self):
         if self.expense_accounts:
             existing = []
@@ -94,6 +90,6 @@ class ExpenseItem(Document):
     def on_trash(self):
         if expenses_of_item_exists(self.name):
             error(_(
-                ("{0} cannot be removed before removing its reference in other doctypes"
+                ("{0} cannot be removed before removing its reference in Expense doctype"
                     .format(self.doctype))
             ))

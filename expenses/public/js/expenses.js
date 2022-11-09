@@ -6,26 +6,8 @@
 */
 
 
-// Polyfill
-if (!Array.prototype.has)
-    Array.prototype.has = function(v) { return this.indexOf(v) >= 0; };
-if (!Array.prototype.clear)
-    Array.prototype.clear = function() { this.splice(0, this.length); };
-if (!Array.prototype.clone)
-    Array.prototype.clone = function() { return JSON.parse(JSON.stringify(this)); };
-if (!Array.prototype.del)
-    Array.prototype.del = function(v) {
-        let idx = this.indexOf(v);
-        return idx >= 0 ? this.splice(idx, 1) : null;
-    };
-
-
 // Expenses
-(function(root, factory) {
-    if (typeof define === 'function' && define.amd) define([], function() { return factory(root); });
-    else if (typeof exports === 'object') module.exports = factory(root);
-    else root.E = factory(root);
-})(typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : this), function(win) {
+window.E = (function() {
     'use strict';
     
     class Expenses {
@@ -36,25 +18,40 @@ if (!Array.prototype.del)
         }
         
         // Helpers
-        fn(v, o) {
-            o = o || this;
-            return function() { return v && v.apply(o, arguments); };
+        fn(f, b) {
+            if (!this.is_func(f)) f = null;
+            b = b || this;
+            return function() { return f && f.apply(b, arguments); };
         }
         is_func(v) { return typeof v === 'function'; }
         is_str(v) { return typeof v === 'string'; }
-        is_arr(v) { return Array.isArray(v); }
-        is_obj(v) { return $.isPlainObject(v); }
-        to_arr(v) { return Array.prototype.slice.call(v); }
+        is_num(v) { return typeof v === 'number'; }
+        is_arr(v) { return v && Array.isArray(v); }
+        is_cls(v) { return typeof v === 'object' && !this.is_arr(v); }
+        is_obj(v) { return v && $.isPlainObject(v); }
+        is_url(v) { try { new URL(v); return true; } catch(e) { return false; } }
+        to_arr(v) { return v ? Array.prototype.slice.call(v) : []; }
+        has(v, k) {
+            return (this.is_arr(v) && v.indexOf(k) >= 0) || (this.is_cls(v) && v[k] != null);
+        }
+        clear(v) {
+            if (this.is_arr(v)) v.splice(0, v.length);
+            else if (this.is_obj(v)) {
+                for (let k in v)
+                    delete v[k];
+            }
+            return v;
+        }
         each(data, fn, bind) {
             bind = bind || this;
             if (this.is_arr(data)) {
-                for (var i = 0, l = data.length; i < l; i++) {
+                for (let i = 0, l = data.length; i < l; i++) {
                     if (fn.apply(bind, [data[i], i]) === false) return this;
                 }
-                return this;
-            }
-            for (var k in data) {
-                if (fn.apply(bind, [data[k], k]) === false) return this;
+            } else if (this.is_cls(data)) {
+                for (let k in data) {
+                    if (fn.apply(bind, [data[k], k]) === false) return this;
+                }
             }
             return this;
         }
@@ -67,10 +64,10 @@ if (!Array.prototype.del)
             if (!this.is_arr(b) || !b.length) return this.is_arr(a) ? a : [];
             let ret = [];
             this.each(a, function(v) {
-                if (b.indexOf(v) < 0 && ret.indexOf(v) < 0) ret.push(v);
+                if (!this.has(b, v) && !this.has(ret, v)) ret.push(v);
             });
             this.each(b, function(v) {
-                if (a.indexOf(v) < 0 && ret.indexOf(v) < 0) ret.push(v);
+                if (!this.has(a, v) && !this.has(ret, v)) ret.push(v);
             });
             return ret;
         }
@@ -111,24 +108,26 @@ if (!Array.prototype.del)
                 if (this.is_func(args)) {
                     success = args;
                     args = null;
-                } else if (!this.is_obj(args)) args = {'data': args};
-            }
-            if (!type && args && args.type) {
-                type = args.type;
-                args = args.args || null;
+                } else if (!this.is_obj(args)) {
+                    args = {'data': args};
+                } else if (!type && this.is_obj(args) && args.type) {
+                    type = args.type;
+                    delete args.type;
+                    args = args.args || (Object.keys(args).length ? args : null);
+                }
             }
             var error = this.fn(function(e) {
                 this.log('Call error.', e);
                 this.error('Unable to make the call to {0}', [data.method]);
                 reject && reject();
-            });
-            let data = {
+            }),
+            data = {
                 type: type || (args ? 'POST' : 'GET'),
                 args: args,
                 callback: this.fn(function(ret) {
                     if (ret && this.is_obj(ret)) ret = ret.message || ret;
                     try {
-                        let val = success ? success.call(this, ret) : null;
+                        let val = this.is_func(success) ? success.call(this, ret) : null;
                         resolve && resolve(val || ret);
                     } catch(e) {
                         error(e);
@@ -136,12 +135,14 @@ if (!Array.prototype.del)
                 }),
             };
             if (this.is_str(method)) {
-                if (method.substring(0, 4) !== 'http' && method.split('.').length < 2)
-                    data.method = this.path(method);
-                else data.method = method;
+                if (!this.is_url(method)) method = this.path(method);
+                data.method = method;
             } else if (this.is_arr(method)) {
                 data.doc = method[0];
                 data.method = method[1];
+            } else {
+                this.log('The method passed is invalid', arguments);
+                return;
             }
             data.error = error;
             if (this.is_func(always)) data.always = this.fn(always);
@@ -173,20 +174,16 @@ if (!Array.prototype.del)
                     value = JSON.stringify(value);
                 } catch(e) { value = null; }
             }
-            if (value != null && this.is_str(value)) {
-                localStorage.setItem(key, value);
-            }
+            if (this.is_str(value)) localStorage.setItem(key, value);
             return this;
         }
         get_cache(key) {
             if (!this.is_str(key)) return;
             let value = localStorage.getItem(key);
-            if (value != null && this.is_str(value)) {
+            if (this.is_str(value)) {
                 try {
                     value = JSON.parse(value);
-                } catch(e) {
-                    value = null;
-                }
+                } catch(e) { value = null; }
             }
             if (this.is_obj(value) && value.__value) {
                 value = value.__value;
@@ -237,18 +234,23 @@ if (!Array.prototype.del)
         
         // Form
         frm(v) {
-            if (v) this._frm = v;
+            if (this.is_cls(v)) this._frm = v;
             return this;
         }
         refresh_df() {
-            return this.each(arguments, function(f) { this._frm.refresh_field(f); });
+            return this.each(arguments, function(f) {
+                if (this.is_arr(f)) this._frm.refresh_field.apply(this._frm, f);
+                else this._frm.refresh_field(f);
+            });
         }
         refresh_row_df() {
             let a = this.to_arr(arguments),
             t = a.shift(),
             r = a.shift();
             if (this.is_arr(a[0])) a = a.shift();
-            return this.each(a, function(f) { this._frm.refresh_field(t, r, f); });
+            return this.each(a, function(f) {
+                this._frm.refresh_field(t, r, f);
+            });
         }
         remove_row(table, cdn) {
             this._frm.get_field(table).grid.grid_rows_by_docname[cdn].remove();
@@ -270,34 +272,22 @@ if (!Array.prototype.del)
             if (k[1]) f = f.grid.get_field(k[1]);
             return f.get_precision();
         }
-        set_df(field, key, val) {
-            field = field.split('.');
-            this._frm.get_docfield(field[0], field[1])[key] = val;
-            return this;
-        }
-        set_dfs(fields, key, val) {
-            return this.each(fields, function(f) {
-                f = f.split('.');
-                this._frm.get_docfield(f[0], f[1])[key] = val;
-            });
-        }
-        set_df_props(field, props) {
-            field = field.split('.');
-            let df = this._frm.get_docfield(field[0], field[1]);
-            for (var k in props)
-                df[k] = props[k];
-            return this;
-        }
-        set_dfs_props(fields, props) {
-            for (var k in props)
-                this.set_dfs(fields, k, props[k]);
-            return this;
-        }
         df_property(field, key, val, table, cdn) {
+            if (!table && field.indexOf('.') > 0) {
+                let parts = field.split('.');
+                field = parts.pop();
+                if (parts.length > 1) cdn = parts.pop();
+                if (parts.length > 0) table = parts.pop();
+            }
             if (table && !cdn) {
                 this._frm.get_field(table).grid
                     .update_docfield_property(field, key, val);
-            } else this._frm.set_df_property(field, key, val, null, table, cdn);
+            } else if (table && cdn) {
+                this._frm.get_field(table).grid.get_row(cdn)
+                    .set_field_property(field, key, val);
+            } else {
+                this._frm.set_df_property(field, key, val);
+            }
             return this;
         }
         df_properties(field, props, table, cdn) {
@@ -316,7 +306,7 @@ if (!Array.prototype.del)
             return this;
         }
         row_df_property(table, cdn, field, key, val) {
-            this._frm.get_field(table).grid.get_row(cdn).set_field_property(field, key, val);
+            this.df_property(field, key, val, table, cdn);
             return this;
         }
         row_df_properties(table, cdn, field, props) {
@@ -367,6 +357,10 @@ if (!Array.prototype.del)
         unique_array(data) {
             return UniqueArray ? new UniqueArray(data) : null;
         }
+        // DataTable
+        datatable(wrapper) {
+            return ExpensesDataTable ? new ExpensesDataTable(wrapper) : null;
+        }
     }
     return new Expenses();
-});
+}());

@@ -38,7 +38,7 @@ frappe.ui.form.on('Expense Type', {
         });
         frm.set_query('company', 'expense_accounts', function(doc, cdt, cdn) {
             let filters = {is_group: 0};
-            if (frm.E.companies.length()) {
+            if (frm.E.companies.length) {
                 filters.name = ['not in', frm.E.companies.all()];
             }
             return {filters};
@@ -104,7 +104,7 @@ frappe.ui.form.on('Expense Type', {
             : '',
         field = frm.get_field('disabled');
         field.set_description(desc);
-        field.toggle_description(frm.doc.is_group);
+        field.toggle_description(!!frm.doc.is_group);
     },
     add_toolbar_buttons: function(frm) {
         if (frm.is_new()) return;

@@ -18,8 +18,7 @@ frappe.ui.form.on('Expense', {
         frm.E = {
             is_requested: !!cint(frm.doc.is_requested),
             is_approved: !!cint(frm.doc.is_approved),
-            is_super: (frm.is_new() && frappe.perm.has_perm(frm.doctype, 1, 'create'))
-                || (!frm.is_new() && frappe.perm.has_perm(frm.doctype, 1, 'write')),
+            is_super: frappe.perm.has_perm(frm.doctype, 1, 'create'),
             expense_data: {},
             expense_cost: null,
             expense_qty: null,
@@ -28,12 +27,12 @@ frappe.ui.form.on('Expense', {
         };
         E.call('has_hrm', function(ret) {
             if (!ret) return;
-            E.set_dfs(['is_paid', 'paid_by', 'type_column'], 'hidden', 1);
-            E.set_df('type_adv_column', 'hidden', 0);
+            E.dfs_property(['is_paid', 'paid_by', 'type_column'], 'hidden', 1);
+            E.df_property('type_adv_column', 'hidden', 0);
         });
         if (!frm.E.is_super) {
             let today = frappe.datetime.moment_to_date_obj(moment());
-            E.set_df('required_by', 'options', {startDate: today, minDate: today});
+            E.df_property('required_by', 'options', {startDate: today, minDate: today});
         }
     },
     onload: function(frm) {
@@ -45,21 +44,13 @@ frappe.ui.form.on('Expense', {
         
         frm.disable_form();
         frm.set_intro(
-            __(
-                'The expense cannot be modified after being included in '
-                + 'an Expenses Request'
-            ),
+            __('Expense cannot be modified after being requested'),
             'red'
         );
         
-        if (
-            frm.E.is_approved
-            || !frappe.model.can_create(frm.doctype)
-            || !frappe.model.can_write(frm.doctype)
-            || (frm.doc.owner && frm.doc.owner !== frappe.session.user)
-        ) return;
+        if (frm.E.is_approved) return;
         
-        E.set_df_props('attachments', {
+        E.df_properties('attachments', {
             read_only: 0,
             cannot_delete_rows: 1,
             allow_bulk_edit: 0,
@@ -67,9 +58,7 @@ frappe.ui.form.on('Expense', {
         frm.get_field('attachments').grid.df.cannot_delete_rows = 1;
     },
     refresh: function(frm) {
-        if (frm.E.is_requested) return;
-        if (frm.is_new()) frm.trigger('add_save_button');
-        else frm.trigger('add_toolbar_button');
+        if (!frm.E.is_requested && !frm.is_new()) frm.trigger('add_toolbar_button');
     },
     company: function(frm) {
         frm.trigger('set_account_data');
@@ -177,29 +166,10 @@ frappe.ui.form.on('Expense', {
             );
         }
     },
-    add_save_button: function(frm) {
-        let add_btn = __('Save & Add');
-        if (!frm.custom_buttons[add_btn]) {
-            frm.clear_custom_buttons();
-            frm.add_custom_button(add_btn, function () {
-                frm.save().then(function() {
-                    frappe.set_route('Form', frm.doctype);
-                });
-            });
-            frm.change_custom_button_type(add_btn, null, 'primary');
-        }
-    },
     add_toolbar_button: function(frm) {
-        let add_btn = __('Add New');
-        if (!frm.custom_buttons[add_btn]) {
-            frm.clear_custom_buttons();
-            frm.add_custom_button(add_btn, function () {
-                frappe.set_route('Form', frm.doctype);
-            });
-            frm.change_custom_button_type(add_btn, null, 'primary');
-        }
         let req_btn = __('Make Request');
         if (!frm.custom_buttons[req_btn]) {
+            frm.clear_custom_buttons();
             frm.add_custom_button(req_btn, function () {
                 E.set_cache('make-expenses-request', {
                     company: frm.doc.company,

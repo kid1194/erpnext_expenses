@@ -77,6 +77,12 @@ def get_request_data(name):
 
 
 ## Expenses Entry
-def cancel_request(name):
+def reject_request(name):
     if name and isinstance(name, str):
-        get_cached_doc(_REQUEST, name, True).cancel()
+        doc = get_cached_doc(_REQUEST, name, True)
+        doc.update({
+            "status": "Rejected",
+            "workflow_state": "Rejected",
+        })
+        doc.save(ignore_permissions=True)
+        doc.cancel()

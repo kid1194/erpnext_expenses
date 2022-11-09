@@ -10,7 +10,7 @@ frappe.ui.form.on('Expenses Settings', {
     refresh: function(frm) {
         frm.get_field('update_note').$wrapper.html(
             cint(frm.doc.has_update)
-            ? '<strong class="text-danger">A new version is available</strong>'
+            ? '<span class="font-weight-bold text-danger">A new version is available</span>'
             : '<span class="text-muted">No new version is found</span>'
         );
     },
@@ -19,7 +19,6 @@ frappe.ui.form.on('Expenses Settings', {
             'check_for_update',
             function(ret) {
                 frm.reload_doc();
-                E.refresh('latest_version', 'latest_check');
             }
         );
     },

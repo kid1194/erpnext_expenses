@@ -1,42 +1,72 @@
 {%- from "templates/print_formats/standard_macros.html" import add_header -%}
+<style>
+    .table {
+        table-layout: auto;
+        margin-bottom: 0;
+    }
+    .table th,
+    .table td {
+        vertical-align: middle;
+        white-space: nowrap;
+        text-align: center;
+        width: auto;
+    }
+    .table th.w-15,
+    .table td.w-15 {
+        width: 15%;
+    }
+    .table th.fit,
+    .table td.fit {
+        width: 1%;
+    }
+    .subheader {
+        font-size: 1.1rem;
+    }
+</style>
 <div class="page-break">
     {%- if not doc.get("print_heading") and not doc.get("select_print_heading")
         and doc.set("select_print_heading", _("Expense")) -%}{%- endif -%}
     {{ add_header(0, 1, doc, letter_head, no_letterhead, print_settings) }}
-    {%- for fcol, scol in (
-        ((_("Name"), doc.name), (_("Creator"), doc.owner)),
-        ((_("Company"), doc.company), (_("Posting Date"), frappe.utils.format_date(doc.creation))),
-        ((_("Expense Item"), doc.expense_item), (_("Required By"), frappe.utils.format_date(doc.required_by))),
-        ((_("Expense Account"), doc.expense_account), (_("Project"), doc.project if doc.project else _("None"))),
-        ((_("Party Type"), doc.party_type if doc.party_type else _("None")), (_("Party"), doc.party if doc.party else _("None"))),
-        ((_("Is Paid"), _("Yes") if cint(doc.is_paid) else _("No")), (_("Paid By"), doc.paid_by if doc.paid_by else _("None"))),
-    ) -%}
-    <div class="row">
-        <div class="col-xs-3 col-md-2">
-            <label class="text-left strong">{{ fcol[0] }}</label>
-        </div>
-        <div class="col-xs-3 col-md-4">{{ fcol[1] }}</div>
-        <div class="col-xs-3 col-md-2">
-            <label class="text-left strong">{{ scol[0] }}</label>
-        </div>
-        <div class="col-xs-3 col-md-4">{{ scol[1] }}</div>
-    </div>
-    {%- endfor -%}
-    <hr/>
-    <div class="row">
-        <div class="col-xs-12 strong">{{ _("Details") }}</div>
-    </div>
-    <div class="row">
-        <div class="col-xs-12">
-            <table class="table table-bordered table-condensed">
+    <div class="row my-4">
+        <div class="col-12">
+            <table class="table table-sm table-borderless table-condensed">
+                {%- for fcol, scol in (
+                    ((_("Name"), doc.name), (_("Date"), frappe.format_date(doc.creation))),
+                    ((_("Company"), doc.company), (_("Status"), _("Cancelled") if cint(doc.docstatus) == 2 else (_("Approved) if cint(doc.is_approved) else (_("Requested") if cint(doc.is_requested) else _("Pending"))))),
+                    ((_("Expense Item"), doc.expense_item), (_("Required By"), frappe.format_date(doc.required_by))),
+                    ((_("Expense Account"), doc.expense_account), (_("Project"), doc.project if doc.project else _("N/A"))),
+                    ((_("Party Type"), doc.party_type if doc.party_type else _("N/A")), (_("Party"), doc.party if doc.party else _("N/A"))),
+                    ((_("Is Paid"), _("Yes") if cint(doc.is_paid) else _("No")), (_("Paid By"), doc.paid_by if doc.paid_by else _("N/A"))),
+                ) -%}
                 <tr>
-                    <td class="strong">{{ _("Cost") }}</td>
+                    <td scope="row" class="fit text-left font-weight-bold">{{ fcol[0] }}</td>
+                    <td class="fit">:</td>
+                    <td>{{ fcol[1] }}</td>
+                    <td class="fit text-left font-weight-bold">{{ scol[0] }}</td>
+                    <td class="fit">:</td>
+                    <td>{{ scol[1] }}</td>
+                </tr>
+                {%- endfor -%}
+            </table>
+        </div>
+    </div>
+    <hr/>
+    <div class="row mt-4">
+        <div class="col-12 display-4 subheader">{{ _("Details") }}</div>
+    </div>
+    <div class="row my-4">
+        <div class="col-12">
+            <table class="table table-sm table-bordered table-condensed">
+                <tr>
+                    <td scope="row" class="table-light font-weight-bold w-15">{{ _("Cost") }}</td>
                     <td class="text-center">{{ doc.get_formatted("cost") }}</td>
-                    <td class="strong">{{ _("Quantity") }}</td>
-                    <td class="text-center">{{ doc.get_formatted("qty") }</td>
-                    <td class="strong">{{ _("Total") }}</td>
+                    <td class="table-light font-weight-bold w-15">{{ _("Quantity") }}</td>
+                    <td class="text-center">{{ doc.get_formatted("qty") }}</td>
+                </tr>
+                <tr>
+                    <td scope="row" class="table-light font-weight-bold w-15">{{ _("Total") }}</td>
                     <td class="text-center">{{ doc.get_formatted("total") }}</td>
-                    <td class="strong">{{ _("Is Advance") }}</td>
+                    <td class="table-light font-weight-bold w-15">{{ _("Is Advance") }}</td>
                     <td class="text-center">{{ _("Yes") if cint(doc.is_advance) else _("No") }}</td>
                 </tr>
             </table>
@@ -44,11 +74,19 @@
     </div>
     {% if doc.description %}
     <hr/>
-    <div class="row">
-        <div class="col-xs-12 col-md-4">
-            <label class="text-left strong">{{ _("Description") }}</label>
+    <div class="row my-4">
+        <div class="col-12">
+            <label class="display-4 subheader">{{ _("Description") }}</label>
         </div>
-        <div class="col-xs-12 col-md-8 text-justify">{{ doc.description }}</div>
+        <div class="col-12 mt-2 text-justify">
+            {{ doc.description }}
+        </div>
     </div>
     {% endif %}
+    <hr/>
+    <div class="row my-4">
+        <div class="col-12">
+            <label class="display-4 subheader">{{ doc.owner }}</label>
+        </div>
+    </div>
 </div>
