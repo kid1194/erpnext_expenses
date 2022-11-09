@@ -113,10 +113,27 @@ bench restart
 ---
 
 ### Usage
+1. **Expense Type**
+  - Create the hierarchy of expense types based on your needs
+  - Under each type, add the expense account for each company
+
+ℹ️ *Note: The expense accounts are inherited from parents if not set*
+
+2. **Expense Item**
+  - Create the expense items that reflect your expenses
+  - Add each expense item to the expense type that it belongs to
+  - Customize the expense account for each company and/or set the expense defaults (cost, quantity, etc..)
+
+ℹ️ *Note: The expense accounts are inherited from expense types if not set*
+
+3. **Expense**
+  - Create a company expense and fill the cost, quantity, etc..
+  - The attachments can be added before or after including the expense in an expenses request
 
 ---
 
 ### Issues
+If you find bug in the plugin, please create a [bug report](https://github.com/kid1194/erpnext_expenses/issues/new?assignees=&labels=&template=bug_report.md&title=) and let us know about it.
 
 ---
 
