@@ -66,16 +66,16 @@
                     <td scope="row" class="text-left">{{ exp.account }}</td>
                     <td class="text-justify">{{ exp.description }}</td>
                     <td class="fit">{{ _("Yes") if exp.is_advance else _("No") }}</td>
-                    <td class="fit">{{ exp.format("cost"}) }}</td>
+                    <td class="fit">{{ exp.get_formatted("cost"}) }}</td>
                 </tr>
                 {% endfor %}
                 <tr>
                     <td scope="row" class="text-right font-weight-bold" colspan="3">{{ _("Exchange Rate") }}</td>
-                    <td class="font-weight-bold table-dark">{{ doc.format("exchange_rate") }}</td>
+                    <td class="font-weight-bold table-dark">{{ doc.get_formatted("exchange_rate") }}</td>
                 </tr>
                 <tr>
                     <td scope="row" class="text-right font-weight-bold" colspan="3">{{ _("Total") }}</td>
-                    <td class="font-weight-bold table-dark">{{ doc.format("total") }}</td>
+                    <td class="font-weight-bold table-dark">{{ doc.get_formatted("total") }}</td>
                 </tr>
             </table>
         </div>

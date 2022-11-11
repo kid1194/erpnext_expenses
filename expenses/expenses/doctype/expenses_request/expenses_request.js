@@ -2,7 +2,7 @@
 *  ERPNext Expenses © 2022
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
-*  Licence: Please refer to license.txt
+*  Licence: Please refer to LICENSE file
 */
 
 
@@ -32,8 +32,6 @@ frappe.ui.form.on('Expenses Request', {
             }
             req = null;
         }
-    },
-    refresh: function(frm) {
         if (!frm.E.et.table) frm.trigger('build_expenses_table');
     },
     company: function(frm) {
@@ -109,7 +107,7 @@ frappe.ui.form.on('Expenses Request', {
         }
         frm.E.et.table.render();
         frm.E.et.rows = {};
-        if (!frm.is_new()) frm.trigger('update_expenses_table');
+        if (frm.doc.expenses.length) frm.trigger('update_expenses_table');
     },
     update_expenses_table: function(frm) {
         var expenses = {};
@@ -139,7 +137,11 @@ frappe.ui.form.on('Expenses Request', {
         );
     },
     toggle_add_expenses: function(frm) {
-        new frappe.ui.form.MultiSelectDialog({
+        if (frm.E.et.select_dialog) {
+            frm.E.et.select_dialog.dialog.show();
+            return;
+        }
+        frm.E.et.select_dialog = new frappe.ui.form.MultiSelectDialog({
             doctype: 'Expense',
             target: frm,
             add_filters_group: 0,
@@ -160,6 +162,7 @@ frappe.ui.form.on('Expenses Request', {
                     filters: filters,
                 };
             },
+            primary_action_label: 'Add',
             action: function(vals) {
                 if (E.is_arr(vals) && vals.length) {
                     E.each(vals, function(v) {
@@ -169,6 +172,7 @@ frappe.ui.form.on('Expenses Request', {
                 }
             }
         });
+        frm.E.et.select_dialog.dialog.get_secondary_btn().addClass('hide');
     },
     before_workflow_action: function(frm) {
         if (!frm.selected_workflow_action || frm.doc.reviewer) return;

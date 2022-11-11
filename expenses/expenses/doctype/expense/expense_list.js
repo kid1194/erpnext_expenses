@@ -2,11 +2,12 @@
 *  ERPNext Expenses © 2022
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
-*  Licence: Please refer to license.txt
+*  Licence: Please refer to LICENSE file
 */
 
 
 frappe.provide('frappe.listview_settings');
+frappe.provide('frappe.model');
 frappe.provide('frappe.datetime');
 frappe.provide('frappe.perm');
 
@@ -301,10 +302,10 @@ frappe.listview_settings['Expense'] = {
         name: function(v, df, doc) {
             let html = [];
             if (doc.party_type && doc.party) {
-                html.push('<small class="text-mute mr-4">' + __(doc.party_type) + ': ' + doc.party + '</small>');
+                html.push('<small class="text-muted mr-4">' + __(doc.party_type) + ': ' + doc.party + '</small>');
             }
             if (frappe.listview_settings.Expense.QE._has_hrm && doc.paid_by) {
-                html.push('<small class="text-mute mr-4">' + __('Paid By') + ': ' + doc.paid_by + '</small>');
+                html.push('<small class="text-muted mr-4">' + __('Paid By') + ': ' + doc.paid_by + '</small>');
             }
             html = v + (html.length ? '<br/>' + html.join('') : '');
             return html;

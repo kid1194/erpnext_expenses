@@ -68,7 +68,7 @@
                     <td scope="row" class="text-left">{{ exp.name }}</td>
                     <td class="text-left">{{ exp.expense_item }}</td>
                     <td class="text-justify">{{ exp.description }}</td>
-                    <td class="fit">{{ frappe.format(exp.total, {"fieldtype": "Currency"}) }}</td>
+                    <td class="fit">{{ exp.get_formatted("total") }}</td>
                     <td class="fit">{{ _("Yes") if exp.is_advance else _("No") }}</td>
                     <td class="fit">{{ frappe.format_date(exp.required_by) }}</td>
                 </tr>

@@ -2,7 +2,7 @@
 *  ERPNext Expenses © 2022
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
-*  Licence: Please refer to license.txt
+*  Licence: Please refer to LICENSE file
 */
 
 
@@ -138,6 +138,16 @@ class ExpensesDocDialog {
         }, this);
         return this;
     }
+    _apply_field_properties(name) {
+        var field = this.get_field_by_name(name);
+        if (field && E.is_obj(this._properties[name])) {
+            E.each(this._properties[name], function(v, k) {
+                if (v && E.is_func(v)) v = E.fn(v, this);
+                field[k] = v;
+            }, this);
+            delete this._properties[name];
+        }
+    }
     remove_properties(data) {
         if (!this._ready) return this._on_make('remove_properties', arguments);
         E.each(this._fields_by_ref, function(f) {
@@ -147,12 +157,9 @@ class ExpensesDocDialog {
     }
     sort_fields(fields) {
         if (!this._ready) return this._on_make('sort_fields', arguments);
-        var new_fields = {};
-        E.each(this._fields, function(f, i) {
-            let idx = fields.indexOf(f.fieldname);
-            if (idx >= 0) new_fields[idx] = f;
+        this._fields.sort(function(a, b) {
+            return fields.indexOf(a.fieldname) - fields.indexOf(b.fieldname);
         });
-        this._fields = Object.values(new_fields);
         return this;
     }
     _on_ready(fn, args) {
@@ -194,16 +201,6 @@ class ExpensesDocDialog {
         else if (position === pos[1]) primary.after(btn);
         btn.on('click', E.fn(callback, this));
         return this;
-    }
-    _apply_field_properties(name) {
-        var field = this.get_field_by_name(name);
-        if (field && E.is_obj(this._properties[name])) {
-            E.each(this._properties[name], function(v, k) {
-                if (v && E.is_func(v)) v = E.fn(v, this);
-                field[k] = v;
-            }, this);
-            delete this._properties[name];
-        }
     }
     get_field_by_name(name) {
         let idx = this._fields_by_name[name];

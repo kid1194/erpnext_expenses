@@ -13,16 +13,16 @@
   "account",
   "main_column",
   "description",
+  "dimensions_section",
+  "project",
+  "dimensions_column",
+  "cost_center",
   "expense_section",
   "account_currency",
   "cost_in_account_currency",
   "expense_column",
   "exchange_rate",
   "cost",
-  "dimensions_section",
-  "project",
-  "dimensions_column",
-  "cost_center",
   "type_section",
   "is_paid",
   "paid_by",
@@ -62,6 +62,38 @@
    "fieldtype": "Small Text",
    "label": "Description",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "description": "Use only if expense is project related",
+   "options": "Project",
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "dimensions_column",
+   "fieldtype": "Column Break",
+   "width": "50%"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "only_select": 1,
+   "remember_last_selected_value": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
   },
   {
    "fieldname": "expense_section",
@@ -113,38 +145,6 @@
    "bold": 1,
    "read_only": 1,
    "print_hide": 1
-  },
-  {
-   "fieldname": "dimensions_section",
-   "fieldtype": "Section Break",
-   "label": "Accounting Dimensions",
-   "collapsible": 1
-  },
-  {
-   "fieldname": "project",
-   "fieldtype": "Link",
-   "label": "Project",
-   "description": "Use only if expense is project related",
-   "options": "Project",
-   "only_select": 1,
-   "remember_last_selected_value": 1,
-   "ignore_user_permissions": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "dimensions_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
-  },
-  {
-   "fieldname": "cost_center",
-   "fieldtype": "Link",
-   "label": "Cost Center",
-   "options": "Cost Center",
-   "only_select": 1,
-   "remember_last_selected_value": 1,
-   "ignore_user_permissions": 1,
-   "search_index": 1
   },
   {
    "fieldname": "type_section",

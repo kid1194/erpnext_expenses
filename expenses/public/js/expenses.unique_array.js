@@ -1,3 +1,11 @@
+/*
+*  ERPNext Expenses © 2022
+*  Author:  Ameen Ahmed
+*  Company: Level Up Marketing & Software Development Services
+*  Licence: Please refer to LICENSE file
+*/
+
+
 class UniqueArray {
     constructor(data) {
         this._d = E.is_arr(data) ? E.clone(data) : [];
