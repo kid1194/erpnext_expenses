@@ -1,9 +1,9 @@
 ---
 name: Feature request
 about: Suggest an idea for this project
-title: ''
-labels: ''
-assignees: ''
+title: "[REQ]: "
+labels: enhancement
+assignees: kid1194
 
 ---
 
