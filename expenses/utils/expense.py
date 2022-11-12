@@ -91,6 +91,7 @@ def search_company_expenses(doctype, txt, searchfield, start, page_len, filters,
         )
         .where(doc.company == filters.get("company"))
         .where(doc.is_requested == 0)
+        .where(doc.owner == frappe.session.user)
         .where(doc.docstatus != 2))
     
     qry = filter_search(doc, qry, _EXPENSE, txt, doc.name, "name")
@@ -180,6 +181,7 @@ def get_expenses_data(expenses):
         )
         .where(doc.name.isin(expenses))
         .where(doc.is_requested == 1)
+        .where(doc.owner == frappe.session.user)
         .where(doc.docstatus != 2)
     ).run(as_dict=True)
     

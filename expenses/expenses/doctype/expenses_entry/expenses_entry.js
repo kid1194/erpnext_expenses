@@ -79,16 +79,6 @@ frappe.ui.form.on('Expenses Entry', {
             frm.read_only();
             return;
         }
-        frm.set_query('company', {filters: {is_group: 0}});
-        frm.set_query('mode_of_payment', {filters: {type: ['in', ['Cash', 'Bank']]}});
-        E.each(['default_project', 'project'], function(k, i) {
-            let fn = function() { return {company: frm.doc.company}; };
-            frm.set_query(k, i > 0 ? 'expenses' : fn, i > 0 ? fn : null);
-        });
-        E.each(['default_cost_center', 'cost_center'], function(k, i) {
-            let fn = function() { return {company: frm.doc.company}; };
-            frm.set_query(k, i > 0 ? 'expenses' : fn, i > 0 ? fn : null);
-        });
         if (frm.is_new()) {
             var request = E.pop_cache('make-expenses-entry');
             if (request && E.is_str(request)) {
@@ -129,8 +119,18 @@ frappe.ui.form.on('Expenses Entry', {
             }
             request = null;
         }
+        frm.set_query('company', {filters: {is_group: 0}});
+        frm.set_query('mode_of_payment', {filters: {type: ['in', ['Cash', 'Bank']]}});
+        E.each(['default_project', 'project'], function(k, i) {
+            let fn = function() { return {company: frm.doc.company}; };
+            frm.set_query(k, i > 0 ? 'expenses' : fn, i > 0 ? fn : null);
+        });
+        E.each(['default_cost_center', 'cost_center'], function(k, i) {
+            let fn = function() { return {company: frm.doc.company}; };
+            frm.set_query(k, i > 0 ? 'expenses' : fn, i > 0 ? fn : null);
+        });
         frm.get_field('expenses').grid.add_custom_button(
-            __('Set Exchange Rates'),
+            __('Update Exchange Rates'),
             function() {
                 let fields = [],
                 exist = [];
@@ -149,6 +149,7 @@ frappe.ui.form.on('Expenses Entry', {
                 frappe.prompt(
                     fields,
                     function(ret) {
+                        if (!ret || !E.is_cls(ret)) return;
                         E.each(frm.doc.expenses, function(v) {
                             let k = frappe.scrub(v.account_currency).toLowerCase();
                             if (!ret[k]) return;
@@ -156,7 +157,7 @@ frappe.ui.form.on('Expenses Entry', {
                             E.refresh_row_df('expenses', v.name, 'exchange_rate');
                         });
                     },
-                    __('Set Exchange Rates'),
+                    __('Update Exchange Rates'),
                     __('Save')
                 );
             },

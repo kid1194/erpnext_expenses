@@ -20,7 +20,9 @@
   "control_section",
   "reviewer",
   "status",
-  "workflow_state"
+  "workflow_state",
+  "amended_from",
+  "amendment_date"
  ],
  "fields": [
   {
@@ -136,6 +138,25 @@
    "report_hide": 1,
    "only_select": 1,
    "ignore_user_permissions": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Expenses Request",
+   "read_only": 1,
+   "hidden": 1,
+   "only_select": 1,
+   "allow_on_submit": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "amendment_date",
+   "fieldtype": "Date",
+   "label": "Amendment Date",
+   "read_only": 1,
+   "hidden": 1,
    "allow_on_submit": 1
   }
  ],

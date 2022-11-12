@@ -103,7 +103,7 @@ frappe.ui.form.on('Expense Type', {
             ? 'Disabling a group will disable all its children, groups and items'
             : '',
         field = frm.get_field('disabled');
-        field.set_description(desc);
+        field.set_new_description(__(desc));
         field.toggle_description(!!frm.doc.is_group);
     },
     add_toolbar_buttons: function(frm) {

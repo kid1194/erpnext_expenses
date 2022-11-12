@@ -23,8 +23,7 @@ def after_uninstall():
             "Submit",
             "Cancel",
             "Approve",
-            "Reject",
-            "Make Entry"
+            "Reject"
         ],
     }
     for doctype, name in data.items():

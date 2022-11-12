@@ -89,7 +89,8 @@ class Expense(Document):
         if self.party_type and not self.party:
             error(_("The party is mandatory"))
         
-        self.check_changes()
+        if cint(self.is_requested):
+            self.check_changes()
     
     
     def before_save(self):
@@ -106,21 +107,20 @@ class Expense(Document):
     
     
     def check_changes(self):
-        if cint(self.is_requested):
-            self.load_doc_before_save()
-            old = self.get_doc_before_save()
-            keys = [
-                "company", "expense_item", "required_by", "description",
-                "currency", "paid_by", "project", "party_type", "party"
-            ]
-            for k in keys:
-                if str(self.get(k)) != str(old.get(k)):
-                    error(_("The expense cannot be modified after adding it to an expenses request"))
-            
-            if (
-                flt(self.cost) != flt(old.cost) or
-                flt(self.qty) != flt(old.qty) or
-                cint(self.is_paid) != cint(old.is_paid) or
-                cint(self.is_advance) != cint(old.is_advance)
-            ):
+        self.load_doc_before_save()
+        old = self.get_doc_before_save()
+        keys = [
+            "company", "expense_item", "required_by", "description",
+            "currency", "paid_by", "project", "party_type", "party"
+        ]
+        for k in keys:
+            if str(self.get(k)) != str(old.get(k)):
                 error(_("The expense cannot be modified after adding it to an expenses request"))
+        
+        if (
+            flt(self.cost) != flt(old.cost) or
+            flt(self.qty) != flt(old.qty) or
+            cint(self.is_paid) != cint(old.is_paid) or
+            cint(self.is_advance) != cint(old.is_advance)
+        ):
+            error(_("The expense cannot be modified after adding it to an expenses request"))

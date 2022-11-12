@@ -83,6 +83,25 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "Expenses Entry",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Expenses Entry Report",
+   "link_count": 0,
+   "link_to": "Expenses Entry Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
  "modified": "2022-01-13 17:49:08.912772",

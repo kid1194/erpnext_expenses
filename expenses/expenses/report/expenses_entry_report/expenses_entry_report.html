@@ -1,0 +1,46 @@
+<h2 class="text-center">{%= __("Expenses Entry Report") %}</h2>
+
+<h3 class="text-center">{%= filters.company %}</h3>
+
+<h4 class="text-center">
+    {% if (filters.mode_of_payment) { %}
+    {%= __("Mode of Payment: ")%}{%= filters.mode_of_payment %}
+    {% } %}
+</h4>
+
+<h5 class="text-center">
+    {%= frappe.datetime.str_to_user(filters.from_date) %}
+    {%= __("to") %}
+    {%= frappe.datetime.str_to_user(filters.to_date) %}
+</h5>
+
+<hr>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th style="width: 15%">{%= __("Expenses Entry") %}</th>
+            <th class="text-center" style="width: 15%">{%= __("Mode of Payment") %}</th>
+            <th class="text-center" style="width: 10%">{%= __("Posting Date") %}</th>
+            <th class="text-center" style="width: 10%">{%= __("Total") %}</th>
+            <th class="text-center" style="width: 15%">{%= __("Payment Reference") %}</th>
+            <th class="text-center" style="width: 10%">{%= __("Clearance Date") %}</th>
+            <th class="text-center" style="width: 25%">{%= __("Remarks") %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for(var i=0, l=data.length; i<l; i++) { %}
+            <tr>
+                <td><b>{%= frappe.format(data[i].expenses_entry, {fieldtype: "Link"}) || "&nbsp;" %}</b></td>
+                <td class="text-center">{%= frappe.format(data[i].mode_of_payment, {fieldtype: "Link"}) || "&nbsp;" %}</td>
+                <td class="text-center">{%= frappe.datetime.str_to_user(data[i].posting_date) %}</td>
+                <td class="text-right">{%= format_currency(data[i].total, data[i].currency) %}</td>
+                <td class="text-center">{%= data[i].payment_reference || "&nbsp;" %}</td>
+                <td class="text-center">{%= frappe.datetime.str_to_user(data[i].clearance_date) || "&nbsp;" %}</td>
+                <td class="text-justify">{%= data[i].payment_reference %}</td>
+            </tr>
+        {% } %}
+    </tbody>
+</table>
+
+<p class="text-right text-muted">{%= __("Printed On") %}: {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}</p>

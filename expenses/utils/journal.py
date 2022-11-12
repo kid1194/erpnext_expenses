@@ -103,3 +103,14 @@ def make_journal_entry(expenses_entry):
             (_("Unable to create a Journal Entry for the expense entry {0}")
                 .format(entry.name))
         )
+
+
+## Expenses Entry
+def cancel_journal_entry(expenses_entry):
+    doctype = "Journal Entry"
+    if frappe.db.exists(doctype, {"bill_no": expenses_entry}):
+        doc = frappe.get_doc(
+            doctype,
+            {"bill_no": expenses_entry}
+        )
+        doc.cancel()

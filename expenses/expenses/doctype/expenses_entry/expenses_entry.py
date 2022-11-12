@@ -7,7 +7,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt, getdate
+from frappe.utils import flt
 
 from expenses.utils import (
     error,
@@ -15,14 +15,16 @@ from expenses.utils import (
     get_cached_value,
     get_mode_of_payment_data,
     get_current_exchange_rate,
+    process_request,
     reject_request,
-    enqueue_journal_entry
+    enqueue_journal_entry,
+    cancel_journal_entry
 )
 
 
 class ExpensesEntry(Document):
     def before_validate(self):
-        if self.docstatus == 0 and self.company:
+        if self.docstatus.is_draft() and self.company:
             
             if self.mode_of_payment:
                 if not self.payment_account or not self.payment_currency:
@@ -83,7 +85,7 @@ class ExpensesEntry(Document):
             if not self.clearance_date:
                 error(_("The reference / clearance date is mandatory"))
         
-        if cint(self.docstatus) == 0:
+        if self.docstatus.is_draft():
             self.validate_expenses()
     
     
@@ -93,6 +95,12 @@ class ExpensesEntry(Document):
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
         )
+        if self.is_new() and self.expenses_request_ref:
+            self._process_request = True
+    
+    
+    def on_update(self):
+        self.handle_request()
     
     
     def before_update_after_submit(self):
@@ -104,19 +112,21 @@ class ExpensesEntry(Document):
         enqueue_journal_entry(self.name)
     
     
+    def before_cancel(self):
+        if self.expenses_request_ref:
+            self._reject_request = True
+    
+    
     def on_cancel(self):
         clear_document_cache(self.doctype, self.name)
-        is self.expenses_request_ref:
-            reject_request(self.expenses_request_ref)
+        self.handle_request()
+        if self.docstatus.is_submitted():
+            cancel_journal_entry(self.name)
     
     
     def on_trash(self):
-        if cint(self.docstatus) != 2:
+        if not self.docstatus.is_cancelled():
             error(_("Cannot delete a non-cancelled expenses entry"))
-    
-    
-    def after_delete(self):
-        clear_document_cache(self.doctype, self.name)
     
     
     def validate_expenses(self):
@@ -153,3 +163,12 @@ class ExpensesEntry(Document):
         for v in self.expenses:
             if v.account not in old_accounts:
                 error(_("The expenses cannot be modified after submit"))
+    
+    
+    def handle_request(self):
+        if self._process_request:
+            self._process_request = False
+            process_request(self.expenses_request_ref)
+        elif self._reject_request:
+            self._reject_request = False
+            reject_request(self.expenses_request_ref)

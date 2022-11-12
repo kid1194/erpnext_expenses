@@ -26,7 +26,7 @@
    },
    {
     "allow_edit": "Accounts User",
-    "doc_status": "0",
+    "doc_status": "1",
     "is_optional_state": 0,
     "message": "Pending",
     "parent": "Expenses Request Review",
@@ -61,6 +61,18 @@
     "update_value": "Approved"
    },
    {
+    "allow_edit": "Accounts Manager",
+    "doc_status": "1",
+    "is_optional_state": 0,
+    "message": "Approved",
+    "parent": "Expenses Request Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Approved",
+    "update_field": "status",
+    "update_value": "Approved"
+   },
+   {
     "allow_edit": "Expenses Reviewer",
     "doc_status": "2",
     "is_optional_state": 0,
@@ -73,7 +85,31 @@
     "update_value": "Rejected"
    },
    {
+    "allow_edit": "Accounts Manager",
+    "doc_status": "2",
+    "is_optional_state": 0,
+    "message": "Rejected",
+    "parent": "Expenses Request Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Rejected",
+    "update_field": "status",
+    "update_value": "Rejected"
+   },
+   {
     "allow_edit": "Expenses Reviewer",
+    "doc_status": "1",
+    "is_optional_state": 1,
+    "message": "Processed",
+    "parent": "Expenses Request Review",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "state": "Processed",
+    "update_field": "status",
+    "update_value": "Processed"
+   },
+   {
+    "allow_edit": "Accounts Manager",
     "doc_status": "1",
     "is_optional_state": 1,
     "message": "Processed",
@@ -120,6 +156,17 @@
     "state": "Pending"
    },
    {
+    "action": "Approve",
+    "allow_self_approval": 0,
+    "allowed": "Accounts Manager",
+    "condition": null,
+    "next_state": "Approved",
+    "parent": "Expenses Request Review",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "state": "Rejected"
+   },
+   {
     "action": "Reject",
     "allow_self_approval": 0,
     "allowed": "Expenses Reviewer",
@@ -131,11 +178,11 @@
     "state": "Pending"
    },
    {
-    "action": "Make Entry",
+    "action": "Reject",
     "allow_self_approval": 0,
-    "allowed": "Expenses Reviewer",
+    "allowed": "Accounts Manager",
     "condition": null,
-    "next_state": "Processed",
+    "next_state": "Rejected",
     "parent": "Expenses Request Review",
     "parentfield": "transitions",
     "parenttype": "Workflow",

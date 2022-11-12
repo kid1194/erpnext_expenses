@@ -158,7 +158,8 @@ frappe.treeview_settings['Expense Type'] = {
                     function() { frappe.dom.unfreeze(); }
                 );
             })
-            .set_secondary_action('Cancel', function() { this.hide(); });
+            .set_secondary_action('Cancel', function() { this.hide(); })
+            .build();
     },
     post_render: function(treeview) {
         treeview.page.set_primary_action(__('New'), function() {

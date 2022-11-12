@@ -20,12 +20,14 @@ class ExpensesDataTable {
             disableReorderColumn: true,
             events: {},
         };
+        this._columns_ids = [];
         this._checkbox_callback = null;
         this._read_only = false;
         this._on_remove = null;
         this._on_remove_all = null;
         this._on_add = null;
         this._buttons = [];
+        this._buttons_html = '';
         this._rowsKeys = [];
         this._rows = [];
         this._rowsIdx = 0;
@@ -36,6 +38,7 @@ class ExpensesDataTable {
         return this;
     }
     column(id, label, format) {
+        if (id !== '_actions') this._columns_ids.push(id);
         let col = {
             id: id, name: __(label),
             editable: false, resizable: false,
@@ -189,12 +192,12 @@ class ExpensesDataTable {
         }
         
         if (this._buttons.length) {
-            var html = [];
+            let html = [];
             html.push('<div class="btn-group" role="group">');
             E.each(this._buttons, function(b) {
                 html.push(b.html);
                 var callback = b.callback;
-                this.$table.on('click', 'button[data-action="' + d.key + '"]', function(e) {
+                this.$table.on('click', 'button[data-action="' + b.key + '"]', function(e) {
                     e.preventDefault();
                     let idx = cint($(this).attr('data-row-idx'));
                     if (!idx) return;
@@ -204,16 +207,17 @@ class ExpensesDataTable {
                 });
             }, this);
             html.push('</div>');
-            html = html.join('');
+            this._buttons_html = html.join("\n");
             this.column('_actions', 'Actions', function(v, row, col, data) {
                 let idx = row.rowIndex || (row.meta ? row.meta.rowIndex : -1);
-                return html.replace(/\{idx\}/g, idx);
+                return me._buttons_html.replace(/\{idx\}/g, idx);
             });
         }
         
         this._table = new frappe.DataTable(this.$table.get(0), this._opt);
     }
     add_row(data, bulk) {
+        data._actions = '';
         this._rows.push(data);
         if (!bulk) this.refresh();
         return this;

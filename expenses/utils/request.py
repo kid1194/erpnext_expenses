@@ -26,33 +26,19 @@ def requests_of_expense_exists(expense):
 
 ## Expenses Request Form
 @frappe.whitelist(methods=["POST"])
-def add_request_reject_reason(name, reason):
+def add_request_rejection_comment(name, comment):
     if (
         not name or not isinstance(name, str) or
-        not reason or not isinstance(reason, str)
+        not comment or not isinstance(comment, str)
     ):
         return 0
     
-    set_request_reviewer(name)
-    (frappe.get_doc(_REQUEST, name)
+    (get_cached_doc(_REQUEST, name)
         .add_comment(
             "Workflow",
-            reason,
+            comment,
             comment_by=frappe.session.user
         ))
-    return 1
-
-
-## Expenses Request Form
-@frappe.whitelist(methods=["POST"])
-def set_request_reviewer(name):
-    if not name or not isinstance(name, str):
-        return 0
-    
-    frappe.db.set_value(
-        _REQUEST, name, 'reviewer',
-        frappe.session.user, update_modified=False
-    )
     return 1
 
 
@@ -77,12 +63,12 @@ def get_request_data(name):
 
 
 ## Expenses Entry
+def process_request(name):
+    if name and isinstance(name, str):
+        get_cached_doc(_REQUEST, name, True).process()
+
+
+## Expenses Entry
 def reject_request(name):
     if name and isinstance(name, str):
-        doc = get_cached_doc(_REQUEST, name, True)
-        doc.update({
-            "status": "Rejected",
-            "workflow_state": "Rejected",
-        })
-        doc.save(ignore_permissions=True)
-        doc.cancel()
+        get_cached_doc(_REQUEST, name, True).reject()

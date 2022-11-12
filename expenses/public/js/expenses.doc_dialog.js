@@ -47,10 +47,7 @@ class ExpensesDocDialog {
                     tasks.push(this._get_table_fields(f, name));
                 }
             }, this);
-            var callback = E.fn(function() {
-                E.clear(tasks);
-                this._make();
-            }, this);
+            var callback = function() { E.clear(tasks); };
             if (tasks.length) {
                 Promise.all(tasks).finally(callback);
             } else {
@@ -86,10 +83,11 @@ class ExpensesDocDialog {
         }, this));
         return this;
     }
-    prepend_field(field) {
+    add_field(field, start) {
         if (!this._ready) return this._on_make('prepend_field', arguments);
         if (E.is_obj(field)) {
-            this._fields.splice(1, 0, field);
+            if (start) this._fields.splice(1, 0, field);
+            else this._fields.push(field);
             let name = field.fieldname;
             if (!this._fields_by_name[name]) {
                 this._fields_by_name[name] = this._fields_by_ref.length;
@@ -206,8 +204,8 @@ class ExpensesDocDialog {
         let idx = this._fields_by_name[name];
         return idx != null ? this._fields_by_ref[idx] || null : null;
     }
-    _make() {
-        if (this._ready) return;
+    build() {
+        if (this._ready) return this;
         this._ready = true;
         if (this.__on_make.length) {
             frappe.run_serially(this.__on_make)
@@ -218,10 +216,6 @@ class ExpensesDocDialog {
             indicator: this._indicator || 'green',
             fields: this._fields,
         });
-        if (this.__on_ready.length) {
-            frappe.run_serially(this.__on_ready)
-            .finally(E.fn(function() { E.clear(this.__on_ready); }, this));
-        }
         let f = this._dialog.get_field('error_message');
         if (f && f.$wrapper) {
             f.$wrapper.append(`<div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -234,6 +228,11 @@ class ExpensesDocDialog {
             this.$error = this.$alert.find('.error-message');
             this.$alert.alert();
         }
+        if (this.__on_ready.length) {
+            frappe.run_serially(this.__on_ready)
+            .finally(E.fn(function() { E.clear(this.__on_ready); }, this));
+        }
+        return this;
     }
     set_title(text) {
         if (!this._ready) return this._on_ready('set_title', arguments);

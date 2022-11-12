@@ -14,7 +14,7 @@ frappe.listview_settings['Expenses Request'] = {
     button: {
         show: function(doc) {
             return frappe.user_roles.includes('Expenses Reviewer')
-            && doc.status === 'Approved';
+            && doc.docstatus === 1 && doc.status === 'Approved';
         },
         get_label: function(doc) {
             return __('Make Entry');

@@ -236,15 +236,24 @@ frappe.listview_settings['Expense'] = {
                 qty = flt(this.get_value('qty'));
                 this.set_value('total', flt(cost * qty));
             });
-        E.call('has_hrm', function(ret) {
-            if (!!ret) {
-                settings.QE._has_hrm = 1;
-                settings.QE
-                    .set_df_property('is_paid', 'hidden', 1)
-                    .set_df_property('paid_by', 'hidden', 1)
-                    .set_df_property('type_column', 'hidden', 1)
-                    .set_df_property('type_adv_column', 'hidden', 0);
+        (new Promise(function(resolve, reject) {
+            try {
+                E.call('has_hrm', function(ret) {
+                    if (!!ret) {
+                        settings.QE._has_hrm = 1;
+                        settings.QE
+                            .set_df_property('is_paid', 'hidden', 1)
+                            .set_df_property('paid_by', 'hidden', 1)
+                            .set_df_property('type_column', 'hidden', 1)
+                            .set_df_property('type_adv_column', 'hidden', 0);
+                    }
+                    resolve();
+                });
+            } catch(e) {
+                resolve();
             }
+        })).finally(function() {
+            settings.QE.build();
         });
         list.page.add_inner_button(
             __('Quick Add'), function() { frappe.listview_settings.Expense.QE.show(); },
