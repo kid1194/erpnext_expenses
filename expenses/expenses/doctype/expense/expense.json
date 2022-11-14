@@ -26,11 +26,11 @@
   "qty",
   "total",
   "type_section",
-  "is_paid",
-  "paid_by",
-  "type_column",
   "is_advance",
-  "type_adv_column",
+  "is_paid",
+  "type_column",
+  "paid_by",
+  "expense_claim",
   "party_section",
   "party_type",
   "party_column",
@@ -184,29 +184,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "is_paid",
-   "fieldtype": "Check",
-   "label": "Is Paid",
-   "default": "0",
-   "search_index": 1
-  },
-  {
-   "fieldname": "paid_by",
-   "fieldtype": "Link",
-   "label": "Paid By",
-   "options": "User",
-   "read_only_depends_on": "eval:!doc.is_paid",
-   "mandatory_depends_on": "eval:doc.is_paid",
-   "only_select": 1,
-   "ignore_user_permissions": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "type_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
-  },
-  {
    "fieldname": "is_advance",
    "fieldtype": "Check",
    "label": "Is Advance",
@@ -215,10 +192,39 @@
    "search_index": 1
   },
   {
-   "fieldname": "type_adv_column",
+   "fieldname": "is_paid",
+   "fieldtype": "Check",
+   "label": "Is Paid",
+   "default": "0",
+   "search_index": 1
+  },
+  {
+   "fieldname": "type_column",
    "fieldtype": "Column Break",
-   "width": "50%",
-   "hidden": 1
+   "width": "50%"
+  },
+  {
+   "fieldname": "paid_by",
+   "fieldtype": "Link",
+   "label": "Paid By",
+   "options": "Employee",
+   "read_only_depends_on": "eval:!doc.is_paid",
+   "mandatory_depends_on": "eval:doc.is_paid",
+   "only_select": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "expense_claim",
+   "fieldtype": "Link",
+   "label": "Expense Claim",
+   "options": "Expense",
+   "hidden": 1,
+   "read_only_depends_on": "eval:!doc.is_paid",
+   "mandatory_depends_on": "eval:doc.is_paid",
+   "only_select": 1,
+   "ignore_user_permissions": 1,
+   "search_index": 1
   },
   {
    "fieldname": "party_section",

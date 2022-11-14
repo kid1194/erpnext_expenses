@@ -25,7 +25,8 @@ class ExpenseType(NestedSet):
     def before_validate(self):
         if self.expense_accounts:
             existing = []
-            for v in self.expense_accounts:
+            for i in range(len(self.expense_accounts)):
+                v = self.expense_accounts[i]
                 if not v.company or not v.account or v.company in existing:
                     self.expense_accounts.remove(v)
                 else:

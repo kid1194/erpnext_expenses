@@ -15,6 +15,7 @@ from expenses.utils import (
     get_cached_value,
     get_mode_of_payment_data,
     get_current_exchange_rate,
+    with_expense_claim,
     process_request,
     reject_request,
     enqueue_journal_entry,
@@ -27,7 +28,7 @@ class ExpensesEntry(Document):
         if self.docstatus.is_draft() and self.company:
             
             if self.mode_of_payment:
-                if not self.payment_account or not self.payment_currency:
+                if not self.payment_account or not self.payment_target or not self.payment_currency:
                     mop_data = get_mode_of_payment_data(self.mode_of_payment, self.company)
                     self.payment_account = mop_data["account"]
                     self.payment_target = mop_data["type"]
@@ -42,10 +43,17 @@ class ExpensesEntry(Document):
                 self.total_in_account_currency = 0
             
             if self.expenses:
-                for v in self.expenses:
-                    if v.account and not v.account_currency:
+                _with_expense_claim = with_expense_claim()
+                for i in range(len(self.expenses)):
+                    v = self.expenses[i]
+                    if not v.account or flt(v.cost_in_account_currency) <= 0:
+                        self.expenses.remove(v)
+                        continue
+                    
+                    if not v.account_currency:
                         v.account_currency = get_cached_value("Account", v.account, "account_currency")
-                    if v.account_currency and not flt(v.exchange_rate):
+                    
+                    if not flt(v.exchange_rate):
                         v.exchange_rate = flt(get_current_exchange_rate(
                             v.account_currency, company_currency, self.posting_date
                         ))
@@ -53,12 +61,21 @@ class ExpensesEntry(Document):
                         self.total_in_account_currency = 0
                         self.total = 0
                         
-                    if flt(v.cost_in_account_currency) and not flt(v.cost):
+                    if not flt(v.cost):
                         v.cost = flt(flt(v.cost_in_account_currency) * flt(v.exchange_rate))
-                    if self.default_project and not v.project:
-                        v.project = self.default_project
-                    if self.default_cost_center and not v.cost_center:
-                        v.cost_center = self.default_cost_center
+                    
+                    if not cint(v.is_paid):
+                        v.paid_by = None
+                        v.expense_claim = None
+                    
+                    if v.party_type and not v.party:
+                        v.party_type = None
+                    
+                    if not v.project:
+                        v.project = self.default_project or None
+                    
+                    if not v.cost_center:
+                        v.cost_center = self.default_cost_center or None
             
                 if not flt(self.total):
                     total = 0
@@ -68,6 +85,15 @@ class ExpensesEntry(Document):
                 
                 if not flt(self.total_in_account_currency):
                     self.total_in_account_currency = flt(flt(self.total) / flt(self.exchange_rate))
+        
+        if self.attachments:
+            existing = []
+            for i in range(len(self.attachments)):
+                v = self.attachments[i]
+                if not v.file or v.file in existing:
+                    self.attachments.remove(v)
+                else:
+                    existing.append(v.file)
     
     
     def validate(self):
@@ -130,39 +156,51 @@ class ExpensesEntry(Document):
     
     
     def validate_expenses(self):
-        accounts = [v.account for v in self.expenses]
-        for account in accounts:
-            if get_cached_value("Account", account, "company") != self.company:
+        _with_expense_claim = with_expense_claim()
+        for v in self.expenses:
+            if get_cached_value("Account", v.account, "company") != self.company:
                 error(_("The expense account {0} does not belong to {0}").format(
-                    account, self.company
+                    v.account, self.company
                 ))
+            elif cint(v.is_paid) and not v.paid_by:
+                error(_("The paid by for expense account \"{0}\" is mandatory").format(v.account))
+            elif cint(v.is_paid) and _with_expense_claim:
+                if not v.expense_claim:
+                    error(_("The expense claim for expense account \"{0}\" is mandatory").format(v.account))
+                elif not frappe.db.exists('Expense Claim', {
+                    "name": v.expense_claim,
+                    "employee": v.paid_by,
+                    "company": self.company,
+                    "is_paid": 1,
+                    "status": "Paid",
+                    "docstatus": 1
+                }):
+                    error(_("The expense claim for expense account \"{0}\" is invalid").format(v.account))
     
     
     def check_changes(self):
         self.load_doc_before_save()
         old = self.get_doc_before_save()
-        keys = [
-            "company", "mode_of_payment", "posting_date",
-            "default_project", "default_cost_center",
-            "payment_account", "payment_currency",
-            "payment_reference", "clearance_date",
-            "expenses_request_ref"
-        ]
-        for k in keys:
-            if self.get(k) != old.get(k):
+        as_len = ["expenses", "attachments"]
+        as_flt = ["exchange_rate", "total"]
+        for k, v in old.items():
+            if (
+                (k in as_len and len(v) != len(self.get(k))) or
+                (k in as_flt and flt(v) != flt(self.get(k))) or
+                (v != self.get(k))
+            ):
                 error(_("The expenses entry cannot be modified after submit"))
         
-        if (
-            len(self.expenses) != len(old.expenses) or
-            flt(self.exchange_rate) != flt(old.exchange_rate) or
-            flt(self.total) != flt(old.total)
-        ):
-            error(_("The expenses entry cannot be modified after submit"))
-        
-        old_accounts = [v.account for v in old.expenses]
-        for v in self.expenses:
-            if v.account not in old_accounts:
-                error(_("The expenses cannot be modified after submit"))
+        as_flt = ["cost_in_account_currency", "exchange_rate", "cost"]
+        as_int = ["is_advance", "is_paid"]
+        for i in range(len(self.expenses)):
+            for k, v in self.expenses[i].items():
+                if (
+                    (k in as_flt and flt(v) != flt(old.expenses[i].get(k))) or
+                    (k in as_int and cint(v) != cint(old.expenses[i].get(k))) or
+                    (v != old.expenses[i].get(k))
+                ):
+                    error(_("The expenses entry cannot be modified after submit"))
     
     
     def handle_request(self):

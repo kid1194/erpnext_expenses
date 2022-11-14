@@ -31,14 +31,21 @@ frappe.treeview_settings['Expense Type'] = {
                 'doctype': treeview.doctype,
                 'ET': settings.ET,
             })
-            .remove_fields(['disabled', 'parent_type'])
-            .remove_properties([
+            .remove_fields('disabled', 'parent_type')
+            .replace_properties({
+                'depends_on': ['hidden', 1],
+                'read_only_depends_on': ['read_only', 1]
+            })
+            .remove_properties(
                 'in_preview', 'in_list_view', 'in_filter', 'in_standard_filter',
                 'depends_on', 'read_only_depends_on', 'mandatory_depends_on',
                 'search_index', 'print_hide', 'report_hide', 'allow_in_quick_entry',
-                'translatable',
-            ])
+                'translatable'
+            )
             .set_fields_properties({
+                is_group: {
+                    hidden: 0,
+                },
                 company: {
                     get_query: function() {
                         var ET = this && this.ET;

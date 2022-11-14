@@ -7,7 +7,13 @@
 import frappe
 
 from .attachment import get_attachments_by_parents
-from .common import parse_json_if_valid, log_error, get_cached_doc
+from .common import (
+    get_cache,
+    get_cache,
+    parse_json_if_valid,
+    log_error,
+    get_cached_doc
+)
 from .search import filter_search, prepare_data
 
 
@@ -19,15 +25,14 @@ def expenses_of_item_exists(item):
     return frappe.db.exists(_EXPENSE, {"expense_item": item})
 
 
+## Expense
 ## Expense Form
 ## Expense List
+## Expense Entry
 ## Expense Entry Form
 @frappe.whitelist()
-def has_hrm():
-    dt = "DocType"
-    has_employee = frappe.db.exists(dt, "Employee")
-    has_claim = frappe.db.exists(dt, "Expense Claim")
-    return 1 if has_employee and has_claim else 0
+def with_expense_claim():
+    return 1 if frappe.db.exists("DocType", "Expense Claim") else 0
 
 
 ## Expense List

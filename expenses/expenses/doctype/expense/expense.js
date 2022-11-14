@@ -22,23 +22,44 @@ frappe.ui.form.on('Expense', {
             expense_data: {},
             expense_cost: null,
             expense_qty: null,
-            ckey: function(c, i) { return c + '-' + i; },
             del_files: [],
         };
-        E.call('has_hrm', function(ret) {
-            if (!ret) return;
-            E.dfs_property(['is_paid', 'paid_by', 'type_column'], 'hidden', 1);
-            E.df_property('type_adv_column', 'hidden', 0);
-        });
+        
         if (!frm.E.is_super) {
             let today = frappe.datetime.moment_to_date_obj(moment());
-            E.df_property('required_by', 'options', {startDate: today, minDate: today});
+            E.df_property('required_by', 'options', {
+                startDate: today,
+                minDate: today
+            });
         }
+        
+        E.call('with_expense_claim', function(ret) {
+            if (!!ret) {
+                frm.E.with_expense_claim = true;
+                E.df_properties('expense_claim', {
+                    options: 'Expense Claim',
+                    hidden: 0,
+                });
+            }
+        });
     },
     onload: function(frm) {
         if (!frm.E.is_requested) {
             frm.set_query('company', {filters: {is_group: 0}});
             frm.set_query('expense_item', {query: E.path('search_items')});
+            if (frm.E.with_expense_claim) {
+                frm.set_query('expense_claim', function() {
+                    return {
+                        filters: {
+                            employee: frm.doc.paid_by,
+                            company: frm.doc.company,
+                            is_paid: 1,
+                            status: 'Paid',
+                            docstatus: 1,
+                        }
+                    };
+                });
+            }
             return;
         }
         
@@ -92,7 +113,7 @@ frappe.ui.form.on('Expense', {
                 frm.E.expense_qty = {min: flt(v.min_qty), max: flt(v.max_qty)};
             }
         }
-        var ckey = frm.E.ckey(company, item);
+        var ckey = [company, item].join('-');
         if (frm.E.expense_data[ckey]) {
             resolve(frm.E.expense_data[ckey]);
             return;
@@ -112,6 +133,13 @@ frappe.ui.form.on('Expense', {
                 resolve(ret);
             }
         );
+    },
+    required_by: function(frm) {
+        if (frm.E.is_super || !frm.doc.required_by) return;
+        let date = moment(),
+        format = frappe.defaultDateFormat;
+        if (cint(moment(frm.doc.required_by, format).diff(date, 'days')) < 0)
+            frm.set_value('required_by', date.format(format));
     },
     cost: function(frm) {
         if (frm.E.is_requested) return;
@@ -146,6 +174,18 @@ frappe.ui.form.on('Expense', {
         let cost = flt(frm.doc.cost),
         qty = flt(frm.doc.qty);
         frm.set_value('total', flt(cost * qty));
+    },
+    is_paid: function(frm) {
+        if (!cint(frm.doc.is_paid)) {
+            frm.set_value('paid_by', '');
+            frm.set_value('expense_claim', '');
+        }
+    },
+    paid_by: function(frm) {
+        if (!frm.doc.paid_by) frm.set_value('expense_claim', '');
+    },
+    party_type: function(frm) {
+        if (!frm.doc.party_type) frm.set_value('party', '');
     },
     validate: function(frm) {
         if (!frm.E.is_super) {

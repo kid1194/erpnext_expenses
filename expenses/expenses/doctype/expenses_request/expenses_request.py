@@ -23,8 +23,9 @@ class ExpensesRequest(Document):
         if self.docstatus.is_draft():
             if self.expenses:
                 existing = []
-                for v in self.expenses:
-                    if v.expense in existing:
+                for i in range(len(self.expenses)):
+                    v = self.expenses[i]
+                    if not v.expense or v.expense in existing:
                         self.expenses.remove(v)
                     else:
                         existing.append(v.expense)

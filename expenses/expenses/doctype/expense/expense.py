@@ -6,13 +6,14 @@
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, flt, cstr, getdate
 from frappe.model.document import Document
 
 from expenses.utils import (
     error,
     clear_document_cache,
     get_item_company_account_data,
+    with_expense_claim,
     requests_of_expense_exists
 )
 
@@ -23,46 +24,42 @@ class Expense(Document):
             if self.expense_item and self.company:
                 temp = get_item_company_account_data(self.expense_item, self.company)
                 if not self.expense_account or not self.currency:
-                    self.expense_account = temp.get("account")
-                    self.currency = temp.get("currency")
+                    self.expense_account = temp.account
+                    self.currency = temp.currency
                 
                 old_cost = flt(self.cost)
                 old_qty = flt(self.qty)
                 
-                t_cost = flt(temp.get("cost"))
-                t_min_cost = flt(temp.get("min_cost")
-                t_max_cost = flt(temp.get("max_cost")
-                if t_cost:
-                    self.cost = t_cost
-                elif t_min_cost or t_max_cost:
-                    if t_min_cost and flt(self.cost) < t_min_cost:
-                        self.cost = t_min_cost
-                    elif t_max_cost and flt(self.cost) > t_max_cost:
-                        self.cost = t_max_cost
+                if temp.cost:
+                    self.cost = temp.cost
+                elif temp.min_cost or temp.max_cost:
+                    if temp.min_cost and flt(self.cost) < temp.min_cost:
+                        self.cost = temp.min_cost
+                    elif temp.max_cost and flt(self.cost) > temp.max_cost:
+                        self.cost = temp.max_cost
                 
-                t_qty = flt(temp.get("qty"))
-                t_min_qty = flt(temp.get("min_qty")
-                t_max_qty = flt(temp.get("max_qty")
-                if t_qty:
-                    self.qty = t_qty
-                elif t_min_qty or t_max_qty:
-                    if t_min_qty and flt(self.qty) < t_min_qty:
-                        self.qty = t_min_qty
-                    elif t_max_qty and flt(self.qty) > t_max_qty:
-                        self.qty = t_max_qty
+                if temp.qty:
+                    self.qty = temp.qty
+                elif temp.min_qty or temp.max_qty:
+                    if temp.min_qty and flt(self.qty) < temp.min_qty:
+                        self.qty = temp.min_qty
+                    elif temp.max_qty and flt(self.qty) > temp.max_qty:
+                        self.qty = temp.max_qty
                 
                 if old_cost != flt(self.cost) or old_qty != flt(self.qty):
                     self.total = flt(flt(self.cost) * flt(self.qty))
             
             if not cint(self.is_paid):
                 self.paid_by = None
+                self.expense_claim = None
             
             if not self.party_type:
                 self.party = None
             
             if self.attachments:
                 existing = []
-                for v in self.attachments:
+                for i in range(len(self.attachments)):
+                    v = self.attachments[i]
                     if not v.file or v.file in existing:
                         self.attachments.remove(v)
                     else:
@@ -72,24 +69,36 @@ class Expense(Document):
     def validate(self):
         if not self.company:
             error(_("The company is mandatory"))
-        if not self.expense_item:
+        elif not self.expense_item:
             error(_("The expense item is mandatory"))
-        if not self.required_by:
+        elif not self.required_by:
             error(_("The required by date is mandatory"))
         elif getdate(self.required_by) < getdate():
             error(_("The minimum required by date is today"))
-        if not self.currency:
+        elif not self.currency:
             error(_("The currency is mandatory"))
-        if flt(self.cost) <= 0:
+        elif flt(self.cost) <= 0:
             error(_("The cost is mandatory"))
-        if flt(self.qty) <= 0:
+        elif flt(self.qty) <= 0:
             error(_("The quantity is mandatory"))
-        if cint(self.is_paid) and not self.paid_by:
+        elif cint(self.is_paid) and not self.paid_by:
             error(_("The paid by is mandatory"))
-        if self.party_type and not self.party:
+        elif cint(self.is_paid) and with_expense_claim():
+            if not self.expense_claim:
+                error(_("The expense claim is mandatory"))
+            elif not frappe.db.exists('Expense Claim', {
+                "name": self.expense_claim,
+                "employee": self.paid_by,
+                "company": self.company,
+                "is_paid": 1,
+                "status": "Paid",
+                "docstatus": 1
+            }):
+                error(_("The expense claim is invalid"))
+        elif self.party_type and not self.party:
             error(_("The party is mandatory"))
         
-        if cint(self.is_requested):
+        elif cint(self.is_requested):
             self.check_changes()
     
     
@@ -111,10 +120,11 @@ class Expense(Document):
         old = self.get_doc_before_save()
         keys = [
             "company", "expense_item", "required_by", "description",
-            "currency", "paid_by", "project", "party_type", "party"
+            "currency", "paid_by", "expense_claim", "project",
+            "party_type", "party"
         ]
         for k in keys:
-            if str(self.get(k)) != str(old.get(k)):
+            if cstr(self.get(k)) != cstr(old.get(k)):
                 error(_("The expense cannot be modified after adding it to an expenses request"))
         
         if (

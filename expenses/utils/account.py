@@ -39,6 +39,7 @@ def get_company_account_data_by_parent(company, parent, parenttype, parentfield)
     
     data = data.pop(0) if data and isinstance(data, list) else None
     if data:
+        data = frappe._dict(data)
         for k in ["cost", "qty"]:
             data[k] = flt(data[k])
             data["min_" + k] = flt(data["min_" + k])

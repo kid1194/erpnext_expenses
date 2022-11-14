@@ -72,9 +72,9 @@ def get_item_company_account_data(item, company):
             _ITEM_ACCOUNTS
         )):
             if isinstance(item_data, dict):
-                item_data.account = data.account
-                item_data.currency = data.currency
-                data.update(item_data)
+                for k, v in item_data.items():
+                    if v:
+                        data[k] = v;
     
     else:
         account = get_cached_value("Company", company, "default_expense_account")
@@ -82,12 +82,12 @@ def get_item_company_account_data(item, company):
         data = frappe._dict({
             "account": account,
             "currency": currency,
-            "cost": 0,
-            "min_cost": 0,
-            "max_cost": 0,
-            "qty": 0,
-            "min_qty": 0,
-            "max_qty": 0,
+            "cost": 0.0,
+            "min_cost": 0.0,
+            "max_cost": 0.0,
+            "qty": 0.0,
+            "min_qty": 0.0,
+            "max_qty": 0.0,
         })
     
     set_cache(_ITEM, ckey, data)

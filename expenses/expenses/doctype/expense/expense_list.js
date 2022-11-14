@@ -35,16 +35,22 @@ frappe.listview_settings['Expense'] = {
         settings.QE.extend('is_super', !!frappe.perm.has_perm(list.doctype, 1, 'create'));
         if (!settings.QE.is_super) {
             let today = frappe.datetime.moment_to_date_obj(moment());
-            settings.QE.set_df_property('required_by', 'options',
-                {startDate: today, minDate: today});
+            settings.QE.set_df_property('required_by', 'options', {
+                startDate: today,
+                minDate: today
+            });
         }
         settings.QE
-            .remove_properties([
+            .replace_properties({
+                'depends_on': ['hidden', 1],
+                'read_only_depends_on': ['read_only', 1]
+            })
+            .remove_properties(
                 'in_preview', 'in_list_view', 'in_filter', 'in_standard_filter',
                 'depends_on', 'read_only_depends_on', 'mandatory_depends_on',
                 'search_index', 'print_hide', 'report_hide', 'allow_in_quick_entry',
-                'translatable',
-            ])
+                'translatable'
+            )
             .set_fields_properties({
                 company: {
                     get_query: {filters: {is_group: 0}},
@@ -106,7 +112,22 @@ frappe.listview_settings['Expense'] = {
                             reqd: val ? 1 : 0,
                             read_only: val ? 0 : 1,
                         });
-                        if (!val) this.set_value('paid_by', '');
+                        if (this.with_expense_claim) {
+                            this.set_df_properties('expense_claim', {
+                                reqd: val ? 1 : 0,
+                                read_only: val ? 0 : 1,
+                            });
+                        }
+                        if (!val) {
+                            this.set_value('paid_by', '');
+                            this.set_value('expense_claim', '');
+                        }
+                    },
+                },
+                paid_by: {
+                    change: function() {
+                        if (!this.get_value('paid_by'))
+                            this.set_value('expense_claim', '');
                     },
                 },
                 party_type: {
@@ -236,25 +257,29 @@ frappe.listview_settings['Expense'] = {
                 qty = flt(this.get_value('qty'));
                 this.set_value('total', flt(cost * qty));
             });
-        (new Promise(function(resolve, reject) {
-            try {
-                E.call('has_hrm', function(ret) {
-                    if (!!ret) {
-                        settings.QE._has_hrm = 1;
-                        settings.QE
-                            .set_df_property('is_paid', 'hidden', 1)
-                            .set_df_property('paid_by', 'hidden', 1)
-                            .set_df_property('type_column', 'hidden', 1)
-                            .set_df_property('type_adv_column', 'hidden', 0);
-                    }
-                    resolve();
-                });
-            } catch(e) {
-                resolve();
+        
+        E.call('with_expense_claim', function(ret) {
+            if (!!ret) {
+                settings.QE.set_field_properties('expense_claim', {
+                    options: 'Expense Claim',
+                    hidden: 0,
+                    get_query: function() {
+                        return {
+                            filters: {
+                                employee: this.get_value('paid_by'),
+                                company: this.get_value('company'),
+                                is_paid: 1,
+                                status: 'Paid',
+                                docstatus: 1,
+                            }
+                        };
+                    },
+                })
+                .extend('with_expense_claim', true);
             }
-        })).finally(function() {
             settings.QE.build();
         });
+        
         list.page.add_inner_button(
             __('Quick Add'), function() { frappe.listview_settings.Expense.QE.show(); },
             null, 'primary'

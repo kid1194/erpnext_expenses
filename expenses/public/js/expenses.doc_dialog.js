@@ -89,7 +89,7 @@ class ExpensesDocDialog {
             if (start) this._fields.splice(1, 0, field);
             else this._fields.push(field);
             let name = field.fieldname;
-            if (!this._fields_by_name[name]) {
+            if (this._fields_by_name[name] == null) {
                 this._fields_by_name[name] = this._fields_by_ref.length;
                 this._fields_by_ref.push(field);
             }
@@ -99,17 +99,18 @@ class ExpensesDocDialog {
     remove_field(name) {
         if (!this._ready) return this._on_make('remove_field', arguments);
         this._fields = this._fields.filter(function(f) { return f.fieldname !== name; });
-        if (this._fields_by_name[name]) {
+        if (this._fields_by_name[name] != null) {
             this._fields_by_ref.splice(this._fields_by_name[name], 1);
             delete this._fields_by_name[name];
         }
         return this;
     }
-    remove_fields(names) {
+    remove_fields() {
         if (!this._ready) return this._on_make('remove_fields', arguments);
-        this._fields = this._fields.filter(function(f) { return !E.has(names, f.fieldname); });
-        E.each(names, function(n) {
-            if (this._fields_by_name[n]) {
+        var args = arguments;
+        this._fields = this._fields.filter(function(f) { return !E.has(args, f.fieldname); });
+        E.each(args, function(n) {
+            if (this._fields_by_name[n] != null) {
                 this._fields_by_ref.splice(this._fields_by_name[n], 1);
                 delete this._fields_by_name[n];
             }
@@ -146,10 +147,33 @@ class ExpensesDocDialog {
             delete this._properties[name];
         }
     }
-    remove_properties(data) {
+    replace_properties(data) {
+        if (!this._ready) return this._on_make('replace_properties', arguments);
+        E.each(data, function(v, k) {
+            if (E.is_arr(v)) {
+                E.each(this._fields_by_ref, function(f) {
+                    if (f[k] != null) {
+                        delete f[k];
+                        f[v[0]] = v[1];
+                    }
+                });
+                return;
+            }
+            let idx = this._fields_by_name[k];
+            if (idx == null) return;
+            var f = this._fields_by_ref[idx];
+            E.each(v, function(v, p) {
+                delete f[p];
+                f[v[0]] = v[1];
+            });
+        }, this);
+        return this;
+    }
+    remove_properties() {
         if (!this._ready) return this._on_make('remove_properties', arguments);
+        var args = arguments;
         E.each(this._fields_by_ref, function(f) {
-            E.each(data, function(k) { delete f[k]; });
+            E.each(args, function(k) { delete f[k]; });
         });
         return this;
     }
