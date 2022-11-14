@@ -44,10 +44,15 @@ def add_expense(data):
     if not data or not isinstance(data, dict):
         return 0
     
+    for k in [
+        "doctype", "owner", "name",
+        "creation", "modified", "modified_by"
+    ]:
+        if k in data:
+            del data[k]
+    
     try:
-        (frappe.new_doc(_EXPENSE)
-            .update(data)
-            .insert(ignore_permissions=True, ignore_mandatory=True))
+        frappe.new_doc(_EXPENSE).update(data).insert()
     except Exception as exc:
         log_error(exc)
         return 0
@@ -165,6 +170,8 @@ def get_expenses_data(expenses):
     
     if not expenses or not isinstance(expenses, list):
         return []
+    
+    expenses = [str(v) for v in expenses]
     
     doc = frappe.qb.DocType(_EXPENSE)
     data = (
