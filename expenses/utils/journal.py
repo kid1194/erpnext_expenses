@@ -46,11 +46,8 @@ def make_journal_entry(expenses_entry):
         error(_("Payment Reference and Date are Required for all non-cash payments"))
         return 0
     
-    date = today()
     multi_currency = 0
     accounts = []
-    can_claim = frappe.db.exists("DocType", "Expense Claim")
-    claims = []
     for v in entry.expenses:
         if not multi_currency and v.account_currency != entry.payment_currency:
             multi_currency = 1
@@ -69,32 +66,6 @@ def make_journal_entry(expenses_entry):
             "user_remark": cstr(v.description),
         })
         
-        if can_claim and cint(v.is_paid) and v.paid_by:
-            claims.append({
-                "naming_series": "",
-                "posting_date": date,
-                "employee": v.paid_by,
-                "company": entry.company,
-                "payable_account": v.payable_account,
-                "expense_approver": "",
-                "approval_status": "Approved",
-                "expenses": [
-                    {
-                        "expense_date": date,
-                        "expense_type": "",
-                        "default_account": v.account,
-                        "amount": flt(v.cost),
-                        "cost_center": cstr(v.cost_center),
-                    }
-                ],
-                "taxes": [],
-                "cost_center": cstr(v.cost_center),
-                "project": cstr(v.project),
-                "remark": cstr(v.description),
-                #"is_paid": 1,
-                #"mode_of_payment": entry.mode_of_payment,
-            })
-        
     if entry.payment_target == "Cash":
         entry.payment_reference = ""
         entry.clearance_date = ""
@@ -112,7 +83,7 @@ def make_journal_entry(expenses_entry):
             .update({
                 "title": entry.name,
                 "voucher_type": _JOURNAL,
-                "posting_date": date,
+                "posting_date": today(),
                 "company": entry.company,
                 "bill_no": entry.name,
                 "accounts": accounts,
