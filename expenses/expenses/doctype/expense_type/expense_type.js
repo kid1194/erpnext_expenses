@@ -52,6 +52,7 @@ frappe.ui.form.on('Expense Type', {
                 }
             };
         });
+        frm.add_fetch('account', 'account_currency', 'currency', 'Expense Account');
         if (!frm.is_new()) return;
         frm.get_field('expense_accounts').grid.add_custom_button(
             __('Add All Companies'),

@@ -42,10 +42,10 @@ class ExpenseType(NestedSet):
     def validate(self):
         if not self.type_name:
             error(_("The name is mandatory"))
-        if not cint(self.is_group) and not self.parent_type:
+        elif frappe.db.exists(self.doctype, self.type_name):
+            error(_("{0} already exist").format(self.type_name))
+        elif not cint(self.is_group) and not self.parent_type:
             error(_("The parent type is mandatory"))
-        if frappe.db.exists(self.doctype, self.name):
-            error(_("{0} already exist").format(self.name))
         
         self.validate_parent()
         self.validate_group_or_item()

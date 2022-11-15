@@ -33,17 +33,17 @@ class Expense(Document):
                 if temp.cost:
                     self.cost = temp.cost
                 elif temp.min_cost or temp.max_cost:
-                    if temp.min_cost and flt(self.cost) < temp.min_cost:
+                    if temp.min_cost and old_cost < temp.min_cost:
                         self.cost = temp.min_cost
-                    elif temp.max_cost and flt(self.cost) > temp.max_cost:
+                    elif temp.max_cost and old_cost > temp.max_cost:
                         self.cost = temp.max_cost
                 
                 if temp.qty:
                     self.qty = temp.qty
                 elif temp.min_qty or temp.max_qty:
-                    if temp.min_qty and flt(self.qty) < temp.min_qty:
+                    if temp.min_qty and old_qty < temp.min_qty:
                         self.qty = temp.min_qty
-                    elif temp.max_qty and flt(self.qty) > temp.max_qty:
+                    elif temp.max_qty and old_qty> temp.max_qty:
                         self.qty = temp.max_qty
                 
                 if old_cost != flt(self.cost) or old_qty != flt(self.qty):
@@ -71,10 +71,8 @@ class Expense(Document):
             error(_("The company is mandatory"))
         elif not self.expense_item:
             error(_("The expense item is mandatory"))
-        elif not self.required_by:
+        elif not self.required_by or not getdate(self.required_by):
             error(_("The required by date is mandatory"))
-        elif getdate(self.required_by) < getdate():
-            error(_("The minimum required by date is today"))
         elif not self.currency:
             error(_("The currency is mandatory"))
         elif flt(self.cost) <= 0:

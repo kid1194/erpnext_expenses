@@ -300,6 +300,7 @@ frappe.listview_settings['Expense'] = {
                     if (company === v.company) expenses.push(v.name);
                 });
                 var callback = function() {
+                    list.clear_checked_items();
                     E.set_cache('make-expenses-request', {company, expenses});
                     frappe.router.set_route('Form', 'Expenses Request');
                 };

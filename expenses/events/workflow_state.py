@@ -22,15 +22,18 @@ def on_trash(doc, method=None):
 
 
 def evaluate(doc, action):
-    name = "Expenses Request Review"
+    names = [
+        "Draft", "Pending", "Cancelled",
+        "Approved", "Rejected", "Processed"
+    ]
     if (
         (
             action == "renamed" and
-            doc.get_doc_before_save().name == name and
-            doc.name != name
+            doc.get_doc_before_save().name in names and
+            doc.name not in names
         ) or
-        (action != "renamed" and doc.name == name)
+        (action != "renamed" and doc.name in names)
     ):
         error(_(
-            "This workflow belongs to the Expenses plugin and should not be {0}."
+            "This workflow state belongs to the Expenses plugin and should not be {0}."
         ).format(action))

@@ -67,6 +67,16 @@ doc_events = {
         "before_save": "expenses.events.workflow.before_save",
         "before_rename": "expenses.events.workflow.before_rename",
         "on_trash": "expenses.events.workflow.on_trash",
+    },
+    "Workflow Action Master": {
+        "before_save": "expenses.events.workflow_action_master.before_save",
+        "before_rename": "expenses.events.workflow_action_master.before_rename",
+        "on_trash": "expenses.events.workflow_action_master.on_trash",
+    },
+    "Workflow State": {
+        "before_save": "expenses.events.workflow_state.before_save",
+        "before_rename": "expenses.events.workflow_state.before_rename",
+        "on_trash": "expenses.events.workflow_state.on_trash",
     }
 }
 

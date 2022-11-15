@@ -35,11 +35,11 @@ frappe.ui.form.on('Expenses Entry', {
                     if (v <= flt(locals[cdt][cdn].exchange_rate)) return;
                     locals[cdt][cdn].exchange_rate = v;
                     E.refresh_row_df('expenses', cdn, 'exchange_rate');
+                    frm.E.update_totals();
                 } else {
                     if (v > flt(frm.doc.exchange_rate))
                         frm.set_value('exchange_rate', v);
                 }
-                frm.E.update_totals();
             });
         };
         frm.E.update_exchange_rates = function() {
@@ -77,7 +77,7 @@ frappe.ui.form.on('Expenses Entry', {
     onload: function(frm) {
         frm.add_fetch('mode_of_payment', 'type', 'payment_target', frm.doctype);
         if (cint(frm.doc.docstatus) > 0) {
-            frm.read_only();
+            frm.disable_form();
             return;
         }
         if (frm.is_new()) {
@@ -94,9 +94,7 @@ frappe.ui.form.on('Expenses Entry', {
                         }
                         frm.set_value('company', ret.company);
                         frm.set_value('remarks', ret.remarks);
-                        E.dfs_property(
-                            ['company', 'remarks', 'expenses', 'attachments'], 'read_only', 1);
-                        var keys = 'description paid_by party_type party project'.split(' ');
+                        var keys = 'description paid_by expense_claim party_type party project'.split(' ');
                         E.each(ret.expenses, function(v) {
                             let row = frm.add_child('expenses');
                             E.each(keys, function(k) { row[k] = v[k]; });
@@ -113,6 +111,16 @@ frappe.ui.form.on('Expenses Entry', {
                                 });
                             }
                         });
+                        E.dfs_property(
+                            ['company', 'remarks', 'expenses', 'attachments'],
+                            'read_only', 1
+                        );
+                        E.dfs_properties(['expenses', 'attachments'], {
+                            cannot_delete_rows: 1,
+                            allow_bulk_edit: 0,
+                        });
+                        frm.get_field('expenses').grid.df.cannot_delete_rows = 1;
+                        frm.get_field('attachments').grid.df.cannot_delete_rows = 1;
                         E.refresh_df('company', 'remarks', 'expenses', 'attachments');
                         frm.E.update_exchange_rates();
                     }
@@ -131,7 +139,7 @@ frappe.ui.form.on('Expenses Entry', {
             frm.set_query(k, i > 0 ? 'expenses' : fn, i > 0 ? fn : null);
         });
         if (frm.E.with_expense_claim) {
-            set_query('expense_claim', 'expenses', function(frm, cdt, cdn) {
+            frm.set_query('expense_claim', 'expenses', function(frm, cdt, cdn) {
                 let row = locals[cdt][cdn];
                 return {
                     filters: {

@@ -6,24 +6,22 @@
 
 from frappe import _
 
-from expenses.utils import error
+from expenses.utils.common import error
 
 
 def before_rename(doc, method=None):
-    check(doc, "renamed")
+    evaluate(doc, "renamed")
 
 
 def on_trash(doc, method=None):
-    check(doc, "trashed")
+    evaluate(doc, "trashed")
 
 
-def check(doc, action):
+def evaluate(doc, action):
     name = "Expenses Reviewer"
     if (
+        (action == "trashed" and doc.name == name) or
         (
-            action == "trashed" and
-            doc.name == name
-        ) or (
             action == "renamed" and
             doc.get_doc_before_save().name == name and
             doc.name != name

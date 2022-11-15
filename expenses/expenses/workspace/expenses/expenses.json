@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}}]",
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Expense Type\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Expense Item\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Expense\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Expenses Request\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Expenses Entry\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Expenses Settings\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Expenses\",\"col\":6}},{\"type\":\"card\",\"data\":{\"card_name\":\"Masters & Reports\",\"col\":6}}]",
  "creation": "2020-03-02 15:12:16.754449",
  "docstatus": 0,
  "doctype": "Workspace",
@@ -114,6 +114,37 @@
  "restrict_to_domain": "",
  "roles": [],
  "sequence_id": 2.1,
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "label": "Expense Type",
+   "link_to": "Expense Type",
+   "type": "DocType"
+  },
+  {
+   "label": "Expense Item",
+   "link_to": "Expense Item",
+   "type": "DocType"
+  },
+  {
+   "label": "Expense",
+   "link_to": "Expense",
+   "type": "DocType"
+  },
+  {
+   "label": "Expenses Request",
+   "link_to": "Expenses Request",
+   "type": "DocType"
+  },
+  {
+   "label": "Expenses Entry",
+   "link_to": "Expenses Entry",
+   "type": "DocType"
+  },
+  {
+   "label": "Expenses Settings",
+   "link_to": "Expenses Settings",
+   "type": "DocType"
+  }
+ ],
  "title": "Expenses"
 }

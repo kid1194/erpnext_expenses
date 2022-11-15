@@ -6,7 +6,7 @@
 */
 
 
-frappe.provide("frappe.listview_settings");
+frappe.provide('frappe.listview_settings');
 
 
 frappe.listview_settings['Expense Item'] = {

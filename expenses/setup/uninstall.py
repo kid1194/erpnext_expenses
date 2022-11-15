@@ -27,11 +27,11 @@ def after_uninstall():
         ],
     }
     for doctype, name in data.items():
-        if not isinstance(name, list):
-            delete_doc(doctype, name)
-        else:
+        if isinstance(name, list):
             for doc_name in name:
                 delete_doc(doctype, doc_name)
+        else:
+            delete_doc(doctype, name)
 
 
 def delete_doc(doctype, name):

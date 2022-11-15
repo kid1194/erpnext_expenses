@@ -38,9 +38,9 @@ class ExpenseItem(Document):
                         max_cost = flt(v.max_cost)
                         if min_cost < 0:
                             v.min_cost = 0
-                        elif max_cost < 0:
+                        if max_cost < 0:
                             v.max_cost = 0
-                        elif min_cost > 0 and min_cost > max_cost:
+                        if min_cost > 0 and min_cost > max_cost:
                             v.min_cost = 0
                     qty = flt(v.qty)
                     if qty < 0 or qty > 0:
@@ -53,19 +53,19 @@ class ExpenseItem(Document):
                         max_qty = flt(v.max_qty)
                         if min_qty < 0:
                             v.min_qty = 0
-                        elif max_qty < 0:
+                        if max_qty < 0:
                             v.max_qty = 0
-                        elif min_qty > 0 and min_qty > max_qty:
+                        if min_qty > 0 and min_qty > max_qty:
                             v.min_qty = 0
     
     
     def validate(self):
         if not self.item_name:
             error(_("The name is mandatory"))
+        if frappe.db.exists(self.doctype, self.item_name):
+            error(_("{0} already exist").format(self.item_name))
         if not self.expense_type:
             error(_("The expense type is mandatory"))
-        if frappe.db.exists(self.doctype, self.name):
-            error(_("{0} already exist").format(self.name))
         
         self.validate_accounts()
     

@@ -280,14 +280,6 @@ frappe.ui.form.on('Expenses Request', {
             );
             return;
         }
-        if (action === 'Approve') {
-            frm.trigger('toggle_make_entry_button');
-            return;
-        }
-        if (action === 'Reject') {
-            frm.trigger('toggle_appeal_button');
-            return;
-        }
         frappe.show_alert({
             indicator: 'green',
             message: __(
@@ -300,6 +292,14 @@ frappe.ui.form.on('Expenses Request', {
                 }[action.toLowerCase()]]
             )
         });
+        if (action === 'Approve') {
+            frm.trigger('toggle_make_entry_button');
+            return;
+        }
+        if (action === 'Reject') {
+            frm.trigger('toggle_appeal_button');
+            return;
+        }
     },
     toggle_make_entry_button: function(frm) {
         if (

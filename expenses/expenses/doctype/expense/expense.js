@@ -229,6 +229,14 @@ frappe.ui.form.on('Expense Attachment', {
             E.error('Removing attachments is not allowed', true);
             return;
         }
-        if (row.file) frm.E.del_files.push(row.file);
+        if (row.file && frm.E.del_files.indexOf(row.file) < 0)
+            frm.E.del_files.push(row.file);
+    },
+    file: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (row.file) {
+            let idx = frm.E.del_files.indexOf(row.file);
+            if (idx >= 0) frm.E.del_files.splice(idx, 1);
+        }
     },
 });
