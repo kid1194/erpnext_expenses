@@ -15,13 +15,6 @@ frappe.ui.form.on('Expenses Entry', {
             del_files: [],
         };
         
-        E.call('with_expense_claim', function(ret) {
-            if (!!ret) {
-                frm.E.with_expense_claim = true;
-                E.df_properties('expense_claim', {options: 'Expense Claim', hidden: 0,}, 'expenses');
-            }
-        });
-        
         frm.E.update_exchange_rate = function(cdt, cdn) {
             let c = cdt && cdn
                 ? locals[cdt][cdn].account_currency
@@ -136,20 +129,25 @@ frappe.ui.form.on('Expenses Entry', {
             let fn = function() { return {company: frm.doc.company}; };
             frm.set_query(k, i > 0 ? 'expenses' : fn, i > 0 ? fn : null);
         });
-        if (frm.E.with_expense_claim) {
-            frm.set_query('expense_claim', 'expenses', function(frm, cdt, cdn) {
-                let row = locals[cdt][cdn];
-                return {
-                    filters: {
-                        employee: row.paid_by,
-                        company: frm.doc.company,
-                        is_paid: 1,
-                        status: 'Paid',
-                        docstatus: 1,
-                    }
-                };
-            });
-        }
+        
+        E.call('with_expense_claim', function(ret) {
+            if (!!ret) {
+                frm.E.with_expense_claim = true;
+                E.df_properties('expense_claim', {options: 'Expense Claim', hidden: 0,}, 'expenses');
+                frm.set_query('expense_claim', 'expenses', function(frm, cdt, cdn) {
+                    let row = locals[cdt][cdn];
+                    return {
+                        filters: {
+                            employee: row.paid_by,
+                            company: frm.doc.company,
+                            is_paid: 1,
+                            status: 'Paid',
+                            docstatus: 1,
+                        }
+                    };
+                });
+            }
+        });
         
         frm.get_field('expenses').grid.add_custom_button(
             __('Update Exchange Rates'),

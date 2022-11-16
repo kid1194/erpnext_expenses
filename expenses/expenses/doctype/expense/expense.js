@@ -24,7 +24,8 @@ frappe.ui.form.on('Expense', {
             expense_qty: null,
             del_files: [],
         };
-        
+    },
+    onload: function(frm) {
         if (!frm.E.is_super) {
             let today = frappe.datetime.moment_to_date_obj(moment());
             E.df_property('required_by', 'options', {
@@ -39,8 +40,7 @@ frappe.ui.form.on('Expense', {
                 E.df_properties('expense_claim', {options: 'Expense Claim', hidden: 0});
             }
         });
-    },
-    onload: function(frm) {
+        
         if (!frm.E.is_requested) {
             frm.set_query('company', {filters: {is_group: 0}});
             frm.set_query('expense_item', {query: E.path('search_items')});
