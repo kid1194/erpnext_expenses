@@ -138,7 +138,7 @@ class ExpensesEntry(Document):
                     error(_("The expense claim for expense account \"{0}\" is invalid").format(v.account))
     
     
-     def before_save(self):
+    def before_save(self):
         self.load_doc_before_save()
         clear_document_cache(
             self.doctype,
