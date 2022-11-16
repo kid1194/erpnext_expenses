@@ -7,7 +7,7 @@
 import frappe
 
 
-def after_uninstall():
+def before_uninstall():
     data = {
         "Role": "Expenses Reviewer",
         "Workflow": "Expenses Request Review",

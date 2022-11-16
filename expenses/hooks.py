@@ -55,7 +55,7 @@ doctype_tree_js = {
 
 
 after_install = "expenses.setup.install.after_install"
-after_uninstall = "expenses.setup.uninstall.after_uninstall"
+before_uninstall = "expenses.setup.uninstall.before_uninstall"
 
 
 doc_events = {
