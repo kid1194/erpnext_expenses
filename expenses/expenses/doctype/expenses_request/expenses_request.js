@@ -103,29 +103,37 @@ frappe.ui.form.on('Expenses Request', {
             frm.E.table
                 .action('remove', 'trash-o', 'danger', function(row, idx) {
                     E.remove_row('expenses', row.cdn);
-                    frm.trigger('toggle_company_desc');
+                    delete this.frm.E.rows[row.expense];
+                    delete this.frm.E.data[row.expense];
+                    this.frm.trigger('toggle_company_desc');
                 })
                 .column_checkbox()
                 .checked_row_status()
                 .on_remove(function(rows) {
                     E.each(rows, function(v) {
                         E.remove_row('expenses', v.cdn);
-                    });
-                    frm.trigger('toggle_company_desc');
+                        delete this.frm.E.rows[v.expense];
+                        delete this.frm.E.data[v.expense];
+                    }, this);
+                    this.frm.trigger('toggle_company_desc');
                 })
                 .on_remove_all(function() {
                     E.clear_table('expenses');
-                    frm.trigger('toggle_company_desc');
+                    E.clear(this.frm.E.rows);
+                    E.clear(this.frm.E.data);
+                    this.frm.trigger('toggle_company_desc');
                 })
                 .on_add(function() {
-                    frm.trigger('toggle_add_expenses');
+                    this.frm.trigger('toggle_add_expenses');
                 });
         } else {
             frm.E.table
                 .column_number()
                 .read_only();
         }
-        frm.E.table.render();
+        frm.E.table
+            .extend('frm', frm)
+            .render();
         frm.E.rows = {};
         frm.E.data = {};
         if (frm.doc.expenses.length) frm.trigger('update_expenses_table');
@@ -373,10 +381,7 @@ frappe.ui.form.on('Expenses Request', {
                     frm.E.appeal.hide();
                     let args = frm.E.appeal_table.get_selected_rows();
                     if (args && args.length) {
-                        let expenses = [];
-                        E.each(args, function(v) {
-                            expenses.push(v.name);
-                        });
+                        let expenses = args.map(function(v) { return v.name; });
                         E.set_cache('make-expenses-request', {
                             company: frm.doc.company,
                             expenses: expenses,

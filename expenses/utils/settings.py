@@ -7,9 +7,7 @@
 import frappe
 
 from .common import get_cached_doc
-
-
-_SETTINGS = "Expenses Settings"
+from .doctypes import _SETTINGS
 
 
 # Common

@@ -31,7 +31,7 @@
  "modified": "2022-04-04 04:04:04.119400",
  "modified_by": "Administrator",
  "module": "Expenses",
- "name": "Expenses Request Expense",
+ "name": "Expenses Request Details",
  "owner": "Administrator",
  "permissions": [],
  "sort_field": "modified",

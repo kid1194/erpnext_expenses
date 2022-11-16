@@ -133,7 +133,7 @@
    "fieldname": "expenses",
    "fieldtype": "Table",
    "label": "Expenses",
-   "options": "Expenses Entry Account",
+   "options": "Expenses Entry Details",
    "read_only_depends_on": "eval:doc.expenses_request_ref",
    "mandatory_depends_on": "eval:!doc.expenses_request_ref",
    "bold": 1,
@@ -273,6 +273,7 @@
    "fieldname": "expenses_request_ref",
    "fieldtype": "Link",
    "label": "Expenses Request Reference",
+   "options": "Expenses Request",
    "read_only": 1,
    "hidden": 1
   }

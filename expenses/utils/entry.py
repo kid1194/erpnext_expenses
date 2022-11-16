@@ -10,12 +10,17 @@ from frappe import _
 from erpnext.setup.utils import get_exchange_rate
 
 from .common import error, get_cached_doc, get_cached_value
+from .doctypes import _ENTRY, _ENTRY_EXPENSES, _ENTRY_DETAILS
 from .search import filter_search
 
 
-_ENTRY = "Expenses Entry"
-_ENTRY_ACCOUNT = "Expenses Entry Account"
-_ENTRY_EXPENSES_FIELD = "expenses"
+## Expense
+def entries_of_expense_exists(expense):
+    return frappe.db.exists(_ENTRY_DETAILS, {
+        "parenttype": _ENTRY,
+        "parentfield": _ENTRY_EXPENSES,
+        "expense_ref": expense
+    })
 
 
 ## Expenses Entry Form

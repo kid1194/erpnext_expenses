@@ -14,10 +14,8 @@ from .common import (
     log_error,
     get_cached_doc
 )
+from .doctypes import _EXPENSE
 from .search import filter_search, prepare_data
-
-
-_EXPENSE = "Expense"
 
 
 ## Expense Item

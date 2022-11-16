@@ -7,14 +7,12 @@
 import frappe
 
 from .common import parse_json_if_valid
-
-
-_ATTACHMENT = "Expense Attachment"
+from .doctypes import _ATTACHMENT
 
 
 ## Expense Form
 @frappe.whitelist(methods=["POST"])
-def delete_attach_files(files):
+def delete_attach_files(doctype, name, files):
     if not files:
         return 0
     
@@ -26,8 +24,15 @@ def delete_attach_files(files):
     dt = "File"
     for f in files:
         if frappe.db.exists(dt, f):
-            (frappe.get_doc(dt, f)
-                .delete(ignore_permissions=True))
+            doc = frappe.get_doc(dt, f)
+            if (
+                doc.attached_to_doctype == doctype and
+                (
+                    not doc.attached_to_name or
+                    doc.attached_to_name == name
+                )
+            ):
+                doc.delete(ignore_permissions=True)
     
     return 1
 

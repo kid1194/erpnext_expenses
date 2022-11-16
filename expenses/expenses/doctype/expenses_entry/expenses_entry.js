@@ -10,32 +10,28 @@ frappe.ui.form.on('Expenses Entry', {
     setup: function(frm) {
         E.frm(frm);
         frm.E = {
-            company_currency: frappe.boot.sysdefaults.currency,
+            base_currency: frappe.boot.sysdefaults.currency,
             mops: {},
+            del_files: [],
         };
         
         E.call('with_expense_claim', function(ret) {
             if (!!ret) {
                 frm.E.with_expense_claim = true;
-                E.df_properties('expense_claim', {
-                    options: 'Expense Claim',
-                    hidden: 0,
-                }, 'expenses');
+                E.df_properties('expense_claim', {options: 'Expense Claim', hidden: 0,}, 'expenses');
             }
         });
         
-        if (frm.doc.docstatus > 0) return;
-        
         frm.E.update_exchange_rate = function(cdt, cdn) {
-            let c = cdt && cdn ? locals[cdt][cdn].account_currency
+            let c = cdt && cdn
+                ? locals[cdt][cdn].account_currency
                 : frm.doc.payment_currency;
-            if (!frm.E.company_currency || !c) return;
-            E.get_exchange_rate(c, frm.E.company_currency, function(v) {
+            if (!c || !frm.E.base_currency) return;
+            E.get_exchange_rate(c, frm.E.base_currency, function(v) {
                 if (cdt && cdn) {
                     if (v <= flt(locals[cdt][cdn].exchange_rate)) return;
                     locals[cdt][cdn].exchange_rate = v;
                     E.refresh_row_df('expenses', cdn, 'exchange_rate');
-                    frm.E.update_totals();
                 } else {
                     if (v > flt(frm.doc.exchange_rate))
                         frm.set_value('exchange_rate', v);
@@ -43,43 +39,44 @@ frappe.ui.form.on('Expenses Entry', {
             });
         };
         frm.E.update_exchange_rates = function() {
-            if (!frm.E.company_currency || !frm.doc.payment_currency) return;
-            var cc = frm.E.company_currency,
+            if (!frm.E.base_currency || !frm.doc.payment_currency) return;
+            var cc = frm.E.base_currency,
             tasks = [];
-            tasks.push(E.get_exchange_rate(frm.doc.payment_currency, cc, function(v) {
-                if (v > flt(frm.doc.exchange_rate))
-                    frm.set_value('exchange_rate', v);
-            }));
             E.each(frm.doc.expenses, function(r) {
                 tasks.push(E.get_exchange_rate(r.account_currency, cc, function(v) {
-                    if (v > flt(r.exchange_rate)) {
-                        r.exchange_rate = v;
-                        E.refresh_row_df('expenses', r.name, 'exchange_rate');
-                    }
+                    if (v > flt(r.exchange_rate)) r.exchange_rate = v;
                 }));
             });
-            tasks.push(frm.E.update_totals);
-            Promise.all(tasks).finally(function() { tasks = null; });
+            Promise.all(tasks).finally(function() {
+                E.clear(tasks);
+                E.get_exchange_rate(frm.doc.payment_currency, cc, function(v) {
+                    if (v > flt(frm.doc.exchange_rate))
+                        frm.set_value('exchange_rate', v);
+                    else E.refresh_df('expenses');
+                });
+            });
         };
         frm.E.update_totals = function() {
-            var cc = frm.E.company_currency;
             var total = 0;
             E.each(frm.doc.expenses, function(r) {
                 r.cost = flt(flt(r.cost_in_account_currency) * flt(r.exchange_rate));
                 total += flt(r.cost);
-                E.refresh_row_df('expenses', r.name, 'cost');
             });
             frm.set_value('total_in_payment_currency',
                 flt(total / flt(frm.doc.exchange_rate)));
             frm.set_value('total', total);
+            E.refresh_df('expenses');
         };
     },
     onload: function(frm) {
         frm.add_fetch('mode_of_payment', 'type', 'payment_target', frm.doctype);
+        
         if (cint(frm.doc.docstatus) > 0) {
             frm.disable_form();
+            frm.set_intro(__('Expenses Entry has been submitted'), 'green');
             return;
         }
+        
         if (frm.is_new()) {
             var request = E.pop_cache('make-expenses-entry');
             if (request && E.is_str(request)) {
@@ -128,6 +125,7 @@ frappe.ui.form.on('Expenses Entry', {
             }
             request = null;
         }
+        
         frm.set_query('company', {filters: {is_group: 0}});
         frm.set_query('mode_of_payment', {filters: {type: ['in', ['Cash', 'Bank']]}});
         E.each(['default_project', 'project'], function(k, i) {
@@ -152,6 +150,7 @@ frappe.ui.form.on('Expenses Entry', {
                 };
             });
         }
+        
         frm.get_field('expenses').grid.add_custom_button(
             __('Update Exchange Rates'),
             function() {
@@ -187,6 +186,9 @@ frappe.ui.form.on('Expenses Entry', {
             'bottom'
         );
     },
+    refresh: function(frm) {
+        frm.E.update_totals();
+    },
     company: function(frm) {
         if (!frm.doc.company) frm.set_value('mode_of_payment', '');
     },
@@ -195,11 +197,11 @@ frappe.ui.form.on('Expenses Entry', {
         if (!mop) {
             frm.set_value('payment_account', '');
             frm.set_value('payment_target', '');
-            frm.set_value('payment_currency', frm.E.company_currency);
+            frm.set_value('payment_currency', frm.E.base_currency);
             return;
         }
         function resolve(ret) {
-            frm.E.company_currency = ret.company_currency;
+            frm.E.base_currency = ret.company_currency;
             frm.set_value('payment_account', ret.account);
             frm.set_value('payment_target', ret.type);
             frm.set_value('payment_currency', ret.currency);
@@ -232,9 +234,22 @@ frappe.ui.form.on('Expenses Entry', {
         if (flt(frm.doc.exchange_rate) <= 0) frm.E.update_exchange_rate();
         else frm.E.update_totals();
     },
+    after_save: function(frm) {
+        if (!cint(frm.doc.docstatus) && frm.E.del_files.length) {
+            E.call(
+                'delete_attach_files',
+                {
+                    doctype: frm.doctype,
+                    name: frm.doc.name || frm.docname,
+                    files: frm.E.del_files,
+                },
+                function() { E.clear(frm.E.del_files); }
+            );
+        }
+    },
 });
 
-frappe.ui.form.on('Expenses Entry Account', {
+frappe.ui.form.on('Expenses Entry Details', {
     account: function(frm, cdt, cdn) {
         if (locals[cdt][cdn].account)
             frm.E.update_exchange_rate(cdt, cdn);
@@ -244,6 +259,28 @@ frappe.ui.form.on('Expenses Entry Account', {
         if (flt(row.exchange_rate) <= 0) frm.E.update_exchange_rate(cdt, cdn);
         else frm.E.update_totals();
     },
+    is_paid: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (!cint(row.is_paid)) {
+            row.paid_by = '';
+            row.expense_claim = '';
+            E.refresh_row_df('expenses', cdn, 'paid_by', 'expense_claim');
+        }
+    },
+    paid_by: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (!row.paid_by) {
+            row.expense_claim = '';
+            E.refresh_row_df('expenses', cdn, 'expense_claim');
+        }
+    },
+    party_type: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (!row.party_type) {
+            row.party = '';
+            E.refresh_row_df('expenses', cdn, 'party');
+        }
+    },
 });
 
 frappe.ui.form.on('Expense Attachment', {
@@ -251,5 +288,14 @@ frappe.ui.form.on('Expense Attachment', {
         let row = locals[cdt][cdn];
         if (row.expenses_entry_row_ref)
             E.error('Removing attachments is not allowed', true);
+        if (row.file && !E.has(frm.E.del_files, row.file))
+            frm.E.del_files.push(row.file);
+    },
+    file: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (row.file) {
+            let idx = frm.E.del_files.indexOf(row.file);
+            if (idx >= 0) frm.E.del_files.splice(idx, 1);
+        }
     },
 });

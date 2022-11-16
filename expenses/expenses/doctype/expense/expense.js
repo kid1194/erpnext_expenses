@@ -36,10 +36,7 @@ frappe.ui.form.on('Expense', {
         E.call('with_expense_claim', function(ret) {
             if (!!ret) {
                 frm.E.with_expense_claim = true;
-                E.df_properties('expense_claim', {
-                    options: 'Expense Claim',
-                    hidden: 0,
-                });
+                E.df_properties('expense_claim', {options: 'Expense Claim', hidden: 0});
             }
         });
     },
@@ -64,10 +61,7 @@ frappe.ui.form.on('Expense', {
         }
         
         frm.disable_form();
-        frm.set_intro(
-            __('Expense cannot be modified after being requested'),
-            'red'
-        );
+        frm.set_intro(__('Expense has been requested'), 'green');
         
         if (frm.E.is_approved) return;
         
@@ -144,30 +138,26 @@ frappe.ui.form.on('Expense', {
     cost: function(frm) {
         if (frm.E.is_requested) return;
         let cost = flt(frm.doc.cost),
-        limit = frm.E.expense_cost;
-        if (cost <= 0) {
-            frm.set_value('cost', 1);
-        } else if (limit && limit.min && cost < limit.min) {
-            frm.set_value('cost', limit.min);
-        } else if (limit && limit.max && cost > limit.max) {
-            frm.set_value('cost', limit.max);
-        } else {
-            frm.trigger('update_total');
+        limit = frm.E.expense_cost,
+        new_cost = cost <= 0 ? 1 : cost;
+        if (limit) {
+            if (limit.min && cost < limit.min) new_cost = limit.min;
+            else if (limit.max && cost > limit.max) new_cost = limit.max;
         }
+        if (new_cost !== cost) frm.set_value('cost', new_cost);
+        else frm.trigger('update_total');
     },
     qty: function(frm) {
         if (frm.E.is_requested) return;
         let qty = flt(frm.doc.qty),
-        limit = frm.E.expense_qty;
-        if (qty <= 0) {
-            frm.set_value('qty', 1);
-        } else if (limit && limit.min && qty < limit.min) {
-            frm.set_value('qty', limit.min);
-        } else if (limit && limit.max && qty > limit.max) {
-            frm.set_value('qty', limit.max);
-        } else {
-            frm.trigger('update_total');
+        limit = frm.E.expense_qty,
+        new_qty = qty <= 0 ? 1 : qty;
+        if (limit) {
+            if (limit.min && qty < limit.min) new_qty = limit.min;
+            else if (limit.max && qty > limit.max) new_qty = limit.max;
         }
+        if (new_qty !== qty) frm.set_value('qty', new_qty);
+        else frm.trigger('update_total');
     },
     update_total: function(frm) {
         if (frm.E.is_requested) return;
@@ -199,10 +189,12 @@ frappe.ui.form.on('Expense', {
         if (!frm.E.is_requested && frm.E.del_files.length) {
             E.call(
                 'delete_attach_files',
-                {files: frm.E.del_files},
-                function(ret) {
-                    frm.E.del_files.clear();
-                }
+                {
+                    doctype: frm.doctype,
+                    name: frm.doc.name || frm.docname,
+                    files: frm.E.del_files,
+                },
+                function() { E.clear(frm.E.del_files); }
             );
         }
     },
@@ -213,7 +205,7 @@ frappe.ui.form.on('Expense', {
             frm.add_custom_button(req_btn, function () {
                 E.set_cache('make-expenses-request', {
                     company: frm.doc.company,
-                    expenses: [frm.doc.name],
+                    expenses: [frm.doc.name || frm.docname],
                 });
                 frappe.set_route('Form', 'Expenses Request');
             });
@@ -229,7 +221,7 @@ frappe.ui.form.on('Expense Attachment', {
             E.error('Removing attachments is not allowed', true);
             return;
         }
-        if (row.file && frm.E.del_files.indexOf(row.file) < 0)
+        if (row.file && !E.has(frm.E.del_files, row.file))
             frm.E.del_files.push(row.file);
     },
     file: function(frm, cdt, cdn) {

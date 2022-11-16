@@ -11,6 +11,7 @@ from .entry import *
 from .expense import *
 from .item import *
 from .journal import *
+from .meta import *
 from .request import *
 from .search import *
 from .settings import *

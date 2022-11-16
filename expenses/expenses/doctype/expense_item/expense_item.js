@@ -10,16 +10,17 @@ frappe.ui.form.on('Expense Item', {
     setup: function(frm) {
         E.frm(frm);
         frm.E = {
-            accounts_companies: E.unique_array(),
+            companies: E.unique_array(),
         };
     },
     onload: function(frm) {
-        E.df_properties('expense_accounts.account', {reqd: 0, bold: 0});
-        E.dfs_properties(['cost', 'qty'], {hidden: 0, in_list_view: 1}, 'expense_accounts');
+        E.df_properties('account', {reqd: 0, bold: 0}, 'expense_accounts');
         E.dfs_property(
-            ['expense_section', 'min_cost', 'max_cost', 'expense_column', 'min_qty', 'max_qty'],
+            'expense_section cost min_cost max_cost expense_column qty min_qty max_qty',
             'hidden', 0, 'expense_accounts'
         );
+        E.dfs_property('cost qty', 'in_list_view', 1, 'expense_accounts');
+        
         frm.set_query('expense_type', {query: E.path('search_types')});
         frm.set_query('company', 'expense_accounts', {filters: {is_group: 0}});
         frm.set_query('account', 'expense_accounts', function(doc, cdt, cdn) {
@@ -29,24 +30,25 @@ frappe.ui.form.on('Expense Item', {
                 company: locals[cdt][cdn].company,
             }};
         });
+        
         frm.add_fetch('account', 'account_currency', 'currency', 'Expense Account');
     },
 });
 
 frappe.ui.form.on('Expense Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
-        frm.E.accounts_companies.del(locals[cdt][cdn].company, cdn);
+        frm.E.companies.del(locals[cdt][cdn].company, cdn);
     },
     company: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         if (!row.company) {
-            frm.E.accounts_companies.del(null, cdn);
+            frm.E.companies.del(null, cdn);
             row.account = '';
             E.refresh_row_df('expense_accounts', cdn, 'account');
             return;
         }
-        if (!frm.E.accounts_companies.has(row.company)) {
-            frm.E.accounts_companies.rpush(row.company, cdn);
+        if (!frm.E.companies.has(row.company)) {
+            frm.E.companies.rpush(row.company, cdn);
             return;
         }
         E.error(
@@ -71,8 +73,6 @@ frappe.ui.form.on('Expense Account', {
             E.refresh_row_df('expense_accounts', cdn, 'cost');
             return;
         }
-        row.min_cost = 0;
-        row.max_cost = 0;
         E.refresh_row_df('expense_accounts', cdn, 'min_cost', 'max_cost');
     },
     min_cost: function(frm, cdt, cdn) {
@@ -103,8 +103,6 @@ frappe.ui.form.on('Expense Account', {
             E.refresh_row_df('expense_accounts', cdn, 'qty');
             return;
         }
-        row.min_qty = 0;
-        row.max_qty = 0;
         E.refresh_row_df('expense_accounts', cdn, 'min_qty', 'max_qty');
     },
     min_qty: function(frm, cdt, cdn) {

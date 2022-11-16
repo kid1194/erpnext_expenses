@@ -8,16 +8,12 @@ import frappe
 
 from .account import get_company_account_data_by_parent
 from .common import error, get_cache, set_cache, get_cached_value
+from .doctypes import _ITEM, _ITEM_TYPE, _ITEM_ACCOUNTS
 from .search import filter_search, prepare_data
 from .type import (
     get_types_filter_query,
     get_type_company_account_data
 )
-
-
-_ITEM = "Expense Item"
-_ITEM_TYPE = "expense_type"
-_ITEM_ACCOUNTS = "expense_accounts"
 
 
 ## Expense Type

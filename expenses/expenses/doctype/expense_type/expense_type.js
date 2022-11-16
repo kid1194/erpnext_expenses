@@ -10,6 +10,7 @@ frappe.ui.form.on('Expense Type', {
     setup: function(frm) {
         E.frm(frm);
         frm.E = {
+            add_all_companies: false,
             companies_list: null,
             companies: E.unique_array(),
             toolbar: [
@@ -31,7 +32,7 @@ frappe.ui.form.on('Expense Type', {
             return {
                 query: E.path('search_types'),
                 filters: {
-                    is_not: frm.doc.name || '',
+                    name: ['!=', frm.doc.name || frm.docname || ''],
                     is_group: 1,
                 },
             };
@@ -52,51 +53,54 @@ frappe.ui.form.on('Expense Type', {
                 }
             };
         });
-        frm.add_fetch('account', 'account_currency', 'currency', 'Expense Account');
-        if (!frm.is_new()) return;
-        frm.get_field('expense_accounts').grid.add_custom_button(
-            __('Add All Companies'),
-            function() {
-                function resolve(ret) {
-                    E.each(ret, function(v) {
-                        if (frm.E.companies.has(v.name)) return;
-                        let row = frm.add_child('expense_accounts', {
-                            company: v.name,
-                            account: v.default_expense_account,
-                        });
-                        frm.E.companies.rpush(row.company, row.name);
-                    });
-                }
-                if (frm.E.companies_list) {
-                    resolve(frm.E.companies_list);
-                    return;
-                }
-                E.get_list(
-                    'Company',
-                    {
-                        fields: ['name', 'default_expense_account'],
-                        filters: {is_group: 0},
-                    },
-                    function(ret) {
-                        if (!E.is_arr(ret) || !ret.length) {
-                            E.error('Unable to get the list of companies');
-                            return;
-                        }
-                        frm.E.companies_list = ret;
-                        resolve(ret);
-                    }
-                );
-            }
-        )
-        .removeClass('btn-default')
-        .addClass('btn-secondary');
     },
     refresh: function(frm) {
-        frm.trigger('toggle_disabled_desc');
-		frm.trigger('add_toolbar_buttons');
+        if (frm.is_new() && !frm.E.add_all_companies) {
+            frm.E.add_all_companies = true;
+            frm.get_field('expense_accounts').grid.add_custom_button(
+                __('Add All Companies'),
+                function() {
+                    function resolve(ret) {
+                        E.each(ret, function(v) {
+                            if (frm.E.companies.has(v.name)) return;
+                            let row = frm.add_child('expense_accounts', {
+                                company: v.name,
+                                account: v.default_expense_account,
+                            });
+                            frm.E.companies.rpush(row.company, row.name);
+                        });
+                    }
+                    if (frm.E.companies_list) {
+                        resolve(frm.E.companies_list);
+                        return;
+                    }
+                    E.get_list(
+                        'Company',
+                        {
+                            fields: ['name', 'default_expense_account'],
+                            filters: {is_group: 0},
+                        },
+                        function(ret) {
+                            if (!E.is_arr(ret) || !ret.length) {
+                                E.error('Unable to get the list of companies');
+                                return;
+                            }
+                            frm.E.companies_list = ret;
+                            resolve(ret);
+                        }
+                    );
+                }
+            )
+            .removeClass('btn-default')
+            .addClass('btn-secondary');
+        }
+        if (!frm.is_new()) {
+            frm.trigger('toggle_disabled_desc');
+            frm.trigger('add_toolbar_buttons');
+        }
     },
     is_group: function(frm) {
-        frm.trigger('toggle_disabled_desc');
+        if (!frm.is_new()) frm.trigger('toggle_disabled_desc');
     },
     toggle_disabled_desc: function(frm) {
         if (frm.is_new()) return;

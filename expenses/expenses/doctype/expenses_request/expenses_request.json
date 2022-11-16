@@ -73,7 +73,7 @@
    "fieldname": "expenses",
    "fieldtype": "MultiSelect Table",
    "label": "Expenses",
-   "options": "Expenses Request Expense",
+   "options": "Expenses Request Details",
    "hidden": 1,
    "print_hide": 1,
    "report_hide": 1

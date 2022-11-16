@@ -7,8 +7,7 @@
 import frappe
 from frappe.utils import flt
 
-
-_ACCOUNT = "Expense Account"
+from .doctypes import _ACCOUNT
 
 
 ## Self Type

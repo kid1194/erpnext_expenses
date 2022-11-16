@@ -115,46 +115,6 @@ class ExpensesEntry(Document):
             self.validate_expenses()
     
     
-     def before_save(self):
-        self.load_doc_before_save()
-        clear_document_cache(
-            self.doctype,
-            self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
-        )
-        if self.is_new() and self.expenses_request_ref:
-            self._process_request = True
-    
-    
-    def on_update(self):
-        self.handle_request()
-    
-    
-    def before_update_after_submit(self):
-        clear_document_cache(self.doctype, self.name)
-        self.check_changes()
-    
-    
-    def after_submit(self):
-        enqueue_journal_entry(self.name)
-    
-    
-    def before_cancel(self):
-        if self.expenses_request_ref:
-            self._reject_request = True
-    
-    
-    def on_cancel(self):
-        clear_document_cache(self.doctype, self.name)
-        self.handle_request()
-        if self.docstatus.is_submitted():
-            cancel_journal_entry(self.name)
-    
-    
-    def on_trash(self):
-        if not self.docstatus.is_cancelled():
-            error(_("Cannot delete a non-cancelled expenses entry"))
-    
-    
     def validate_expenses(self):
         _with_expense_claim = with_expense_claim()
         for v in self.expenses:
@@ -176,6 +136,25 @@ class ExpensesEntry(Document):
                     "docstatus": 1
                 }):
                     error(_("The expense claim for expense account \"{0}\" is invalid").format(v.account))
+    
+    
+     def before_save(self):
+        self.load_doc_before_save()
+        clear_document_cache(
+            self.doctype,
+            self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
+        )
+        if self.is_new() and self.expenses_request_ref:
+            self._process_request = True
+    
+    
+    def on_update(self):
+        self.handle_request()
+    
+    
+    def before_update_after_submit(self):
+        clear_document_cache(self.doctype, self.name)
+        self.check_changes()
     
     
     def check_changes(self):
@@ -203,6 +182,22 @@ class ExpensesEntry(Document):
                     error(_("The expenses entry cannot be modified after submit"))
     
     
+    def after_submit(self):
+        enqueue_journal_entry(self.name)
+    
+    
+    def before_cancel(self):
+        if self.expenses_request_ref:
+            self._reject_request = True
+    
+    
+    def on_cancel(self):
+        clear_document_cache(self.doctype, self.name)
+        self.handle_request()
+        if self.docstatus.is_submitted():
+            cancel_journal_entry(self.name)
+    
+    
     def handle_request(self):
         if self._process_request:
             self._process_request = False
@@ -210,3 +205,8 @@ class ExpensesEntry(Document):
         elif self._reject_request:
             self._reject_request = False
             reject_request(self.expenses_request_ref)
+    
+    
+    def on_trash(self):
+        if not self.docstatus.is_cancelled():
+            error(_("Cannot delete a non-cancelled expenses entry"))

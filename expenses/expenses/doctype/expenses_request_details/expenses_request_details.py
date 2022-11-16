@@ -7,5 +7,5 @@
 from frappe.model.document import Document
 
 
-class ExpensesEntryAccount(Document):
+class ExpensesRequestDetails(Document):
     pass

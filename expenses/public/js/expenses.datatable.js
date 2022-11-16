@@ -32,6 +32,7 @@ class ExpensesDataTable {
         this._rows = [];
         this._rowsIdx = 0;
         this._selected = [];
+        this._extends = [];
     }
     label(text) {
         this._label = __(text);
@@ -249,6 +250,28 @@ class ExpensesDataTable {
     clear() {
         this._rows.splice(0, this._rows.length);
         this.refresh();
+        return this;
+    }
+    extend(key, val) {
+        if (E.is_obj(key)) {
+            E.each(key, function(v, k) {
+                this.extend(k, v);
+            }, this);
+            return this;
+        }
+        if (E.is_str(key) && !E.has(this._extends, key)) {
+            this[key] = E.is_func(val) ? E.fn(val, this) : val;
+            this._extends.push(key);
+        }
+        return this;
+    }
+    unset() {
+        E.each(arguments, function(k) {
+            if (!E.has(this._extends, key)) return;
+            delete this[key];
+            let idx = this._extends.indexOf(key);
+            if (idx >= 0) this._extends.splice(idx, 1);
+        }, this);
         return this;
     }
 }

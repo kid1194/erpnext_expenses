@@ -28,53 +28,34 @@ class ExpensesDocDialog {
         this._setup();
     }
     _setup() {
-        this._get_fields(this._doctype)
-        .then(E.fn(function(fields) {
-            this._fields = fields;
-            this._fields.unshift({
-                fieldname: 'error_message',
-                fieldtype: 'HTML',
-                read_only: 1,
-                hidden: 1
-            });
-            var tasks = [];
-            E.each(this._fields, function(f, i) {
-                let name = f.fieldname;
-                this._fields_by_name[name] = this._fields_by_ref.length;
-                this._fields_by_ref.push(f);
-                this._apply_field_properties(name);
-                if (f.fieldtype === 'Table') {
-                    tasks.push(this._get_table_fields(f, name));
+        var me = this;
+        E.call(
+            'get_docfields',
+            {doctype: this._doctype},
+            E.fn(function(fields) {
+                if (!E.is_arr(fields)) {
+                    E.error('Unable to get the fields of {0}.', [this._doctype]);
+                    return;
                 }
-            }, this);
-            var callback = function() { E.clear(tasks); };
-            if (tasks.length) {
-                Promise.all(tasks).finally(callback);
-            } else {
-                callback();
-            }
-        }, this));
+                this._fields = fields;
+                this._fields.unshift({
+                    fieldname: 'error_message',
+                    fieldtype: 'HTML',
+                    read_only: 1,
+                    hidden: 1
+                });
+                this._prepare_fields(this._fields);
+            }, this)
+        );
     }
-    _get_table_fields(field, parent_name) {
-        return this._get_fields(field.options)
-        .then(E.fn(function(fields) {
-            field.fields = fields;
-            E.each(field.fields, function(f) {
-                let name = parent_name + '.' + f.fieldname;
-                this._fields_by_name[name] = this._fields_by_ref.length;
-                this._fields_by_ref.push(f);
-                this._apply_field_properties(name);
-            }, this);
-        }, this));
-    }
-    _get_fields(dt) {
-        return E.get_doc('DocType', dt, function(ret) {
-            if (!ret || !ret.fields || !E.is_arr(ret.fields) || !ret.fields.length) {
-                E.error('Unable to get the quick entry fields for ' + dt, true);
-                return;
-            }
-            return ret.fields;
-        });
+    _prepare_fields(fields, parent_name) {
+        E.each(fields, function(f) {
+            let name = (parent_name ? parent_name + '.' : '') + f.fieldname;
+            this._fields_by_name[name] = this._fields_by_ref.length;
+            this._fields_by_ref.push(f);
+            this._apply_field_properties(name);
+            if (f.fields) this._prepare_fields(f.fields, name);
+        }, this);
     }
     _on_make(fn, args) {
         this.__on_make.push(E.fn(function() {
@@ -400,12 +381,12 @@ class ExpensesDocDialog {
     }
     extend(key, val) {
         if (E.is_obj(key)) {
-            E.each(arguments, function(v, k) {
+            E.each(key, function(v, k) {
                 this.extend(k, v);
             }, this);
             return this;
         }
-        if (E.is_str(key) && E.has(this._extends, key)) {
+        if (E.is_str(key) && !E.has(this._extends, key)) {
             this[key] = E.is_func(val) ? E.fn(val, this) : val;
             this._extends.push(key);
         }
@@ -415,7 +396,8 @@ class ExpensesDocDialog {
         E.each(arguments, function(k) {
             if (!E.has(this._extends, key)) return;
             delete this[key];
-            this._extends.del(key);
+            let idx = this._extends.indexOf(key);
+            if (idx >= 0) this._extends.splice(idx, 1);
         }, this);
         return this;
     }

@@ -7,19 +7,15 @@
 import frappe
 
 from .common import get_cached_doc
+from .doctypes import _REQUEST, _REQUEST_EXPENSES, _REQUEST_DETAILS
 from .expense import get_expenses_data
-
-
-_REQUEST = "Expenses Request"
-_REQUEST_EXPENSE = "Expenses Request Expense"
-_EXPENSES_FIELD = "expenses"
 
 
 ## Expense
 def requests_of_expense_exists(expense):
-    return frappe.db.exists(_REQUEST_EXPENSE, {
+    return frappe.db.exists(_REQUEST_DETAILS, {
         "parenttype": _REQUEST,
-        "parentfield": _EXPENSES_FIELD,
+        "parentfield": _REQUEST_EXPENSES,
         "expense": expense
     })
 

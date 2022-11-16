@@ -10,16 +10,14 @@ frappe.ui.form.on('Expenses Settings', {
     refresh: function(frm) {
         frm.get_field('update_note').$wrapper.html(
             cint(frm.doc.has_update)
-            ? '<span class="font-weight-bold text-danger">A new version is available</span>'
+            ? '<strong class="text-danger">A new version is available</strong>'
             : '<span class="text-muted">No new version is found</span>'
         );
     },
     check_for_update: function(frm) {
         E.call(
             'check_for_update',
-            function(ret) {
-                frm.reload_doc();
-            }
+            function() { frm.reload_doc(); }
         );
     },
 });

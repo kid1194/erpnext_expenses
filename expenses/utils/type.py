@@ -9,13 +9,15 @@ from frappe import _
 from pypika.terms import Criterion
 
 from .account import *
-from .common import error, get_cache, set_cache, get_cached_doc
+from .common import (
+    error,
+    get_cache,
+    set_cache,
+    get_cached_doc,
+    parse_json_if_valid
+)
+from .doctypes import _TYPE, _TYPE_PARENT, _TYPE_ACCOUNTS
 from .search import filter_search, prepare_data
-
-
-_TYPE = "Expense Type"
-_TYPE_PARENT = "parent_type"
-_TYPE_ACCOUNTS = "expense_accounts"
 
 
 ## Expense Type Tree
@@ -58,12 +60,14 @@ def add_type_node(args=None):
 
     doc.update(args)
 
-    if not doc.get(_TYPE_PARENT):
-        doc.set(_TYPE_PARENT, args.get("parent"))
-
     if cint(doc.get("is_root")):
         doc.set(_TYPE_PARENT, None)
         doc.flags.ignore_mandatory = True
+    else:
+        if not doc.get(_TYPE_PARENT):
+            doc.set(_TYPE_PARENT, args.get("parent"))
+        if not doc.get(_TYPE_PARENT):
+            return {"error", "The type item must have a parent."}
 
     doc.insert(ignore_permissions=True, ignore_mandatory=True)
 
@@ -96,10 +100,23 @@ def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
         doc.parent_type.isin(parent_qry)
     ))
     
-    if (is_not := filters.get("is_not")):
-        qry = qry.where(doc.name != is_not)
+    if (name := filters.get("name")):
+        if isinstance(name, str):
+            name = parse_json_if_valid(name)
+        if (
+            isinstance(name, list) and len(name) == 2 and
+            isinstance(name[0], str) and name[1]
+        ):
+            if name[0] == "=" and isinstance(name[1], str):
+                qry = qry.where(doc.name == name[1])
+            elif name[0] == "!=" and isinstance(name[1], str):
+                qry = qry.where(doc.name != name[1])
+            elif name[0] == "in"and isinstance(name[1], list):
+                qry = qry.where(doc.name.isin(name[1]))
+            elif name[0] == "not in"and isinstance(name[1], list):
+                qry = qry.where(doc.name.notin(name[1]))
     
-    is_group = 1 if filters.get("is_group") == 1 else 0
+    is_group = 1 if cint(filters.get("is_group")) else 0
     qry = qry.where(doc.is_group == is_group)
     
     data = qry.run(as_dict=as_dict)

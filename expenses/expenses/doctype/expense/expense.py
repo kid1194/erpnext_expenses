@@ -14,7 +14,8 @@ from expenses.utils import (
     clear_document_cache,
     get_item_company_account_data,
     with_expense_claim,
-    requests_of_expense_exists
+    requests_of_expense_exists,
+    entries_of_expense_exists
 )
 
 
@@ -109,7 +110,11 @@ class Expense(Document):
     
     
     def on_trash(self):
-        if cint(self.is_requested) or requests_of_expense_exists(self.name):
+        if (
+            cint(self.is_requested) or
+            requests_of_expense_exists(self.name) or
+            entries_of_expense_exists(self.name)
+        ):
             error(_("The expense cannot be removed before removing its reference in the expenses request doctype"))
     
     
