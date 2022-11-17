@@ -18,7 +18,7 @@ frappe.ui.form.on('Expense', {
         frm.E = {
             is_requested: !!cint(frm.doc.is_requested),
             is_approved: !!cint(frm.doc.is_approved),
-            is_super: frappe.perm.has_perm(frm.doctype, 1, 'create'),
+            is_super: frappe.perm.has_perm(frm.doctype, 1, 'write'),
             expense_data: {},
             expense_cost: null,
             expense_qty: null,
@@ -38,13 +38,6 @@ frappe.ui.form.on('Expense', {
             if (!!ret) {
                 frm.E.with_expense_claim = true;
                 E.df_properties('expense_claim', {options: 'Expense Claim', hidden: 0});
-            }
-        });
-        
-        if (!frm.E.is_requested) {
-            frm.set_query('company', {filters: {is_group: 0}});
-            frm.set_query('expense_item', {query: E.path('search_items')});
-            if (frm.E.with_expense_claim) {
                 frm.set_query('expense_claim', function() {
                     return {
                         filters: {
@@ -57,6 +50,11 @@ frappe.ui.form.on('Expense', {
                     };
                 });
             }
+        });
+        
+        if (!frm.E.is_requested) {
+            frm.set_query('company', {filters: {is_group: 0}});
+            frm.set_query('expense_item', {query: E.path('search_items')});
             return;
         }
         
@@ -221,7 +219,7 @@ frappe.ui.form.on('Expense Attachment', {
             E.error('Removing attachments is not allowed', true);
             return;
         }
-        if (row.file && !E.has(frm.E.del_files, row.file))
+        if (row.file && !E.contains(frm.E.del_files, row.file))
             frm.E.del_files.push(row.file);
     },
     file: function(frm, cdt, cdn) {

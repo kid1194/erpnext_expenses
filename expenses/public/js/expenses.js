@@ -13,8 +13,7 @@ window.E = (function() {
     class Expenses {
         constructor(frm) {
             this._frm = null;
-            this._rates = {};
-            this._docs = {};
+            this._cache = {};
         }
         
         // Helpers
@@ -45,8 +44,57 @@ window.E = (function() {
             t[v] = v;
             return t;
         }
+        to_json(v, d) {
+            if (d === undefined) d = v;
+            try {
+                return JSON.stringify(v);
+            } catch(e) { return d; }
+        }
+        parse_json(v, d) {
+            if (d === undefined) d = v;
+            try {
+                return JSON.parse(v);
+            } catch(e) { return d; }
+        }
+        contains(d, v) {
+            let a = d;
+            if (this.is_cls(d)) a = Object.values(d);
+            return this.is_arr(a) && a.indexOf(v) >= 0;
+        }
+        contains_any(d, vs) {
+            let a = d;
+            if (this.is_cls(d)) a = Object.values(d);
+            if (!this.is_arr(a)) return false;
+            for (let i = 0, l = vs.length; i < l; i++) {
+                if (a.indexOf(vs[i]) >= 0) return true;
+            }
+            return false;
+        }
+        contains_all(d, vs) {
+            let a = d;
+            if (this.is_cls(d)) a = Object.values(d);
+            if (!this.is_arr(a)) return false;
+            for (let i = 0, l = vs.length; i < l; i++) {
+                if (a.indexOf(vs[i]) < 0) return false;
+            }
+            return true;
+        }
         has(v, k) {
-            return (this.is_arr(v) && v.indexOf(k) >= 0) || (this.is_cls(v) && v[k] != null);
+            return (this.is_arr(v) || this.is_cls(v)) && v[k] != null;
+        }
+        has_any(v, ks) {
+            if (!this.is_arr(ks)) return false;
+            let a = v;
+            if (this.is_arr(v) || this.is_cls(v)) a = Object.keys(v);
+            if (!this.is_arr(a)) return false;
+            return this.contains_any(a, ks);
+        }
+        has_all(v, ks) {
+            if (!this.is_arr(ks)) return false;
+            let a = v;
+            if (this.is_arr(v) || this.is_cls(v)) a = Object.keys(v);
+            if (!this.is_arr(a)) return false;
+            return this.contains_all(a, ks);
         }
         merge(d, v) {
             if (this.is_arr(d)) {
@@ -72,14 +120,17 @@ window.E = (function() {
                 }
             } else if (this.is_cls(data)) {
                 for (let k in data) {
-                    if (fn.apply(bind, [data[k], k]) === false) return this;
+                    if (
+                        data.hasOwnProperty(k)
+                        && fn.apply(bind, [data[k], k]) === false
+                    ) return this;
                 }
             }
             return this;
         }
         clone(data) {
             if (!this.is_arr(data) && !this.is_obj(data)) return data;
-            return JSON.parse(JSON.stringify(data));
+            return this.parse_json(this.to_json(data), null);
         }
         array_diff(a, b, f) {
             if (!this.is_arr(a) || !a.length) return this.is_arr(b) ? b : [];
@@ -123,38 +174,24 @@ window.E = (function() {
         path(method) {
             return 'expenses.utils.' + method;
         }
-        _call(method, type, args, success, always, resolve, reject) {
-            args = args || null;
+        _call(method, args, success, always, resolve, reject) {
+            if (args && this.is_func(args)) {
+                if (this.is_func(success)) always = success;
+                success = args;
+                args = null;
+            }
+            let data = {type: 'GET'};
             if (args) {
-                if (this.is_func(args)) {
-                    success = args;
-                    args = null;
-                } else if (!this.is_obj(args)) {
-                    args = {'data': args};
-                } else if (!type && this.is_obj(args) && args.type) {
-                    type = args.type;
-                    delete args.type;
-                    args = args.args || (Object.keys(args).length ? args : null);
+                data.type = 'POST';
+                if (!this.is_obj(args)) data.args = {'data': args};
+                else {
+                    data.args = args;
+                    if (args.type && args.args) {
+                        data.type = args.type;
+                        data.args = args.args;
+                    }
                 }
             }
-            var error = this.fn(function(e) {
-                this.log('Call error.', e);
-                this.error('Unable to make the call to {0}', [data.method]);
-                reject && reject();
-            }),
-            data = {
-                type: type || (args ? 'POST' : 'GET'),
-                args: args,
-                callback: this.fn(function(ret) {
-                    if (ret && this.is_obj(ret)) ret = ret.message || ret;
-                    try {
-                        let val = this.is_func(success) ? success.call(this, ret) : null;
-                        resolve && resolve(val || ret);
-                    } catch(e) {
-                        error(e);
-                    }
-                }),
-            };
             if (this.is_str(method)) {
                 if (!this.is_url(method)) method = this.path(method);
                 data.method = method;
@@ -165,51 +202,57 @@ window.E = (function() {
                 this.log('The method passed is invalid', arguments);
                 return;
             }
-            data.error = error;
+            var ckey = this.to_json(data, ''),
+            error = data.error = this.fn(function(e) {
+                this.log('Call error.', e);
+                this.error('Unable to make the call to {0}', [data.method]);
+                reject && reject();
+            });
+            data.callback = this.fn(function(ret) {
+                if (ret && this.is_obj(ret)) ret = ret.message || ret;
+                this._cache[ckey] = ret;
+                try {
+                    let val = this.is_func(success) ? success.call(this, ret) : null;
+                    resolve && resolve(val || ret);
+                } catch(e) { error(e); }
+            });
+            if (this._cache[ckey]) {
+                data.callback(this._cache[ckey]);
+                return this;
+            }
             if (this.is_func(always)) data.always = this.fn(always);
             try {
                 frappe.call(data);
-            } catch(e) {
-                error(e);
-            }
+            } catch(e) { error(e); }
             return this;
         }
         call(method, args, success, always) {
-            this._call(method, null, args, success, always);
-            return this;
+            return this._call(method, args, success, always);
         }
         xcall(method, args, success, always) {
             return new Promise(this.fn(function(resolve, reject) {
-                this._call(method, null, args, success, always, resolve, reject);
+                this._call(method, args, success, always, resolve, reject);
             }));
         }
         
         // localStorage
-        set_cache(key, value) {
+        set_cache(key, val) {
             if (!this.is_str(key)) return this;
-            if (value != null && !this.is_str(value)) {
-                if (!this.is_arr(value) && !this.is_obj(value)) {
-                    value = {__value: value};
-                }
-                try {
-                    value = JSON.stringify(value);
-                } catch(e) { value = null; }
+            if (val != null && !this.is_str(val)) {
+                if (!this.is_arr(val) && !this.is_obj(val))
+                    val = {__value: val};
+                val = this.to_json(val, null);
             }
-            if (this.is_str(value)) localStorage.setItem(key, value);
+            if (this.is_str(val)) localStorage.setItem(key, val);
             return this;
         }
         get_cache(key) {
             if (!this.is_str(key)) return;
-            let value = localStorage.getItem(key);
-            if (this.is_str(value)) {
-                try {
-                    value = JSON.parse(value);
-                } catch(e) { value = null; }
-            }
-            if (this.is_obj(value) && value.__value) {
-                value = value.__value;
-            }
-            return value;
+            let val = localStorage.getItem(key);
+            val = this.parse_json(val, null);
+            if (val && this.is_obj(val))
+                val = val.__value || val;
+            return val;
         }
         pop_cache(key) {
             let value = this.get_cache(key);
@@ -223,32 +266,23 @@ window.E = (function() {
         
         // Database
         get_doc(dt, name, callback) {
-            if (this._docs[dt] && this._docs[dt][name]) {
-                let ret = callback && callback.call(this, this._docs[dt][name]);
-                return Promise.resolve(ret);
-            }
             return this.xcall(
                 'frappe.client.get',
                 {type: 'GET', args: {doctype: dt, name: name}},
-                function(ret) {
-                    if (ret && this.is_obj(ret)) ret = ret.message || ret;
-                    this._docs[dt] = this._docs[dt] || {};
-                    this._docs[dt][name] = ret;
-                    return callback && callback.call(this, ret);
-                }
+                callback
             );
         }
         get_list(dt, opts, callback) {
             frappe.db.get_list(dt, opts).then(this.fn(function(ret) {
                 if (ret && this.is_obj(ret)) ret = ret.message || ret;
-                callback && callback.call(this, ret);
+                this.is_func(callback) && callback.call(this, ret);
             }));
             return this;
         }
         get_value(dt, name, key, callback) {
             frappe.db.get_value(dt, name, key).then(this.fn(function(ret) {
                 if (ret && this.is_obj(ret)) ret = ret.message || ret;
-                callback && callback.call(this, ret);
+                this.is_func(callback) && callback.call(this, ret);
             }));
             return this;
         }
@@ -349,23 +383,13 @@ window.E = (function() {
         
         // Expenses Entry
         get_exchange_rate(from, to, callback) {
-            var key = from + '.' + to,
-            rkey = to + '.' + from;
-            if (this._rates[rkey]) {
-                this._rates[key] = flt(1 / this._rates[rkey]);
-            }
-            if (this._rates[key]) {
-                callback && callback.call(this, this._rates[key]);
-                return Promise.resolve();
-            }
             return this.xcall(
                 'get_current_exchange_rate',
                 {from, to},
                 function(v) {
                     v = flt(v);
                     if (v <= 0) v = 1.0;
-                    this._rates[key] = v;
-                    callback && callback.call(this, v);
+                    this.is_func(callback) && callback.call(this, v);
                 }
             );
         }

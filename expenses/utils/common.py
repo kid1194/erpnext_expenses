@@ -53,15 +53,15 @@ def log_fallback(data):
         frappe.log_error("Expenses Log", raw)
 
 
-def get_cache(dt: str, key: str):
+def get_cache(dt, key):
     return frappe.cache().hget(dt, key)
 
 
-def set_cache(dt: str, key: str, data):
+def set_cache(dt, key, data):
     frappe.cache().hset(dt, key, data)
 
 
-def del_cache(dt: str, key: str):
+def del_cache(dt, key):
     frappe.cache().hdel(dt, key)
 
 
@@ -96,7 +96,7 @@ def get_cached_value(dt, filters, field):
     if isinstance(filters, str):
         val = frappe.get_cached_value(dt, filters, field)
     if not val:
-        as_dict = 1 if isinstance(field, list) : 0
+        as_dict = 1 if isinstance(field, list) else 0
         val = frappe.db.get_value(dt, filters, field, as_dict=as_dict)
     if val and isinstance(val, list):
         val = val.pop()

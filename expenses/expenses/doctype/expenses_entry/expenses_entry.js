@@ -286,7 +286,7 @@ frappe.ui.form.on('Expense Attachment', {
         let row = locals[cdt][cdn];
         if (row.expenses_entry_row_ref)
             E.error('Removing attachments is not allowed', true);
-        if (row.file && !E.has(frm.E.del_files, row.file))
+        if (row.file && !E.contains(frm.E.del_files, row.file))
             frm.E.del_files.push(row.file);
     },
     file: function(frm, cdt, cdn) {

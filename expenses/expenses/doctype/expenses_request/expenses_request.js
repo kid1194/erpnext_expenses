@@ -311,12 +311,11 @@ frappe.ui.form.on('Expenses Request', {
     },
     toggle_make_entry_button: function(frm) {
         if (
-            frm.doc.docstatus !== 1
+            cint(frm.doc.docstatus) !== 1
             || frm.doc.status !== 'Approved'
             || (
                 frm.doc.owner !== frappe.session.user
-                && !frappe.user_roles.includes('Expenses Reviewer')
-                && !frappe.user_roles.includes('Accounts Manager')
+                && !frappe.perm.has_perm(frm.doctype, 1, 'write')
             )
         ) return;
         
@@ -332,7 +331,7 @@ frappe.ui.form.on('Expenses Request', {
     },
     toggle_appeal_button: function(frm) {
         if (
-            frm.doc.docstatus !== 2
+            cint(frm.doc.docstatus) !== 2
             || frm.doc.status !== 'Rejected'
             || frm.doc.owner !== frappe.session.user
         ) return;
@@ -357,7 +356,8 @@ frappe.ui.form.on('Expenses Request', {
                         read_only: 1,
                     },
                 ],
-            }),
+            });
+            
             frm.E.appeal_table = E.datatable(frm.E.appeal.get_field('expenses_html').$wrapper);
             frm.E.appeal_table
                 .label('Expenses')
@@ -371,10 +371,12 @@ frappe.ui.form.on('Expenses Request', {
                 .checked_row_status()
                 .read_only()
                 .render();
+            
             E.each(frm.doc.expenses, function(v) {
                 frm.E.appeal_table.add_row(frm.E.data[v.expense], 1);
             });
             frm.E.appeal_table.refresh();
+            
             frm.E.appeal.set_primary_action(
                 __('Submit'),
                 function() {

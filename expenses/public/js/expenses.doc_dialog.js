@@ -89,7 +89,7 @@ class ExpensesDocDialog {
     remove_fields() {
         if (!this._ready) return this._on_make('remove_fields', arguments);
         var args = arguments;
-        this._fields = this._fields.filter(function(f) { return !E.has(args, f.fieldname); });
+        this._fields = this._fields.filter(function(f) { return !E.contains(args, f.fieldname); });
         E.each(args, function(n) {
             if (this._fields_by_name[n] != null) {
                 this._fields_by_ref.splice(this._fields_by_name[n], 1);
@@ -186,7 +186,7 @@ class ExpensesDocDialog {
     add_custom_action(label, callback, type, position) {
         if (!this._ready) return this._on_ready('add_custom_action', arguments);
         let pos = ['start', 'center', 'end'];
-        if (type && E.has(pos, type)) {
+        if (type && E.contains(pos, type)) {
             position = type;
             type = null;
         }

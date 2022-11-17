@@ -35,10 +35,11 @@ class ExpensesDataTable {
         this._extends = [];
     }
     label(text) {
-        this._label = __(text);
+        if (E.is_str(text)) this._label = __(text);
         return this;
     }
     column(id, label, format) {
+        if (!E.is_str(id) || !E.is_str(label)) return this;
         if (id !== '_actions') this._columns_ids.push(id);
         let col = {
             id: id, name: __(label),
@@ -51,9 +52,12 @@ class ExpensesDataTable {
         return this;
     }
     action(key, icon, type, callback) {
-        if (!key) key = '_' + Math.random().toString(36).substr(2);
-        if (!icon) icon = 'pen';
-        if (!type) type = 'default';
+        if (
+            !E.is_str(key) || !E.is_str(icon)
+            || !E.is_str(type) || !E.is_func(callback)
+        ) return this;
+        if (icon.startsWith('fa-')) icon = icon.substring(3);
+        if (type.startsWith('btn-')) type = type.substring(4);
         this._buttons.push({
             key: key,
             html: `<button type="button" class="btn btn-sm btn-${type}" data-action="${key}" data-row-idx="{idx}">
@@ -64,7 +68,7 @@ class ExpensesDataTable {
         return this;
     }
     layout(value) {
-        this._opt.layout = value;
+        if (E.is_str(value)) this._opt.layout = value;
         return this;
     }
     column_number() {
@@ -73,25 +77,23 @@ class ExpensesDataTable {
     }
     column_checkbox(callback) {
         this._opt.checkboxColumn = true;
-        this._checkbox_callback = callback;
+        if (E.is_func(callback)) this._checkbox_callback = callback;
         if (!this._opt.events.onCheckRow) {
             var me = this;
             this._opt.events.onCheckRow = function(row) {
-                if (!row) {
+                if (!E.is_obj(row)) {
+                    E.clear(me._selected);
                     let rows = this.rowmanager.getCheckedRows();
                     if (rows.length) {
-                        me._selected.splice(0, me._selected.length);
-                        Array.prototype.push.apply(me._selected, rows);
-                    } else {
-                        me._selected.splice(0, me._selected.length);
+                        E.merge(me._selected, rows);
                     }
                 } else {
                     let idx = row.meta ? row.meta.rowIndex : null;
-                    if (idx != null && me._selected.indexOf(idx) < 0) {
+                    if (idx != null && E.contains(me._selected, idx)) {
                         me._selected.push(idx);
                     }
                 }
-                E.is_func(me._checkbox_callback) && me._checkbox_callback.call(me);
+                me._checkbox_callback && me._checkbox_callback.call(me);
             };
         }
         return this;
@@ -101,7 +103,7 @@ class ExpensesDataTable {
         return this;
     }
     no_data_message(text) {
-        this._opt.noDataMessage = __(text);
+        if (E.is_str(text)) this._opt.noDataMessage = __(text);
         return this;
     }
     dynamic_row_height() {
@@ -126,15 +128,15 @@ class ExpensesDataTable {
         return this;
     }
     on_remove(callback) {
-        this._on_remove = E.is_func(callback) ? callback : null;
+        if (E.is_func(callback)) this._on_remove = callback;
         return this;
     }
     on_remove_all(callback) {
-        this._on_remove_all = E.is_func(callback) ? callback : null;
+        if (E.is_func(callback)) this._on_remove_all = callback;
         return this;
     }
     on_add(callback) {
-        this._on_add = E.is_func(callback) ? callback : null;
+        if (E.is_func(callback)) this._on_add = callback;
         return this;
     }
     render() {
@@ -173,11 +175,8 @@ class ExpensesDataTable {
                 if (!me._selected.length) return;
                 let ret = me._on_remove && me._on_remove.call(me, me.get_selected_rows());
                 if (ret === false) return;
-                E.each(me._selected, function(i) {
-                    me.remove_row(i, 1);
-                });
-                me._selected.splice(0, me._selected.length);
-                me.refresh();
+                me.remove_rows(me._selected);
+                E.clear(me._selected);
             });
             this.$remove_all_rows.on('click', function(e) {
                 e.preventDefault();
@@ -204,7 +203,7 @@ class ExpensesDataTable {
                     if (!idx) return;
                     let row = me.get_row(idx);
                     if (!row) return;
-                    E.is_func(callback) && callback.apply(me, [row, idx]);
+                    callback && callback.apply(me, [row, idx]);
                 });
             }, this);
             html.push('</div>');
@@ -218,17 +217,38 @@ class ExpensesDataTable {
         this._table = new frappe.DataTable(this.$table.get(0), this._opt);
     }
     add_row(data, bulk) {
+        if (!E.is_obj(data)) return this;
         data._actions = '';
         this._rows.push(data);
         if (!bulk) this.refresh();
         return this;
     }
+    add_rows(data, bulk) {
+        if (!E.is_arr(data)) return this;
+        E.each(data, function(v) {
+            if (!E.is_obj(v)) return;
+            v._actions = '';
+            this._rows.push(v);
+        }, this);
+        if (!bulk) this.refresh();
+        return this;
+    }
     remove_row(idx, bulk) {
         idx = cint(idx);
-        if (this._rows.length > idx) {
+        if (idx >= 0 && this._rows[idx]) {
             this._rows.splice(idx, 1);
             if (!bulk) this.refresh();
         }
+        return this;
+    }
+    remove_rows(idxs, bulk) {
+        if (!E.is_arr(idxs)) return this;
+        E.each(idxs, function(i) {
+            i = cint(i);
+            if (i >= 0 && this._rows[i])
+                this._rows.splice(i, 1);
+        }, this);
+        if (!bulk) this.refresh();
         return this;
     }
     refresh() {
@@ -245,10 +265,19 @@ class ExpensesDataTable {
     }
     get_row(idx) {
         idx = cint(idx);
-        return this._rows.length > idx ? this._rows[idx] : null;
+        return this._rows[idx] || null;
+    }
+    get_rows(idxs) {
+        var out = [];
+        if (!E.is_arr(idxs)) return out;
+        E.each(idxs, function(i) {
+            i = cint(i);
+            out.push(this._rows[i] || null);
+        }, this);
+        return out;
     }
     clear() {
-        this._rows.splice(0, this._rows.length);
+        E.clear(this._rows);
         this.refresh();
         return this;
     }
@@ -267,7 +296,11 @@ class ExpensesDataTable {
     }
     unset() {
         E.each(arguments, function(k) {
-            if (!E.has(this._extends, key)) return;
+            if (E.is_arr(k)) {
+                this.unset.apply(this, k);
+                return;
+            }
+            if (!E.is_str(k) || !E.has(this._extends, key)) return;
             delete this[key];
             let idx = this._extends.indexOf(key);
             if (idx >= 0) this._extends.splice(idx, 1);
