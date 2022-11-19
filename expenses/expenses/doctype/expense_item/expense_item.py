@@ -27,36 +27,22 @@ class ExpenseItem(Document):
                     self.expense_accounts.remove(v)
                 else:
                     existing.append(v.company)
-                    cost = flt(v.cost)
-                    if cost < 0 or cost > 0:
-                        if cost < 0:
-                            v.cost = 0
-                        v.min_cost = 0
-                        v.max_cost = 0
-                    else:
-                        min_cost = flt(v.min_cost)
-                        max_cost = flt(v.max_cost)
-                        if min_cost < 0:
-                            v.min_cost = 0
-                        if max_cost < 0:
-                            v.max_cost = 0
-                        if min_cost > 0 and min_cost > max_cost:
-                            v.min_cost = 0
-                    qty = flt(v.qty)
-                    if qty < 0 or qty > 0:
-                        if qty < 0:
-                            v.qty = 0
-                        v.min_qty = 0
-                        v.max_qty = 0
-                    else:
-                        min_qty = flt(v.min_qty)
-                        max_qty = flt(v.max_qty)
-                        if min_qty < 0:
-                            v.min_qty = 0
-                        if max_qty < 0:
-                            v.max_qty = 0
-                        if min_qty > 0 and min_qty > max_qty:
-                            v.min_qty = 0
+                    for k in ["cost", "qty"]:
+                        min_k = "min_" + k
+                        max_k = "max_" + k
+                        val = flt(v[k])
+                        if val != 0:
+                            if val < 0:
+                                v[k] = 0
+                            v[min_k] = 0
+                            v[max_k] = 0
+                        else:
+                            min_val = flt(v[min_k])
+                            max_val = flt(v[max_k])
+                            if max_val < 0:
+                                v[max_k] = 0
+                            if min_val < 0 or min_val > max_val:
+                                v[min_k] = 0
     
     
     def validate(self):

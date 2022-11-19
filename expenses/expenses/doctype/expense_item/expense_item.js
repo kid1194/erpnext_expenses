@@ -32,6 +32,12 @@ frappe.ui.form.on('Expense Item', {
         });
         
         frm.add_fetch('account', 'account_currency', 'currency', 'Expense Account');
+        
+        if (!frm.is_new()) {
+            E.each(frm.doc.expense_accounts, function(v) {
+                frm.E.companies.rpush(v.company, v.name);
+            });
+        }
     },
 });
 

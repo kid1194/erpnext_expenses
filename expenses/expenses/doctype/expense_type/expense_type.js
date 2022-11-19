@@ -53,6 +53,12 @@ frappe.ui.form.on('Expense Type', {
                 }
             };
         });
+        
+        if (!frm.is_new()) {
+            E.each(frm.doc.expense_accounts, function(v) {
+                frm.E.companies.rpush(v.company, v.name);
+            });
+        }
     },
     refresh: function(frm) {
         if (frm.is_new() && !frm.E.add_all_companies) {
