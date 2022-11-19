@@ -98,7 +98,7 @@ window.E = (function() {
         }
         merge(d, v) {
             if (this.is_arr(d)) {
-                Array.prototype.push(d, this.to_arr(v));
+                Array.prototype.push.call(d, this.to_arr(v));
             } else if (this.is_obj(d)) {
                 Object.assign(d, this.to_obj(v));
             }
@@ -140,7 +140,7 @@ window.E = (function() {
             let t = a.filter(function(v) {
                 return b.indexOf(v) < 0 && r.indexOf(v) < 0;
             });
-            Array.prototype.push(r, t);
+            Array.prototype.push.call(r, t);
             return r;
         }
         

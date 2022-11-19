@@ -4,8 +4,6 @@
 # Licence: Please refer to LICENSE file
 
 
-import frappe
-
 from .common import get_cached_doc
 from .doctypes import _SETTINGS
 
