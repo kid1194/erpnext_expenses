@@ -15,7 +15,6 @@
   "posting_date",
   "expenses_section",
   "expenses",
-  "expenses_html",
   "remarks",
   "control_section",
   "reviewer",
@@ -73,17 +72,7 @@
    "fieldname": "expenses",
    "fieldtype": "MultiSelect Table",
    "label": "Expenses",
-   "options": "Expenses Request Details",
-   "hidden": 1,
-   "print_hide": 1,
-   "report_hide": 1
-  },
-  {
-   "fieldname": "expenses_html",
-   "fieldtype": "HTML",
-   "label": "Expenses",
-   "bold": 1,
-   "in_preview": 1
+   "options": "Expenses Request Details"
   },
   {
    "fieldname": "remarks",

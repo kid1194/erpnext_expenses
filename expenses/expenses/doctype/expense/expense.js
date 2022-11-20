@@ -37,7 +37,10 @@ frappe.ui.form.on('Expense', {
         E.call('with_expense_claim', function(ret) {
             if (!!ret) {
                 frm.E.with_expense_claim = true;
-                E.df_properties('expense_claim', {options: 'Expense Claim', hidden: 0});
+                E.df_properties('expense_claim', {
+                    options: 'Expense Claim',
+                    hidden: 0,
+                });
                 frm.set_query('expense_claim', function() {
                     return {
                         filters: {
@@ -63,6 +66,7 @@ frappe.ui.form.on('Expense', {
         
         if (frm.E.is_approved) return;
         
+        E.df_property('attachments.file', 'read_only', 1);
         E.df_properties('attachments', {
             read_only: 0,
             cannot_delete_rows: 1,
@@ -166,11 +170,17 @@ frappe.ui.form.on('Expense', {
     is_paid: function(frm) {
         if (!cint(frm.doc.is_paid)) {
             frm.set_value('paid_by', '');
-            frm.set_value('expense_claim', '');
+            frm.E.with_expense_claim && frm.set_value('expense_claim', '');
+        }
+        if (frm.E.with_expense_claim) {
+            frm.toggle_reqd('expense_claim', !!cint(frm.doc.is_paid));
+            frm.toggle_enable('expense_claim', !!cint(frm.doc.is_paid));
         }
     },
     paid_by: function(frm) {
-        if (!frm.doc.paid_by) frm.set_value('expense_claim', '');
+        if (!frm.doc.paid_by && frm.E.with_expense_claim) {
+            frm.set_value('expense_claim', '');
+        }
     },
     party_type: function(frm) {
         if (!frm.doc.party_type) frm.set_value('party', '');

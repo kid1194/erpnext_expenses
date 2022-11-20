@@ -221,7 +221,6 @@
    "options": "Expense",
    "hidden": 1,
    "read_only_depends_on": "eval:!doc.is_paid",
-   "mandatory_depends_on": "eval:doc.is_paid",
    "only_select": 1,
    "ignore_user_permissions": 1,
    "search_index": 1

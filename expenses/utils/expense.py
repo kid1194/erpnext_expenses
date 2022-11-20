@@ -33,6 +33,28 @@ def with_expense_claim():
     return 1 if frappe.db.exists("DocType", "Expense Claim") else 0
 
 
+## Self
+_EXPENSE_FIELDS = [
+    "company",
+    "expense_item",
+    "expense_account",
+    "required_by",
+    "description",
+    "project",
+    "currency",
+    "cost",
+    "qty",
+    "total",
+    "is_advance",
+    "is_paid",
+    "paid_by",
+    "expense_claim",
+    "party_type",
+    "party",
+    "attachments",
+]
+
+
 ## Expense List
 @frappe.whitelist(methods=["POST"])
 def add_expense(data):
@@ -42,12 +64,7 @@ def add_expense(data):
     if not data or not isinstance(data, dict):
         return 0
     
-    for k in [
-        "doctype", "owner", "name",
-        "creation", "modified", "modified_by"
-    ]:
-        if k in data:
-            del data[k]
+    data = {k:v for k, v in data.items() if k in _EXPENSE_FIELDS}
     
     try:
         frappe.new_doc(_EXPENSE).update(data).insert()

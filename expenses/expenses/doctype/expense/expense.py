@@ -31,27 +31,25 @@ class Expense(Document):
                 old_cost = flt(self.cost)
                 old_qty = flt(self.qty)
                 
-                if temp.cost:
-                    self.cost = temp.cost
-                elif temp.min_cost or temp.max_cost:
-                    if temp.min_cost and old_cost < temp.min_cost:
-                        self.cost = temp.min_cost
-                    elif temp.max_cost and old_cost > temp.max_cost:
-                        self.cost = temp.max_cost
-                
-                if temp.qty:
-                    self.qty = temp.qty
-                elif temp.min_qty or temp.max_qty:
-                    if temp.min_qty and old_qty < temp.min_qty:
-                        self.qty = temp.min_qty
-                    elif temp.max_qty and old_qty> temp.max_qty:
-                        self.qty = temp.max_qty
+                for k in ["cost", "qty"]:
+                    if temp[k]:
+                        self.set(k, temp[k])
+                    else:
+                        min_k = "min_" + k
+                        max_k = "max_" + k
+                        if temp[min_k] or temp[max_k]:
+                            if temp[min_k] and flt(self.get(k)) < temp[min_k]:
+                                self.set(k, temp[min_k])
+                            elif temp[max_k] and flt(self.get(k)) > temp[max_k]:
+                                self.set(k, temp[max_k])
                 
                 if old_cost != flt(self.cost) or old_qty != flt(self.qty):
                     self.total = flt(flt(self.cost) * flt(self.qty))
             
             if not cint(self.is_paid):
                 self.paid_by = None
+                self.expense_claim = None
+            elif self.expense_claim and not with_expense_claim():
                 self.expense_claim = None
             
             if not self.party_type:
@@ -96,7 +94,6 @@ class Expense(Document):
                 error(_("The expense claim is invalid"))
         elif self.party_type and not self.party:
             error(_("The party is mandatory"))
-        
         elif cint(self.is_requested):
             self.check_changes()
     

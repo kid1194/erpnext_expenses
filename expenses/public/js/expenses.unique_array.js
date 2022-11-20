@@ -63,3 +63,9 @@ class UniqueArray {
         return this;
     }
 }
+
+if (window.E) {
+    window.E.extend('unique_array', function(data) {
+        return new UniqueArray(data);
+    });
+}

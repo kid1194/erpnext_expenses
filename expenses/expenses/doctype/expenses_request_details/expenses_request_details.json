@@ -2,7 +2,6 @@
  "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
- "editable_grid": 1,
  "autoname": "hash",
  "creation": "2022-04-04 04:04:04.119400",
  "description": "Link between expenses request and expense",
@@ -18,12 +17,46 @@
    "fieldtype": "Link",
    "label": "Expense",
    "options": "Expense",
-   "reqd": 1,
+   "read_only": 1,
    "bold": 1,
    "only_select": 1,
    "in_list_view": 1,
    "search_index": 1,
    "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "expense_item",
+   "fieldtype": "Data",
+   "label": "Expense Item",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Data",
+   "label": "Total",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_advance",
+   "fieldtype": "Data",
+   "label": "Is Advance",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "required_by",
+   "fieldtype": "Data",
+   "label": "Required By",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "HTML",
+   "label": "Attachments",
+   "read_only": 1
   }
  ],
  "istable": 1,

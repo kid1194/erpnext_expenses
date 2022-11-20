@@ -11,12 +11,20 @@ window.E = (function() {
     'use strict';
     
     class Expenses {
-        constructor(frm) {
+        constructor() {
+            this._path = 'expenses.utils.';
             this._frm = null;
             this._cache = {};
         }
         
         // Helpers
+        is_func(v) { return $.isFunction(v); }
+        is_str(v) { return typeof v === 'string'; }
+        is_arr(v) { return $.isArray(v); }
+        is_cls(v) { return typeof v === 'object' && !this.is_arr(v); }
+        is_obj(v) { return $.isPlainObject(v); }
+        is_url(v) { try { new URL(v); return true; } catch(e) { return false; } }
+        
         fn(f, b) {
             if (!this.is_func(f)) f = null;
             b = b || this;
@@ -25,13 +33,7 @@ window.E = (function() {
                 return f && f.apply(b, arguments);
             };
         }
-        is_func(v) { return typeof v === 'function'; }
-        is_str(v) { return typeof v === 'string'; }
-        is_num(v) { return typeof v === 'number'; }
-        is_arr(v) { return v && Array.isArray(v); }
-        is_cls(v) { return typeof v === 'object' && !this.is_arr(v); }
-        is_obj(v) { return v && $.isPlainObject(v); }
-        is_url(v) { try { new URL(v); return true; } catch(e) { return false; } }
+        
         to_arr(v) {
             if (v == null) return [];
             if (this.is_arr(v)) return v;
@@ -172,7 +174,7 @@ window.E = (function() {
         
         // Call
         path(method) {
-            return 'expenses.utils.' + method;
+            return this._path + method;
         }
         _call(method, args, success, always, resolve, reject) {
             if (args && this.is_func(args)) {
@@ -330,9 +332,8 @@ window.E = (function() {
         df_property(field, key, val, table, cdn) {
             if (!table && field.includes('.', 1)) {
                 let parts = field.split('.');
-                field = parts.pop();
-                if (parts.length === 2) cdn = parts.pop();
-                table = parts.pop();
+                field = parts[1];
+                table = parts[0];
             }
             if (table && !cdn) {
                 this._frm.get_field(table).grid
@@ -394,18 +395,9 @@ window.E = (function() {
             );
         }
         
-        // Doc Dialog
-        doc_dialog(doctype, title, indicator) {
-            return ExpensesDocDialog ? new ExpensesDocDialog(doctype, title, indicator) : null;
-        }
-        
-        // Unique Array
-        unique_array(data) {
-            return UniqueArray ? new UniqueArray(data) : null;
-        }
-        // DataTable
-        datatable(wrapper) {
-            return ExpensesDataTable ? new ExpensesDataTable(wrapper) : null;
+        extend(key, fn) {
+            if (!this[key]) this[key] = this.fn(fn);
+            return this;
         }
     }
     return new Expenses();

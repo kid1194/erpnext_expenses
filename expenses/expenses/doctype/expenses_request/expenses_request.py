@@ -19,16 +19,22 @@ from expenses.utils import (
 
 
 class ExpensesRequest(Document):
+    expenses_virtual_fields = [
+        "expense_item",
+        "total",
+        "is_advance",
+        "required_by"
+    ]
+    
     def before_validate(self):
-        if self.docstatus.is_draft():
-            if self.expenses:
-                existing = []
-                for i in range(len(self.expenses)):
-                    v = self.expenses[i]
-                    if not v.expense or v.expense in existing:
-                        self.expenses.remove(v)
-                    else:
-                        existing.append(v.expense)
+        if self.docstatus.is_draft() and self.expenses:
+            existing = []
+            for i in range(len(self.expenses)):
+                v = self.expenses[i]
+                if not v.expense or v.expense in existing:
+                    self.expenses.remove(v)
+                else:
+                    existing.append(v.expense)
     
     
     def validate(self):
@@ -47,6 +53,10 @@ class ExpensesRequest(Document):
     
     
     def before_save(self):
+        for v in self.expenses:
+            for k in self.expenses_virtual_fields:
+                v[k] = None
+        
         self.load_doc_before_save()
         clear_document_cache(
             self.doctype,

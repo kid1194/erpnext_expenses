@@ -402,3 +402,9 @@ class ExpensesDocDialog {
         return this;
     }
 }
+
+if (window.E) {
+    window.E.extend('doc_dialog', function(doctype, title, indicator) {
+        return new ExpensesDocDialog(doctype, title, indicator);
+    });
+}

@@ -271,8 +271,7 @@ frappe.listview_settings['Expense'] = {
                 })
                 .extend('with_expense_claim', true);
             }
-            base.QE.build();
-        });
+        }, function() { base.QE.build(); });
         
         list.page.add_inner_button(
             __('Quick Add'), function() { frappe.listview_settings.Expense.QE.show(); },
