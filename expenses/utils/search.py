@@ -64,17 +64,17 @@ def prepare_data(data, column, txt, as_dict):
 			if re.search(f"{re.escape(txt)}.*", _(v.get(column) if as_dict else v[0]), re.IGNORECASE)
 		)
 	
-	data = sorted(data, key=lambda x: relevance_sorter(x, txt, as_dict))
+	args = [txt, as_dict]
+	def relevance_sorter(key):
+        value = _(key.name if args[1] else key[0])
+        return (cstr(value).lower().startswith(args[0].lower()) is not True, value)
     
+	data = sorted(data, key=relevance_sorter)
+	
     if as_dict:
         for r in data:
             r.pop("_relevance")
     else:
         data = [r[:-1] for r in data]
-        
+    
     return data
-
-
-def relevance_sorter(key, query, as_dict):
-    value = _(key.name if as_dict else key[0])
-    return (cstr(value).lower().startswith(query.lower()) is not True, value)
