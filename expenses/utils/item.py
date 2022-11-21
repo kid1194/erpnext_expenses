@@ -38,7 +38,7 @@ def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
     
     data = qry.run(as_dict=as_dict)
     
-    data = prepare_data(data, "name", txt, as_dict)
+    data = prepare_data(data, _ITEM, "name", txt, as_dict)
     
     return data
 

@@ -56,13 +56,17 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     return qry
 
 
-def prepare_data(data, column, txt, as_dict):
+def prepare_data(data, dt, column, txt, as_dict):
     if txt and dt in frappe.get_hooks("translated_search_doctypes"):
-        data = (
+        data = [
             v
             for v in data
-			if re.search(f"{re.escape(txt)}.*", _(v.get(column) if as_dict else v[0]), re.IGNORECASE)
-		)
+            if re.search(
+                f"{re.escape(txt)}.*",
+                _(v.get(column) if as_dict else v[0]),
+                re.IGNORECASE
+            )
+		]
 	
 	args = [txt, as_dict]
 	def relevance_sorter(key):

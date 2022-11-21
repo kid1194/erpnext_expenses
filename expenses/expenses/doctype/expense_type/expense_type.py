@@ -31,12 +31,12 @@ class ExpenseType(NestedSet):
                     self.expense_accounts.remove(v)
                 else:
                     existing.append(v.company)
-                    v.cost = 0
-                    v.min_cost = 0
-                    v.max_cost = 0
-                    v.qty = 0
-                    v.min_qty = 0
-                    v.max_qty = 0
+                    v.cost = None
+                    v.min_cost = None
+                    v.max_cost = None
+                    v.qty = None
+                    v.min_qty = None
+                    v.max_qty = None
     
     
     def validate(self):

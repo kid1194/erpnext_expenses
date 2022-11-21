@@ -11,7 +11,6 @@ from erpnext.setup.utils import get_exchange_rate
 
 from .common import error, get_cached_doc, get_cached_value
 from .doctypes import _ENTRY, _ENTRY_EXPENSES, _ENTRY_DETAILS
-from .search import filter_search
 
 
 ## Expense

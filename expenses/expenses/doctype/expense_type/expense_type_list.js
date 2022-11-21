@@ -11,6 +11,12 @@ frappe.provide('frappe.listview_settings');
 
 frappe.listview_settings['Expense Type'] = {
     hide_name_column: true,
+    get_indicator: function(doc) {
+        if (cint(doc.disabled)) {
+            return ['Disabled', 'red', 'disabled,=,1'];
+        }
+        return ['Enabled', 'green', 'disabled,=,0'];
+    },
     formatters: {
         parent_type: function(v) {
             return v || __('Root');

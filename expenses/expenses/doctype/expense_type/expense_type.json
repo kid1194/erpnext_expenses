@@ -39,7 +39,6 @@
    "fieldname": "disabled",
    "fieldtype": "Check",
    "label": "Is Disabled",
-   "default": "0",
    "depends_on": "eval:!doc.__islocal",
    "search_index": 1
   },
@@ -48,7 +47,6 @@
    "fieldtype": "Check",
    "label": "Is Group",
    "description": "Type items can only be created under Groups and Expense Items can only belong to type items",
-   "default": "0",
    "depends_on": "eval:doc.__islocal",
    "in_list_view": 1,
    "in_filter": 1,

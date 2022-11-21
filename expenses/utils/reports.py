@@ -29,6 +29,6 @@ def search_reviewers(doctype, txt, searchfield, start, page_len, filters, as_dic
     
     data = qry.run(as_dict=as_dict)
     
-    data = prepare_data(data, "name", txt, as_dict)
+    data = prepare_data(data, doctype, "name", txt, as_dict)
     
     return data

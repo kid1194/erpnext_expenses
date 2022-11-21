@@ -109,7 +109,6 @@ frappe.ui.form.on('Expense Type', {
         if (!frm.is_new()) frm.trigger('toggle_disabled_desc');
     },
     toggle_disabled_desc: function(frm) {
-        if (frm.is_new()) return;
         let desc = cint(frm.doc.is_group)
             ? 'Disabling a group will disable all its children, groups and items'
             : '',
@@ -118,7 +117,6 @@ frappe.ui.form.on('Expense Type', {
         field.toggle_description(!!frm.doc.is_group);
     },
     add_toolbar_buttons: function(frm) {
-        if (frm.is_new()) return;
         var toolbar = frm.E.toolbar[cint(frm.doc.is_group) ? 0 : 1];
         let btn = __(toolbar[0]);
         if (!frm.custom_buttons[btn]) {

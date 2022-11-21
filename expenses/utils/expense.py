@@ -133,7 +133,7 @@ def search_company_expenses(doctype, txt, searchfield, start, page_len, filters,
     
     data = qry.run(as_dict=as_dict)
     
-    data = prepare_data(data, "name", txt, as_dict)
+    data = prepare_data(data, _EXPENSE, "name", txt, as_dict)
     
     return data
 

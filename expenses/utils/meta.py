@@ -32,7 +32,11 @@ def get_doctype_fields(doctype):
     fields = frappe.get_all(
         "DocField",
         fields=["*"],
-        filters={"parent": doctype}
+        filters={
+            "parent": doctype,
+            "parenttype": "DocType",
+            "parentfield": "fields",
+        }
     )
     for i in range(len(fields)):
         f = fields[i]

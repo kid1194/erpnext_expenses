@@ -12,23 +12,104 @@ class ExpensesDocDialog {
         this._title = title;
         this._indicator = indicator;
         
-        this._fields = [];
+        this._add_fields = [];
+        this._remove_fields = [];
+        this._properties = {};
+        this._replace_properties = {};
+        this._remove_properties = {};
+        this._sort_fields = null;
+        this._primary_action = null;
+        this._secondary_action = null;
+        this._custom_actions = [];
+        
+        this._setup = false;
+        this._fields = null;
         this._fields_by_ref = [];
         this._fields_by_name = {};
+        
         this._ready = false;
-        this.__on_make = [];
         this.__on_ready = [];
         this.__on_clear = [];
         this._to_remove = [];
-        this._properties = {};
         this._dialog = null;
         this._custom_btns = {};
         this._extends = [];
         
         this._setup();
     }
+    add_field(field, start) {
+        this._add_fields.push([field, start]);
+        return this;
+    }
+    remove_field(name) {
+        this._remove_fields.push(name);
+        return this;
+    }
+    remove_fields() {
+        E.merge(this._remove_fields, arguments);
+        return this;
+    }
+    set_field_property(name, key, value) {
+        this._properties[name] = this._properties[name] || {};
+        this._properties[name][key] = value;
+        return this;
+    }
+    set_field_properties(name, props) {
+        this._properties[name] = this._properties[name] || {};
+        E.merge(this._properties[name], props);
+        return this;
+    }
+    set_fields_properties(data) {
+        E.each(data, function(props, name) {
+            this.set_field_properties(name, props);
+        }, this);
+        return this;
+    }
+    replace_properties(data) {
+        E.merge(this._replace_properties, data);
+        return this;
+    }
+    remove_properties() {
+        E.merge(this._remove_properties, arguments);
+        return this;
+    }
+    sort_fields(fields) {
+        this._sort_fields = fields;
+        return this;
+    }
+    set_primary_action(label, callback) {
+        this._primary_action = [label, callback];
+        return this;
+    }
+    set_secondary_action(label, callback) {
+        this._secondary_action = [label, callback];
+        return this;
+    }
+    add_custom_action(label, callback, type, position) {
+        this._custom_actions.push([label, callback, type, position]);
+        return this;
+    }
     _setup() {
-        var me = this;
+        let meta = frappe.get_meta(this._doctype);
+        if (meta && E.is_arr(meta.fields)) {
+            var fields = E.clone(meta.fields),
+            invalid = false;
+            E.each(fields, function(f) {
+                if (f.fieldtype.includes('Table') && !E.is_arr(f.fields)) {
+                    let table_meta = frappe.get_meta(f.options);
+                    if (table_meta && E.is_arr(table_meta.fields)) {
+                        f.fields = table_meta.fields;
+                    } else {
+                        invalid = true;
+                        return false;
+                    }
+                }
+            });
+            if (!invalid) {
+                this._set_fields(fields);
+                return;
+            }
+        }
         E.call(
             'get_docfields',
             {doctype: this._doctype},
@@ -37,185 +118,111 @@ class ExpensesDocDialog {
                     E.error('Unable to get the fields of {0}.', [this._doctype]);
                     return;
                 }
-                this._fields = fields;
-                this._fields.unshift({
-                    fieldname: 'error_message',
-                    fieldtype: 'HTML',
-                    read_only: 1,
-                    hidden: 1
-                });
-                this._prepare_fields(this._fields);
+                this._set_fields(fields);
             }, this)
         );
+    }
+    _set_fields(fields) {
+        this._fields = fields;
+        this._fields.unshift({
+            fieldname: 'error_message',
+            fieldtype: 'HTML',
+            read_only: 1,
+            hidden: 1
+        });
+        this._prepare_fields(this._fields);
+        if (this._add_fields.length) {
+            E.each(this._add_fields, function(d) {
+                let field = d[0];
+                if (d[1]) this._fields.splice(1, 0, field);
+                else this._fields.push(field);
+                let name = field.fieldname;
+                if (this._fields_by_name[name] == null) {
+                    this._fields_by_name[name] = this._fields_by_ref.length;
+                    this._fields_by_ref.push(field);
+                }
+            }, this);
+            E.clear(this._add_fields);
+        }
+        if (this._remove_fields.length) {
+            this._fields = this._fields.filter(E.fn(function(f) {
+                return !E.contains(this._remove_fields, f.fieldname);
+            }, this));
+            E.each(this._remove_fields, function(name) {
+                if (this._fields_by_name[name] != null) {
+                    this._fields_by_ref.splice(this._fields_by_name[name], 1);
+                    delete this._fields_by_name[name];
+                }
+            }, this);
+            E.clear(this._remove_fields);
+        }
+        if (Object.keys(this._properties).length) {
+            E.each(this._properties, function(prop, name) {
+                var field = this.get_df_by_name(name);
+                if (field && E.is_obj(prop)) {
+                    E.each(prop, function(v, k) {
+                        if (v && E.is_func(v)) v = E.fn(v, this);
+                        field[k] = v;
+                    }, this);
+                }
+            }, this);
+            E.clear(this._properties);
+        }
+        if (Object.keys(this._replace_properties).length) {
+            E.each(this._replace_properties, function(v, k) {
+                if (E.is_arr(v)) {
+                    E.each(this._fields_by_ref, function(f) {
+                        if (f[k] != null) {
+                            delete f[k];
+                            f[v[0]] = v[1];
+                        }
+                    });
+                    return;
+                }
+                var f = this.get_df_by_name(k);
+                if (!f) return;
+                E.each(v, function(y, x) {
+                    delete f[x];
+                    f[y[0]] = y[1];
+                });
+            }, this);
+            E.clear(this._replace_properties);
+        }
+        if (this._remove_properties.length) {
+            E.each(this._fields_by_ref, function(f) {
+                E.each(this._remove_properties, function(k) { delete f[k]; });
+            }, this);
+            E.clear(this._remove_properties);
+        }
+        if (this._sort_fields) {
+            this._fields.sort(E.fn(function(a, b) {
+                return this._sort_fields.indexOf(a.fieldname) - this._sort_fields.indexOf(b.fieldname);
+            }, this));
+            E.clear(this._sort_fields);
+        }
+        this._setup = true;
     }
     _prepare_fields(fields, parent_name) {
         E.each(fields, function(f) {
             let name = (parent_name ? parent_name + '.' : '') + f.fieldname;
             this._fields_by_name[name] = this._fields_by_ref.length;
             this._fields_by_ref.push(f);
-            this._apply_field_properties(name);
-            if (f.fields) this._prepare_fields(f.fields, name);
-        }, this);
-    }
-    _on_make(fn, args) {
-        this.__on_make.push(E.fn(function() {
-            if (args) this[fn].apply(this, args);
-            else this[fn].call(this);
-        }, this));
-        return this;
-    }
-    add_field(field, start) {
-        if (!this._ready) return this._on_make('prepend_field', arguments);
-        if (E.is_obj(field)) {
-            if (start) this._fields.splice(1, 0, field);
-            else this._fields.push(field);
-            let name = field.fieldname;
-            if (this._fields_by_name[name] == null) {
-                this._fields_by_name[name] = this._fields_by_ref.length;
-                this._fields_by_ref.push(field);
-            }
-        }
-        return this;
-    }
-    remove_field(name) {
-        if (!this._ready) return this._on_make('remove_field', arguments);
-        this._fields = this._fields.filter(function(f) { return f.fieldname !== name; });
-        if (this._fields_by_name[name] != null) {
-            this._fields_by_ref.splice(this._fields_by_name[name], 1);
-            delete this._fields_by_name[name];
-        }
-        return this;
-    }
-    remove_fields() {
-        if (!this._ready) return this._on_make('remove_fields', arguments);
-        var args = arguments;
-        this._fields = this._fields.filter(function(f) { return !E.contains(args, f.fieldname); });
-        E.each(args, function(n) {
-            if (this._fields_by_name[n] != null) {
-                this._fields_by_ref.splice(this._fields_by_name[n], 1);
-                delete this._fields_by_name[n];
+            if (f.fields) {
+                delete f.options;
+                f.editable_grid = 1;
+                this._prepare_fields(f.fields, name);
             }
         }, this);
-        return this;
     }
-    set_field_property(name, key, value) {
-        if (!this._ready) return this._on_make('set_field_property', arguments);
-        this._properties[name] = this._properties[name] || {};
-        this._properties[name][key] = value;
-        this._apply_field_properties(name);
-        return this;
-    }
-    set_field_properties(name, props) {
-        if (!this._ready) return this._on_make('set_field_properties', arguments);
-        this._properties[name] = this._properties[name] || {};
-        E.each(props, function(k, v) { this._properties[name][k] = v; }, this);
-        this._apply_field_properties(name);
-        return this;
-    }
-    set_fields_properties(data) {
-        E.each(data, function(name, props) {
-            this.set_field_properties(name, props);
-        }, this);
-        return this;
-    }
-    _apply_field_properties(name) {
-        var field = this.get_field_by_name(name);
-        if (field && E.is_obj(this._properties[name])) {
-            E.each(this._properties[name], function(v, k) {
-                if (v && E.is_func(v)) v = E.fn(v, this);
-                field[k] = v;
-            }, this);
-            delete this._properties[name];
-        }
-    }
-    replace_properties(data) {
-        if (!this._ready) return this._on_make('replace_properties', arguments);
-        E.each(data, function(v, k) {
-            if (E.is_arr(v)) {
-                E.each(this._fields_by_ref, function(f) {
-                    if (f[k] != null) {
-                        delete f[k];
-                        f[v[0]] = v[1];
-                    }
-                });
-                return;
-            }
-            let idx = this._fields_by_name[k];
-            if (idx == null) return;
-            var f = this._fields_by_ref[idx];
-            E.each(v, function(v, p) {
-                delete f[p];
-                f[v[0]] = v[1];
-            });
-        }, this);
-        return this;
-    }
-    remove_properties() {
-        if (!this._ready) return this._on_make('remove_properties', arguments);
-        var args = arguments;
-        E.each(this._fields_by_ref, function(f) {
-            E.each(args, function(k) { delete f[k]; });
-        });
-        return this;
-    }
-    sort_fields(fields) {
-        if (!this._ready) return this._on_make('sort_fields', arguments);
-        this._fields.sort(function(a, b) {
-            return fields.indexOf(a.fieldname) - fields.indexOf(b.fieldname);
-        });
-        return this;
-    }
-    _on_ready(fn, args) {
-        this.__on_ready.push(E.fn(function() {
-            if (args) this[fn].apply(this, args);
-            else this[fn].call(this);
-        }, this));
-        return this;
-    }
-    set_primary_action(label, callback) {
-        if (!this._ready) return this._on_ready('set_primary_action', arguments);
-        this._dialog.set_primary_action(__(label), E.fn(callback, this));
-        return this;
-    }
-    set_secondary_action(label, callback) {
-        if (!this._ready) return this._on_ready('set_secondary_action', arguments);
-        this._dialog.set_secondary_action_label(__(label));
-        this._dialog.set_secondary_action(E.fn(callback, this));
-        return this;
-    }
-    add_custom_action(label, callback, type, position) {
-        if (!this._ready) return this._on_ready('add_custom_action', arguments);
-        let pos = ['start', 'center', 'end'];
-        if (type && E.contains(pos, type)) {
-            position = type;
-            type = null;
-        }
-        type = type || 'primary';
-        position = position || pos[2];
-        let btn = $(`<button type='button' class='btn btn-${type} btn-sm'>
-            ${__(label)}
-        </button>`),
-        primary = this._dialog.get_primary_btn();
-        let key = frappe.scrub(label);
-        key = key.replace('&', '_');
-        this._custom_btns[key] = btn;
-        if (position === pos[0]) primary.parent().prepend(btn);
-        else if (position === pos[2]) primary.parent().append(btn);
-        else if (position === pos[1]) primary.after(btn);
-        btn.on('click', E.fn(callback, this));
-        return this;
-    }
-    get_field_by_name(name) {
+    get_df_by_name(name) {
         let idx = this._fields_by_name[name];
-        return idx != null ? this._fields_by_ref[idx] || null : null;
+        return (idx != null && this._fields_by_ref[idx]) || null;
     }
     build() {
-        if (this._ready) return this;
-        this._ready = true;
-        if (this.__on_make.length) {
-            frappe.run_serially(this.__on_make)
-            .finally(E.fn(function() { E.clear(this.__on_make); }, this));
+        if (!this._setup) {
+            return this;
         }
+        if (this._ready) return this;
         this._dialog = new frappe.ui.Dialog({
             title: __(this._title),
             indicator: this._indicator || 'green',
@@ -233,10 +240,57 @@ class ExpensesDocDialog {
             this.$error = this.$alert.find('.error-message');
             this.$alert.alert();
         }
+        if (this._primary_action) {
+            this._dialog.set_primary_action(
+                __(this._primary_action[0]),
+                E.fn(this._primary_action[1], this)
+            );
+            this._primary_action = null;
+        }
+        if (this._secondary_action) {
+            this._dialog.set_secondary_action_label(__(this._secondary_action[0]));
+            this._dialog.set_secondary_action(E.fn(this._secondary_action[1], this));
+            this._secondary_action = null;
+        }
+        if (this._custom_actions.length) {
+            var pos = ['start', 'center', 'end'];
+            E.each(this._custom_actions, function(v) {
+                let label = v[0],
+                callback = v[1],
+                type = v[2],
+                position = v[3];
+                if (type && E.contains(pos, type)) {
+                    position = type;
+                    type = null;
+                }
+                type = type || 'primary';
+                position = position || pos[2];
+                let btn = $(`<button type='button' class='btn btn-${type} btn-sm'>
+                    ${__(label)}
+                </button>`),
+                primary = this._dialog.get_primary_btn();
+                let key = frappe.scrub(label);
+                key = key.replace('&', '_');
+                this._custom_btns[key] = btn;
+                if (position === pos[0]) primary.parent().prepend(btn);
+                else if (position === pos[2]) primary.parent().append(btn);
+                else if (position === pos[1]) primary.after(btn);
+                btn.on('click', E.fn(callback, this));
+            }, this);
+            E.clear(this._custom_actions);
+        }
+        this._ready = true;
         if (this.__on_ready.length) {
             frappe.run_serially(this.__on_ready)
             .finally(E.fn(function() { E.clear(this.__on_ready); }, this));
         }
+        return this;
+    }
+    _on_ready(fn, args) {
+        this.__on_ready.push(E.fn(function() {
+            if (args) this[fn].apply(this, args);
+            else this[fn].call(this);
+        }, this));
         return this;
     }
     set_title(text) {
@@ -256,13 +310,13 @@ class ExpensesDocDialog {
         return this;
     }
     get_field(name) {
-        return this._dialog && this._dialog.get_field(name);
+        return (this._dialog && this._dialog.get_field(name)) || null;
     }
     get_values() {
-        return this._dialog && this._dialog.get_values();
+        return (this._dialog && this._dialog.get_values()) || null;
     }
     get_value(name) {
-        return this._dialog && this._dialog.get_value(name);
+        return (this._dialog && this._dialog.get_value(name)) || null;
     }
     set_value(name, value) {
         if (!this._ready) return this._on_ready('set_value', arguments);
@@ -295,7 +349,7 @@ class ExpensesDocDialog {
     }
     set_invalid(name, error) {
         this.set_df_property(name, 'invalid', 1);
-        let f = this._dialog && this._dialog.get_field(name);
+        let f = this.get_field(name);
         if (f && f.set_invalid) f.set_invalid();
         if (E.is_str(error) && f && f.set_new_description) f.set_new_description(error);
         return this;
@@ -310,7 +364,7 @@ class ExpensesDocDialog {
     }
     set_valid(name) {
         this.set_df_property(name, 'invalid', false);
-        let f = this._dialog && this._dialog.get_field(name);
+        let f = this.get_field(name);
         if (f && f.set_invalid) f.set_invalid();
         if (f && f.set_description) f.set_description();
         return this;
