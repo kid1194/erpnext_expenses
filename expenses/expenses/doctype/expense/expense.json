@@ -372,7 +372,6 @@
    "write": 1
   }
  ],
- "title_field": "name",
  "sort_field": "modified",
  "sort_order": "DESC",
  "default_print_format": "Expense",
