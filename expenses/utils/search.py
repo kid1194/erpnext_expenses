@@ -66,15 +66,15 @@ def prepare_data(data, dt, column, txt, as_dict):
                 _(v.get(column) if as_dict else v[0]),
                 re.IGNORECASE
             )
-		]
-	
+        ]
+    
     args = [txt, as_dict]
     def relevance_sorter(key):
         value = _(key.name if args[1] else key[0])
         return (cstr(value).lower().startswith(args[0].lower()) is not True, value)
     
     data = sorted(data, key=relevance_sorter)
-	
+    
     if as_dict:
         for r in data:
             r.pop("_relevance")

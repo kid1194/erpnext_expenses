@@ -11,7 +11,7 @@ from frappe import _
 from frappe.utils import cint, get_request_session, now, markdown
 
 from frappe.desk.doctype.notification_settings.notification_settings import (
-	is_notifications_enabled
+    is_notifications_enabled
 )
 
 from expenses import __version__
