@@ -41,7 +41,7 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
                     )
                 )
             ):
-                search_filters.append(doc.field(f.strip()).like(f"%{search}%"))
+                search_filters.append(doc.field(f.strip()).like("%" + search + "%"))
         
         if len(search_filters) > 1:
             qry = qry.where(Criterion.any(search_filters))
@@ -62,18 +62,18 @@ def prepare_data(data, dt, column, txt, as_dict):
             v
             for v in data
             if re.search(
-                f"{re.escape(txt)}.*",
+                re.escape(txt) + ".*",
                 _(v.get(column) if as_dict else v[0]),
                 re.IGNORECASE
             )
 		]
 	
-	args = [txt, as_dict]
-	def relevance_sorter(key):
+    args = [txt, as_dict]
+    def relevance_sorter(key):
         value = _(key.name if args[1] else key[0])
         return (cstr(value).lower().startswith(args[0].lower()) is not True, value)
     
-	data = sorted(data, key=relevance_sorter)
+    data = sorted(data, key=relevance_sorter)
 	
     if as_dict:
         for r in data:
