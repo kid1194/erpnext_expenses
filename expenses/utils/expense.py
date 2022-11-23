@@ -12,6 +12,7 @@ from .common import (
     get_cache,
     parse_json_if_valid,
     log_error,
+    is_doc_exist,
     get_cached_doc
 )
 from .doctypes import _EXPENSE
@@ -20,7 +21,7 @@ from .search import filter_search, prepare_data
 
 ## Expense Item
 def expenses_of_item_exists(item):
-    return frappe.db.exists(_EXPENSE, {"expense_item": item})
+    return is_doc_exist(_EXPENSE, {"expense_item": item})
 
 
 ## Expense
@@ -30,11 +31,11 @@ def expenses_of_item_exists(item):
 ## Expense Entry Form
 @frappe.whitelist()
 def with_expense_claim():
-    return 1 if frappe.db.exists("DocType", "Expense Claim") else 0
+    return 1 if is_doc_exist("DocType", "Expense Claim") else 0
 
 
 ## Self
-_EXPENSE_FIELDS = [
+_EXPENSE_FIELDS_ = [
     "company",
     "expense_item",
     "expense_account",
@@ -64,7 +65,7 @@ def add_expense(data):
     if not data or not isinstance(data, dict):
         return 0
     
-    data = {k:v for k, v in data.items() if k in _EXPENSE_FIELDS}
+    data = {k:v for k, v in data.items() if k in _EXPENSE_FIELDS_}
     
     try:
         frappe.new_doc(_EXPENSE).update(data).insert()

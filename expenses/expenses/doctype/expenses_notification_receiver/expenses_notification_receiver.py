@@ -7,5 +7,5 @@
 from frappe.model.document import Document
 
 
-class ExpensesHasUser(Document):
+class ExpensesNotificationReceiver(Document):
     pass

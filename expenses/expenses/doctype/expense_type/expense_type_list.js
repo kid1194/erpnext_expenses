@@ -12,10 +12,9 @@ frappe.provide('frappe.listview_settings');
 frappe.listview_settings['Expense Type'] = {
     hide_name_column: true,
     get_indicator: function(doc) {
-        if (cint(doc.disabled)) {
-            return ['Disabled', 'red', 'disabled,=,1'];
-        }
-        return ['Enabled', 'green', 'disabled,=,0'];
+        return cint(doc.disabled)
+            ? ['Disabled', 'red', 'disabled,=,1']
+            : ['Enabled', 'green', 'disabled,=,0'];
     },
     formatters: {
         parent_type: function(v) {
@@ -23,6 +22,6 @@ frappe.listview_settings['Expense Type'] = {
         },
         is_group: function(v) {
             return __(cint(v) ? 'Yes' : 'No');
-        }
+        },
     },
 };

@@ -14,64 +14,11 @@ from .common import (
     get_cache,
     set_cache,
     get_cached_doc,
+    is_doc_exist,
     parse_json_if_valid
 )
 from .doctypes import _TYPE, _TYPE_PARENT, _TYPE_ACCOUNTS
 from .search import filter_search, prepare_data
-
-
-## Expense Type Tree
-@frappe.whitelist()
-def get_type_children(doctype, parent, is_root=False):
-    return frappe.get_list(
-        _TYPE,
-        fields=[
-            "name as value",
-            "is_group as expandable",
-            _TYPE_PARENT + " as parent"
-        ],
-        filters=[
-            ["docstatus", "<", 2],
-            [
-                "ifnull(`{0}`,\"\")".format(_TYPE_PARENT),
-                "=",
-                "" if is_root else parent
-            ]
-        ]
-    )
-
-
-## Expense Type Tree
-@frappe.whitelist()
-def add_type_node(args=None):
-    from frappe.desk.treeview import make_tree_args
-
-    if not args:
-        args = frappe.local.form_dict
-
-    args.doctype = _TYPE
-    args = make_tree_args(**args)
-
-    doc = frappe.new_doc(_TYPE)
-
-    if args.get("ignore_permissions"):
-        doc.flags.ignore_permissions = True
-        args.pop("ignore_permissions")
-
-    doc.update(args)
-
-    if cint(doc.get("is_root")):
-        doc.set(_TYPE_PARENT, None)
-        doc.flags.ignore_mandatory = True
-    else:
-        if not doc.get(_TYPE_PARENT):
-            doc.set(_TYPE_PARENT, args.get("parent"))
-        if not doc.get(_TYPE_PARENT):
-            return {"error", "The type item must have a parent."}
-
-    doc.insert(ignore_permissions=True, ignore_mandatory=True)
-
-    return doc.name
 
 
 ## Expense Type Form
@@ -128,7 +75,88 @@ def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
 
 ## Expense Type
 def type_children_exists(name):
-    return frappe.db.exists(_TYPE, {_TYPE_PARENT: name})
+    return is_doc_exist(_TYPE, {_TYPE_PARENT: name})
+
+
+## Expense Type
+def disable_type_descendants(lft, rgt):
+    doc = frappe.qb.DocType(_TYPE)
+    (
+        frappe.qb.update(doc)
+        .set(doc.disabled, 1)
+        .where(doc.disabled == 0)
+        .where(doc.lft.gt(lft))
+        .where(doc.rgt.lt(rgt))
+    ).run()
+
+
+## Expense Type Tree
+@frappe.whitelist()
+def get_type_children(doctype, parent, is_root=False):
+    return frappe.get_list(
+        _TYPE,
+        fields=[
+            "name as value",
+            "is_group as expandable",
+            _TYPE_PARENT + " as parent"
+        ],
+        filters=[
+            ["docstatus", "<", 2],
+            [
+                "ifnull(`{0}`,\"\")".format(_TYPE_PARENT),
+                "=",
+                "" if is_root else parent
+            ]
+        ]
+    )
+
+
+## Self
+_TYPE_FIELDS_ = ["type_name", "is_group", "expense_accounts"]
+
+
+## Expense Type Tree
+@frappe.whitelist()
+def add_type_node(args=None):
+    from frappe.desk.treeview import make_tree_args
+    
+    if not args:
+        args = frappe.local.form_dict
+    
+    if not args:
+        return {"error", "{0} data is invalid", "args": [_TYPE]}
+    
+    args.doctype = _TYPE
+    args = make_tree_args(**args)
+    
+    doc = frappe.new_doc(_TYPE)
+    
+    if args.get("ignore_permissions"):
+        doc.flags.ignore_permissions = True
+        args.pop("ignore_permissions")
+    
+    for k, v in args.items():
+        if k in _TYPE_FIELDS_:
+            doc.set(k, v)
+    
+    parent_field = "parent_" + _TYPE.lower().replace(" ", "_")
+    
+    if cint(doc.get("is_root")):
+        doc.set(_TYPE_PARENT, None)
+        doc.flags.ignore_mandatory = True
+    else:
+        if not doc.get(_TYPE_PARENT):
+            if args.get("parent"):
+                doc.set(_TYPE_PARENT, args.get("parent"))
+            elif args.get(parent_field):
+                doc.set(_TYPE_PARENT, args.get(parent_field))
+        
+        if not doc.get(_TYPE_PARENT):
+            return {"error", "{0} must have a parent", "args": [_TYPE]}
+    
+    doc.insert(ignore_permissions=True)
+    
+    return doc.name
 
 
 ## Self Item

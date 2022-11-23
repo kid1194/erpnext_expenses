@@ -14,21 +14,20 @@ frappe.provide('frappe.session');
 
 frappe.ui.form.on('Expense', {
     setup: function(frm) {
-        E.frm(frm);
+        E.form(frm);
         frm.E = {
             is_requested: !!cint(frm.doc.is_requested),
             is_approved: !!cint(frm.doc.is_approved),
             is_super: frappe.perm.has_perm(frm.doctype, 1, 'write'),
-            expense_data: {},
             expense_cost: null,
             expense_qty: null,
-            del_files: [],
+            del_files: E.uniqueArray(),
         };
     },
     onload: function(frm) {
         if (!frm.E.is_super) {
             let today = frappe.datetime.moment_to_date_obj(moment());
-            E.df_property('required_by', 'options', {
+            E.setFieldProperty('required_by', 'options', {
                 startDate: today,
                 minDate: today
             });
@@ -37,7 +36,7 @@ frappe.ui.form.on('Expense', {
         E.call('with_expense_claim', function(ret) {
             if (!!ret) {
                 frm.E.with_expense_claim = true;
-                E.df_properties('expense_claim', {
+                E.setFieldProperties('expense_claim', {
                     options: 'Expense Claim',
                     hidden: 0,
                 });
@@ -62,12 +61,12 @@ frappe.ui.form.on('Expense', {
         }
         
         frm.disable_form();
-        frm.set_intro(__('Expense has been requested'), 'green');
+        frm.set_intro(__('{0} has been requested', [frm.doctype]), 'green');
         
         if (frm.E.is_approved) return;
         
-        E.df_property('attachments.file', 'read_only', 1);
-        E.df_properties('attachments', {
+        E.setFieldProperty('attachments.file', 'read_only', 1);
+        E.setFieldProperties('attachments', {
             read_only: 0,
             cannot_delete_rows: 1,
             allow_bulk_edit: 0,
@@ -93,40 +92,31 @@ frappe.ui.form.on('Expense', {
             frm.E.expense_cost = frm.E.expense_qty = null;
             return;
         }
-        function resolve(v) {
-            frm.set_value('expense_account', v.account);
-            frm.set_value('currency', v.currency);
-            if (flt(v.cost) > 0) {
-                frm.set_value('cost', v.cost);
-                frm.toggle_enable('cost', 0);
-            } else if (flt(v.min_cost) > 0 || flt(v.max_cost) > 0) {
-                frm.E.expense_cost = {min: flt(v.min_cost), max: flt(v.max_cost)};
-            }
-            if (flt(v.qty) > 0) {
-                frm.set_value('qty', v.qty);
-                frm.toggle_enable('qty', 0);
-            } else if (flt(v.min_qty) > 0 || flt(v.max_qty) > 0) {
-                frm.E.expense_qty = {min: flt(v.min_qty), max: flt(v.max_qty)};
-            }
-        }
-        var ckey = [company, item].join('-');
-        if (frm.E.expense_data[ckey]) {
-            resolve(frm.E.expense_data[ckey]);
-            return;
-        }
         E.call(
             'get_item_company_account_data',
             {item, company},
             function(ret) {
                 if (
-                    !ret || !E.is_obj(ret)
+                    !ret || !E.isPlainObject(ret)
                     || !ret.account || !ret.currency
                 ) {
                     E.error('Unable to get the currencies of {0}', [item]);
                     return;
                 }
-                frm.E.expense_data[ckey] = ret;
-                resolve(ret);
+                frm.set_value('expense_account', ret.account);
+                frm.set_value('currency', ret.currency);
+                if (flt(ret.cost) > 0) {
+                    frm.set_value('cost', ret.cost);
+                    frm.toggle_enable('cost', 0);
+                } else if (flt(ret.min_cost) > 0 || flt(ret.max_cost) > 0) {
+                    frm.E.expense_cost = {min: flt(ret.min_cost), max: flt(ret.max_cost)};
+                }
+                if (flt(ret.qty) > 0) {
+                    frm.set_value('qty', ret.qty);
+                    frm.toggle_enable('qty', 0);
+                } else if (flt(ret.min_qty) > 0 || flt(ret.max_qty) > 0) {
+                    frm.E.expense_qty = {min: flt(ret.min_qty), max: flt(ret.max_qty)};
+                }
             }
         );
     },
@@ -189,7 +179,7 @@ frappe.ui.form.on('Expense', {
         if (!frm.E.is_super) {
             if (cint(moment(frm.doc.required_by, frappe.defaultDateFormat)
                 .diff(moment(), 'days')) < 0) {
-                E.error('The minimum date for expense required by is today', true);
+                E.error('{0} required by minimum date is today', [frm.doctype], true);
             }
         }
     },
@@ -199,10 +189,10 @@ frappe.ui.form.on('Expense', {
                 'delete_attach_files',
                 {
                     doctype: frm.doctype,
-                    name: frm.doc.name || frm.docname,
-                    files: frm.E.del_files,
+                    name: frm.doc.name,
+                    files: frm.E.del_files.all(),
                 },
-                function() { E.clear(frm.E.del_files); }
+                function() { frm.E.del_files.clear(); }
             );
         }
     },
@@ -211,9 +201,9 @@ frappe.ui.form.on('Expense', {
         if (!frm.custom_buttons[req_btn]) {
             frm.clear_custom_buttons();
             frm.add_custom_button(req_btn, function () {
-                E.set_cache('make-expenses-request', {
+                E.setCache('make-expenses-request', {
                     company: frm.doc.company,
-                    expenses: [frm.doc.name || frm.docname],
+                    expenses: [frm.doc.name],
                 });
                 frappe.set_route('Form', 'Expenses Request');
             });
@@ -229,14 +219,10 @@ frappe.ui.form.on('Expense Attachment', {
             E.error('Removing attachments is not allowed', true);
             return;
         }
-        if (row.file && !E.contains(frm.E.del_files, row.file))
-            frm.E.del_files.push(row.file);
+        if (row.file) frm.E.del_files.push(row.file);
     },
     file: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (row.file) {
-            let idx = frm.E.del_files.indexOf(row.file);
-            if (idx >= 0) frm.E.del_files.splice(idx, 1);
-        }
+        if (row.file) frm.E.del_files.del(row.file);
     },
 });

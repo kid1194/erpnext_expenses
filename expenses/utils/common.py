@@ -108,6 +108,13 @@ def get_cached_value(dt, filters, field):
     return val
 
 
+def is_doc_exist(dt, name=None):
+    if name is None:
+        name = dt
+    
+    return frappe.db.exists(dt, name)
+
+
 def parse_json_if_valid(data, default=None):
     if not data:
         return data

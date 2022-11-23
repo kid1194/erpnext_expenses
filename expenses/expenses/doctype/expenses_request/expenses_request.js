@@ -8,7 +8,7 @@
 
 frappe.ui.form.on('Expenses Request', {
     setup: function(frm) {
-        E.frm(frm);
+        E.form(frm);
         frm.E = {
             company: frm.doc.company,
             expenses_ready: 0,
@@ -24,7 +24,7 @@ frappe.ui.form.on('Expenses Request', {
                     function(k) { row[k] = data[k]; }
                 );
                 if (data._attachments) {
-                    E.row_df('expenses', cdn, 'attachments').html(data.attachments);
+                    E.getRowField('expenses', cdn, 'attachments').html(data.attachments);
                 }
                 frm.E.update_row_button(cdn);
             },
@@ -43,7 +43,7 @@ frappe.ui.form.on('Expenses Request', {
                     names.push(v.expense);
                 });
                 if (!names.length) {
-                    if (is_changed) E.refresh_df('expenses');
+                    if (is_changed) E.refreshField('expenses');
                     return;
                 }
                 E.call(
@@ -90,12 +90,12 @@ frappe.ui.form.on('Expenses Request', {
                             frm.E.data[v.name] = v;
                             frm.E.set_expense_data(cdns[v.name]);
                         });
-                        E.refresh_df('expenses');
+                        E.refreshField('expenses');
                     }
                 );
             },
             update_row_button: function(cdn) {
-                let row = E.row('expenses', cdn);
+                let row = E.getRow('expenses', cdn);
                 if (
                     row.open_form_button
                     && row.open_form_button.children
@@ -109,15 +109,15 @@ frappe.ui.form.on('Expenses Request', {
     },
     onload: function(frm) {
         if (frm.is_new()) {
-            let req = E.pop_cache('make-expenses-request');
+            let req = E.popCache('make-expenses-request');
             if (
-                req && E.is_obj(req)
-                && req.company && E.is_str(req.company)
-                && E.is_arr(req.expenses) && req.expenses.length
+                req && E.isPlainObject(req)
+                && req.company && E.isString(req.company)
+                && E.isArray(req.expenses) && req.expenses.length
             ) {
                 frm.set_value('company', req.company);
                 E.each(req.expenses, function(v) {
-                    if (v && E.is_str(v)) frm.add_child('expenses', {expense: v});
+                    if (v && E.isString(v)) frm.add_child('expenses', {expense: v});
                 });
                 frm.E.update_expenses_data();
             }
@@ -154,7 +154,7 @@ frappe.ui.form.on('Expenses Request', {
         let company = frm.doc.company;
         if (company !== frm.E.company) {
             frm.E.company = company;
-            if (frm.doc.expenses.length) E.clear_table('expenses');
+            if (frm.doc.expenses.length) E.clearTable('expenses');
         }
     },
     toggle_company_desc: function(frm) {
@@ -196,11 +196,11 @@ frappe.ui.form.on('Expenses Request', {
                     filters: filters,
                 };
             },
-            primary_action_label: 'Add',
+            primary_action_label: __('Add'),
             action: function(vals) {
-                if (E.is_arr(vals) && vals.length) {
+                if (E.isArray(vals) && vals.length) {
                     E.each(vals, function(v) {
-                        if (v && E.is_str(v)) frm.add_child('expenses', {expense: v});
+                        if (v && E.isString(v)) frm.add_child('expenses', {expense: v});
                     });
                     frm.E.update_expenses_data();
                     frm.trigger('toggle_company_desc');
@@ -255,7 +255,7 @@ frappe.ui.form.on('Expenses Request', {
                     }
                     frappe.show_alert({
                         indicator: 'green',
-                        message: __('Expenses request rejected successfully.')
+                        message: __('{0} rejected successfully.', [frm.doctype])
                     });
                 }
             );
@@ -264,13 +264,13 @@ frappe.ui.form.on('Expenses Request', {
         frappe.show_alert({
             indicator: 'green',
             message: __(
-                'Expenses request {0} successfully.',
+                '{0} {1} successfully.',
                 [{
                     submit: 'submitted',
                     cancel: 'cancelled',
                     approve: 'approved',
                     reject: 'rejected',
-                }[action.toLowerCase()]]
+                }[frm.doctype, action.toLowerCase()]]
             )
         });
         if (action === 'Approve') {
@@ -297,7 +297,7 @@ frappe.ui.form.on('Expenses Request', {
         
         frm.clear_custom_buttons();
         frm.add_custom_button(btn, function() {
-            E.set_cache('make-expenses-entry', frm.doc.name);
+            E.setCache('make-expenses-entry', frm.doc.name);
             frappe.set_route('Form', 'Expenses Entry');
         });
         frm.change_custom_button_type(btn, null, 'success');
@@ -312,78 +312,70 @@ frappe.ui.form.on('Expenses Request', {
         let btn = __('Appeal');
         if (frm.custom_buttons[btn]) return;
         
+        if (!frm.E.appeal) {
+            frm.E.appeal = E.formDialog(__('Appeal Request'), 'blue');
+            frm.E.appeal
+                .addField({
+                    fieldname: 'appeal_expenses',
+                    fieldtype: 'Table',
+                    label: __('Expenses'),
+                    read_only: 1,
+                    fields: [
+                        {
+                            fieldname: 'expense',
+                            fieldtype: 'Data',
+                            label: 'Expense',
+                            read_only: 1,
+                        },
+                        {
+                            fieldname: 'expense_item',
+                            fieldtype: 'Data',
+                            label: 'Expense Item',
+                            read_only: 1,
+                        },
+                        {
+                            fieldname: 'total',
+                            fieldtype: 'Data',
+                            label: 'Total',
+                            read_only: 1,
+                        }
+                    ],
+                })
+                .setPrimaryAction(
+                    __('Submit'),
+                    function() {
+                        this.hide();
+                        let args = this.getField('appeal_expenses').grid.get_selected_children();
+                        if (args && args.length) {
+                            let expenses = args.map(function(v) { return v.expense; });
+                            E.setCache('make-expenses-request', {
+                                company: frm.doc.company,
+                                expenses: expenses,
+                            });
+                        }
+                        frm.amend_doc();
+                    }
+                )
+                .setSecondaryAction(
+                    __('Cancel'),
+                    function() { this.hide(); }
+                )
+                .build();
+        
         frm.clear_custom_buttons();
         frm.add_custom_button(btn, function() {
-            if (frm.E.appeal) {
-                frm.E.appeal.show();
-                return;
-            }
-            frm.E.appeal = new frappe.ui.Dialog({
-                title: __('Appeal Request'),
-                indicator: 'green',
-                fields: [
-                    {
-                        fieldname: 'appeal_expenses',
-                        fieldtype: 'Table',
-                        label: __('Expenses'),
-                        read_only: 1,
-                        fields: [
-                            {
-                                fieldname: 'expense',
-                                fieldtype: 'Data',
-                                label: 'Expense',
-                                read_only: 1,
-                            },
-                            {
-                                fieldname: 'expense_item',
-                                fieldtype: 'Data',
-                                label: 'Expense Item',
-                                read_only: 1,
-                            },
-                            {
-                                fieldname: 'total',
-                                fieldtype: 'Data',
-                                label: 'Total',
-                                read_only: 1,
-                            }
-                        ],
-                    },
-                ],
-            });
-            
-            frm.E.appeal.set_value(
-                'appeal_expenses',
-                frm.doc.expenses.map(function(v) {
-                    return {
-                        expense: v.expense,
-                        expense_item: v.expense_item,
-                        total: v.total,
-                    };
-                })
-            );
-            
-            frm.E.appeal.set_primary_action(
-                __('Submit'),
-                function() {
-                    frm.E.appeal.hide();
-                    let args = frm.E.appeal.get_field('appeal_expenses').grid.get_selected_children();
-                    if (args && args.length) {
-                        let expenses = args.map(function(v) { return v.expense; });
-                        E.set_cache('make-expenses-request', {
-                            company: frm.doc.company,
-                            expenses: expenses,
-                        });
-                    }
-                    frm.amend_doc();
-                }
-            );
-            
-            frm.E.appeal.set_secondary_action_label(__('Cancel'));
-            frm.E.appeal.set_secondary_action(function() {
-                frm.E.appeal.hide();
-            });
-            
-            frm.E.appeal.show();
+            frm.E.appeal
+                .setValue(
+                    'appeal_expenses',
+                    frm.doc.expenses.map(function(v) {
+                        return {
+                            expense: v.expense,
+                            expense_item: v.expense_item,
+                            total: v.total,
+                        };
+                    })
+                )
+                .show();
         });
         frm.change_custom_button_type(btn, null, 'info');
     },

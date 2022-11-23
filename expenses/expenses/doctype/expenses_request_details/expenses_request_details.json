@@ -4,12 +4,17 @@
  "allow_import": 1,
  "autoname": "hash",
  "creation": "2022-04-04 04:04:04.119400",
- "description": "Link between expenses request and expense",
+ "description": "Expense details for expenses request",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
-  "expense"
+  "expense",
+  "expense_item",
+  "total",
+  "is_advance",
+  "required_by",
+  "attachments"
  ],
  "fields": [
   {

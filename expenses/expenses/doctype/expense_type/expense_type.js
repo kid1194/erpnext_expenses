@@ -8,11 +8,11 @@
 
 frappe.ui.form.on('Expense Type', {
     setup: function(frm) {
-        E.frm(frm);
+        E.form(frm);
         frm.E = {
-            add_all_companies: false,
-            companies_list: null,
-            companies: E.unique_array(),
+            is_new: frm.is_new(),
+            add_all_companies_btn: 0,
+            companies: E.uniqueArray(),
             toolbar: [
                 [
                     'Convert To Item',
@@ -32,7 +32,7 @@ frappe.ui.form.on('Expense Type', {
             return {
                 query: E.path('search_types'),
                 filters: {
-                    name: ['!=', frm.doc.name || frm.docname || ''],
+                    name: ['!=', frm.doc.name || ''],
                     is_group: 1,
                 },
             };
@@ -54,33 +54,20 @@ frappe.ui.form.on('Expense Type', {
             };
         });
         
-        if (!frm.is_new()) {
+        if (!frm.E.is_new) {
             E.each(frm.doc.expense_accounts, function(v) {
-                frm.E.companies.rpush(v.company, v.name);
+                frm.E.companies.push(v.company, v.name);
             });
         }
     },
     refresh: function(frm) {
-        if (frm.is_new() && !frm.E.add_all_companies) {
-            frm.E.add_all_companies = true;
+        if (!frm.E.add_all_companies_btn && frm.E.is_new) {
+            frm.E.add_all_companies_btn = 1;
             frm.get_field('expense_accounts').grid.add_custom_button(
                 __('Add All Companies'),
                 function() {
-                    function resolve(ret) {
-                        E.each(ret, function(v) {
-                            if (frm.E.companies.has(v.name)) return;
-                            let row = frm.add_child('expense_accounts', {
-                                company: v.name,
-                                account: v.default_expense_account,
-                            });
-                            frm.E.companies.rpush(row.company, row.name);
-                        });
-                    }
-                    if (frm.E.companies_list) {
-                        resolve(frm.E.companies_list);
-                        return;
-                    }
-                    E.get_list(
+                    frappe.dom.freeze(__('Adding all companies'));
+                    E.getList(
                         'Company',
                         {
                             fields: ['name', 'default_expense_account'],
@@ -91,30 +78,46 @@ frappe.ui.form.on('Expense Type', {
                                 E.error('Unable to get the list of companies');
                                 return;
                             }
-                            frm.E.companies_list = ret;
-                            resolve(ret);
-                        }
+                            E.each(ret, function(v) {
+                                if (frm.E.companies.has(v.name)) return;
+                                let row = frm.add_child('expense_accounts', {
+                                    company: v.name,
+                                    account: v.default_expense_account,
+                                });
+                                frm.E.companies.push(row.company, row.name);
+                            });
+                        },
+                        function() { frappe.dom.unfreeze(); }
                     );
                 }
             )
             .removeClass('btn-default')
             .addClass('btn-secondary');
         }
-        if (!frm.is_new()) {
+        if (!frm.E.is_new) {
             frm.trigger('toggle_disabled_desc');
             frm.trigger('add_toolbar_buttons');
         }
     },
     is_group: function(frm) {
-        if (!frm.is_new()) frm.trigger('toggle_disabled_desc');
+        if (!frm.E.is_new) frm.trigger('toggle_disabled_desc');
+    },
+    after_save: function(frm) {
+        if (frm.E.add_all_companies_btn && frm.E.is_new) {
+            frm.get_field('expense_accounts').grid.clear_custom_buttons();
+        }
+        frm.E.is_new = false;
     },
     toggle_disabled_desc: function(frm) {
-        let desc = cint(frm.doc.is_group)
-            ? 'Disabling a group will disable all its children, groups and items'
-            : '',
-        field = frm.get_field('disabled');
-        field.set_new_description(__(desc));
-        field.toggle_description(!!frm.doc.is_group);
+        let field = frm.get_field('disabled');
+        if (!cint(frm.doc.is_group)) {
+            field.toggle_description(false);
+            return;
+        }
+        field.set_new_description(__(
+            'Disabling a group will disable all its children, groups and items'
+        ));
+        field.toggle_description(true);
     },
     add_toolbar_buttons: function(frm) {
         var toolbar = frm.E.toolbar[cint(frm.doc.is_group) ? 0 : 1];
@@ -135,8 +138,8 @@ frappe.ui.form.on('Expense Type', {
                                 E.error(toolbar[2]);
                                 return;
                             }
-                            if (E.is_obj(ret) && ret.error) {
-                                E.error(ret.error);
+                            if (E.isPlainObject(ret) && ret.error) {
+                                E.error(ret.error, ret.args);
                                 return;
                             }
                             frm.reload_doc();
@@ -181,14 +184,13 @@ frappe.ui.form.on('Expense Type', {
 
 frappe.ui.form.on('Expense Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
-        frm.E.companies.del(locals[cdt][cdn].company, cdn);
+        frm.E.companies.delRef(cdn);
     },
     company: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         if (!row.company) {
-            frm.E.companies.del(null, cdn);
-            row.account = '';
-            E.refresh_row_df('expense_accounts', cdn, 'account');
+            frm.E.companies.delRef(cdn);
+            E.setDocValue(row, 'account', '');
             return;
         }
         if (frm.E.companies.has(row.company)) {
@@ -196,17 +198,15 @@ frappe.ui.form.on('Expense Account', {
                 'The expense account for {0} already exist',
                 [row.company]
             );
-            row.company = '';
-            E.refresh_row_df('expense_accounts', cdn, 'company');
+            E.setDocValue(row, 'company', '');
             return;
         }
-        frm.E.companies.rpush(row.company, cdn);
+        frm.E.companies.push(row.company, cdn);
     },
     account: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         if (!row.account || row.company) return;
         E.error('Please select a company first');
-        row.account = '';
-        E.refresh_row_df('expense_accounts', cdn, 'account');
+        E.setDocValue(row, 'account', '');
     },
 });

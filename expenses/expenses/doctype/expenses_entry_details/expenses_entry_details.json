@@ -4,7 +4,7 @@
  "allow_import": 1,
  "autoname": "hash",
  "creation": "2022-04-04 04:04:04.119400",
- "description": "Link between expenses entry and expense details",
+ "description": "Expense details for expenses entry",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",

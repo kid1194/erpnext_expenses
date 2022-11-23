@@ -12,6 +12,7 @@ from frappe.utils import flt
 from expenses.utils import (
     error,
     clear_document_cache,
+    is_doc_exist,
     get_cached_value,
     get_mode_of_payment_data,
     get_current_exchange_rate,
@@ -19,7 +20,8 @@ from expenses.utils import (
     process_request,
     reject_request,
     enqueue_journal_entry,
-    cancel_journal_entry
+    cancel_journal_entry,
+    delete_attach_files
 )
 
 
@@ -98,18 +100,18 @@ class ExpensesEntry(Document):
     
     def validate(self):
         if not self.company:
-            error(_("The company is mandatory"))
+            error(_("Company is mandatory"))
         if not self.mode_of_payment:
-            error(_("The mode of payment is mandatory"))
+            error(_("Mode of payment is mandatory"))
         if not self.posting_date:
-            error(_("The posting date is mandatory"))
+            error(_("Posting date is mandatory"))
         if not self.expenses:
-            error(_("The expenses table must have at least one entry"))
+            error(_("Expenses table must have at least one entry"))
         if self.payment_target == "Bank":
             if not self.payment_reference:
-                error(_("The payment reference is mandatory"))
+                error(_("Payment reference is mandatory"))
             if not self.clearance_date:
-                error(_("The reference / clearance date is mandatory"))
+                error(_("Reference / clearance date is mandatory"))
         
         if self.docstatus.is_draft():
             self.validate_expenses()
@@ -118,16 +120,21 @@ class ExpensesEntry(Document):
     def validate_expenses(self):
         _with_expense_claim = with_expense_claim()
         for v in self.expenses:
-            if get_cached_value("Account", v.account, "company") != self.company:
-                error(_("The expense account {0} does not belong to {0}").format(
-                    v.account, self.company
-                ))
-            elif cint(v.is_paid) and not v.paid_by:
-                error(_("The paid by for expense account \"{0}\" is mandatory").format(v.account))
-            elif cint(v.is_paid) and _with_expense_claim:
+            if not is_doc_exist("Account", v.account):
+                error(
+                    _("Expense account \"{0}\" does not exist").format(v.account)
+                )
+            if not is_doc_exist("Account", {"name": v.account, "company": v.company}):
+                error(
+                    _("Expense account \"{0}\" does not belong to company \"{1}\"")
+                    .format(v.account, v.company)
+                )
+            if cint(v.is_paid) and not v.paid_by:
+                error(_("Paid by for expense account \"{0}\" is mandatory").format(v.account))
+            if cint(v.is_paid) and _with_expense_claim:
                 if not v.expense_claim:
-                    error(_("The expense claim for expense account \"{0}\" is mandatory").format(v.account))
-                elif not frappe.db.exists('Expense Claim', {
+                    error(_("Expense claim for expense account \"{0}\" is mandatory").format(v.account))
+                elif not is_doc_exist('Expense Claim', {
                     "name": v.expense_claim,
                     "employee": v.paid_by,
                     "company": self.company,
@@ -135,11 +142,12 @@ class ExpensesEntry(Document):
                     "status": "Paid",
                     "docstatus": 1
                 }):
-                    error(_("The expense claim for expense account \"{0}\" is invalid").format(v.account))
+                    error(_("Expense claim for expense account \"{0}\" is invalid").format(v.account))
     
     
     def before_save(self):
-        self.load_doc_before_save()
+        if not self.get_doc_before_save():
+            self.load_doc_before_save()
         clear_document_cache(
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
@@ -158,28 +166,30 @@ class ExpensesEntry(Document):
     
     
     def check_changes(self):
-        self.load_doc_before_save()
-        old = self.get_doc_before_save()
-        as_len = ["expenses", "attachments"]
-        as_flt = ["exchange_rate", "total"]
-        for k, v in old.items():
-            if (
-                (k in as_len and len(v) != len(self.get(k))) or
-                (k in as_flt and flt(v) != flt(self.get(k))) or
-                (v != self.get(k))
-            ):
-                error(_("The expenses entry cannot be modified after submit"))
-        
-        as_flt = ["cost_in_account_currency", "exchange_rate", "cost"]
-        as_int = ["is_advance", "is_paid"]
-        for i in range(len(self.expenses)):
-            for k, v in self.expenses[i].items():
+        if not self.get_doc_before_save():
+            self.load_doc_before_save()
+        if self.get_doc_before_save():
+            old = self.get_doc_before_save()
+            as_len = ["expenses", "attachments"]
+            as_flt = ["exchange_rate", "total"]
+            for k, v in old.items():
                 if (
-                    (k in as_flt and flt(v) != flt(old.expenses[i].get(k))) or
-                    (k in as_int and cint(v) != cint(old.expenses[i].get(k))) or
-                    (v != old.expenses[i].get(k))
+                    (k in as_len and len(v) != len(self.get(k))) or
+                    (k in as_flt and flt(v) != flt(self.get(k))) or
+                    (v != self.get(k))
                 ):
-                    error(_("The expenses entry cannot be modified after submit"))
+                    error(_("{0} cannot be modified after submit").format(self.doctype))
+            
+            as_flt = ["cost_in_account_currency", "exchange_rate", "cost"]
+            as_int = ["is_advance", "is_paid"]
+            for i in range(len(self.expenses)):
+                for k, v in self.expenses[i].items():
+                    if (
+                        (k in as_flt and flt(v) != flt(old.expenses[i].get(k))) or
+                        (k in as_int and cint(v) != cint(old.expenses[i].get(k))) or
+                        (v != old.expenses[i].get(k))
+                    ):
+                        error(_("{0} cannot be modified after submit").format(self.doctype))
     
     
     def after_submit(self):
@@ -209,4 +219,11 @@ class ExpensesEntry(Document):
     
     def on_trash(self):
         if not self.docstatus.is_cancelled():
-            error(_("Cannot delete a non-cancelled expenses entry"))
+            error(_("Cannot delete a non-cancelled {0}").format(self.doctype))
+        
+        if self.attachments:
+            delete_attach_files(
+                self.doctype,
+                self.name,
+                [v.file for v in self.attachments]
+            )

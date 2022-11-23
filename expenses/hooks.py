@@ -28,7 +28,10 @@ doctype_js = {
         "public/js/expenses.unique_array.js"
     ],
     "Expense": "public/js/expenses.js",
-    "Expenses Request": "public/js/expenses.js",
+    "Expenses Request": [
+        "public/js/expenses.js",
+        "public/js/form_dialog.js"
+    ],
     "Expenses Entry": "public/js/expenses.js"
 }
 
@@ -36,7 +39,7 @@ doctype_js = {
 doctype_list_js = {
     "Expense": [
         "public/js/expenses.js",
-        "public/js/expenses.doc_dialog.js"
+        "public/js/expenses.form_dialog.js"
     ]
 }
 
@@ -44,7 +47,7 @@ doctype_list_js = {
 doctype_tree_js = {
     "Expense Type": [
         "public/js/expenses.js",
-        "public/js/expenses.doc_dialog.js",
+        "public/js/expenses.form_dialog.js",
         "public/js/expenses.unique_array.js"
     ]
 }

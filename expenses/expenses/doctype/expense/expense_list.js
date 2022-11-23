@@ -32,135 +32,137 @@ frappe.listview_settings['Expense'] = {
         list.refresh(true);
         
         var base = frappe.listview_settings[list.doctype];
-        base.QE = E.doc_dialog(list.doctype, 'Add Expense');
-        base.QE.extend('is_super', !!frappe.perm.has_perm(list.doctype, 1, 'create'));
-        if (!base.QE.is_super) {
+        base.dialog = E.formDialog('Add Expense', 'blue');
+        base.dialog
+            .setDoctype(list.doctype)
+            .extend('is_super', !!frappe.perm.has_perm(list.doctype, 1, 'create'));
+        if (!base.dialog.is_super) {
             let today = frappe.datetime.moment_to_date_obj(moment());
-            base.QE.set_df_property('required_by', 'options', {
+            base.dialog.setFieldProperty('required_by', 'options', {
                 startDate: today,
                 minDate: today
             });
         }
-        base.QE
-            .replace_properties({
+        base.dialog
+            .replaceProperties({
                 'depends_on': ['hidden', 1],
                 'read_only_depends_on': ['read_only', 1]
             })
-            .remove_properties(
+            .removeProperties(
                 'in_preview', 'in_list_view', 'in_filter', 'in_standard_filter',
                 'depends_on', 'read_only_depends_on', 'mandatory_depends_on',
                 'search_index', 'print_hide', 'report_hide', 'allow_in_quick_entry',
                 'translatable'
             )
-            .set_fields_properties({
+            .setFieldsProperties({
                 company: {
                     get_query: {filters: {is_group: 0}},
-                    change: function() { this._set_account_data(); },
+                    change: function() { this._setAccountData(); },
                 },
                 expense_item: {
                     get_query: {query: E.path('search_items')},
-                    change: function() { this._set_account_data(); },
+                    change: function() { this._setAccountData(); },
                 },
                 required_by: {
                     change: function() {
                         if (this.is_super) return;
-                        let val = this.get_value('required_by');
+                        let val = this.getValue('required_by');
                         if (
                             val && cint(moment(val, frappe.defaultDateFormat)
                                 .diff(moment(), 'days')) < 0
                         ) {
-                            this.set_invalid('required_by', 'The minimum required by date is today');
-                            this.set_value('required_by', moment().format(frappe.defaultDateFormat));
+                            this.setInvalid('required_by', 'The minimum required by date is today');
+                            this.setValue('required_by', moment().format(frappe.defaultDateFormat));
                         } else {
-                            this.set_valid('required_by');
+                            this.setValid('required_by');
                         }
                     },
                 },
                 cost: {
                     change: function() {
-                        let cost = flt(this.get_value('cost')),
+                        let cost = flt(this.getValue('cost')),
                         limit = this._expense_cost,
                         new_cost = cost <= 0 ? 1 : cost;
                         if (limit) {
                             if (limit.min && cost < limit.min) new_cost = limit.min;
                             else if (limit.max && cost < limit.max) new_cost = limit.max;
                         }
-                        if (new_cost !== cost) this.set_value('cost', new_cost);
-                        else this._update_total();
+                        if (new_cost !== cost) this.setValue('cost', new_cost);
+                        else this._updateTotal();
                     },
                 },
                 qty: {
                     change: function() {
-                        let qty = flt(this.get_value('qty')),
+                        let qty = flt(this.getValue('qty')),
                         limit = this._expense_qty,
                         new_qty = qty <= 0 ? 1 : qty;
                         if (limit) {
                             if (limit.min && qty < limit.min) new_qty = limit.min;
                             else if (limit.max && qty < limit.max) new_qty = limit.max;
                         }
-                        if (new_qty !== qty) this.set_value('qty', new_qty);
-                        else this._update_total();
+                        if (new_qty !== qty) this.setValue('qty', new_qty);
+                        else this._updateTotal();
                     },
                 },
                 is_paid: {
                     change: function() {
-                        let val = cint(this.get_value('is_paid'));
-                        this.set_df_properties('paid_by', {
+                        let val = cint(this.getValue('is_paid'));
+                        this.setFieldProperties('paid_by', {
                             reqd: val ? 1 : 0,
                             read_only: val ? 0 : 1,
                         });
                         if (this.with_expense_claim) {
-                            this.set_df_properties('expense_claim', {
+                            this.setFieldProperties('expense_claim', {
                                 reqd: val ? 1 : 0,
                                 read_only: val ? 0 : 1,
                             });
                         }
                         if (!val) {
-                            this.set_value('paid_by', '');
-                            this.set_value('expense_claim', '');
+                            this.setValue('paid_by', '');
+                            this.setValue('expense_claim', '');
                         }
                     },
                 },
                 paid_by: {
                     change: function() {
-                        if (!this.get_value('paid_by'))
-                            this.set_value('expense_claim', '');
+                        if (!this.getValue('paid_by'))
+                            this.setValue('expense_claim', '');
                     },
                 },
                 party_type: {
                     change: function() {
-                        let val = this.get_value('party_type');
-                        this.set_df_properties('party', {
+                        let val = this.getValue('party_type');
+                        this.setFieldProperties('party', {
                             reqd: val ? 1 : 0,
                             read_only: val ? 0 : 1,
                         });
-                        if (!val) this.set_value('party', '');
+                        if (!val) this.setValue('party', '');
                     },
                 },
                 project: {
                     get_query: function() {
-                        return {filters : {company: this.get_value('company')}};
+                        return {filters : {company: this.getValue('company')}};
                     },
                 },
             })
-            .add_custom_action('Save & Add', function() {
-                var data = this.get_values();
+            .addCustomAction('Save & Add', function() {
+                var data = this.getValues();
                 if (!data) {
-                    this.show_error('Unable to get the expense inputs.');
+                    this.showError('Unable to get the expense inputs.');
                     return;
                 }
-                this.disable_all_fields();
+                this.disableAllFields();
                 frappe.dom.freeze(__('Creating {0}', [this._doctype]));
                 E.call(
                     'add_expense',
                     {data},
                     E.fn(function(ret) {
                         if (!ret) {
-                            this.show_error('Unable to save the expense.');
+                            this.showError('Unable to save the expense.');
                             return;
                         }
                         this.clear();
-                        this.enable_all_fields();
+                        this.enableAllFields();
                         frappe.show_alert({
                             indicator: 'green',
                             message: __(this._doctype + ' saved successfully.')
@@ -169,10 +171,10 @@ frappe.listview_settings['Expense'] = {
                     function() { frappe.dom.unfreeze(); }
                 );
             }, 'start')
-            .set_primary_action('Save', function() {
-                let data = this.get_values();
+            .setPrimaryAction('Save', function() {
+                let data = this.getValues();
                 if (!data) {
-                    this.show_error('Unable to get the expense inputs');
+                    this.showError('Unable to get the expense inputs');
                     return;
                 }
                 this.hide();
@@ -193,34 +195,34 @@ frappe.listview_settings['Expense'] = {
                     function() { frappe.dom.unfreeze(); }
                 );
             })
-            .set_secondary_action('Cancel', function() {
+            .setSecondaryAction('Cancel', function() {
                 this.hide();
             })
-            .on_clear(function() {
+            .onClear(function() {
                 this.unset('_expense_data', '_expense_cost', '_expense_qty');
             })
-            .extend('_set_account_data', function() {
-                var company = this.get_value('company'),
-                item = this.get_value('expense_item');
+            .extend('_setAccountData', function() {
+                var company = this.getValue('company'),
+                item = this.getValue('expense_item');
                 if (!company || !item) {
-                    this.set_value('expense_account', '');
-                    this.set_value('currency', '');
+                    this.setValue('expense_account', '');
+                    this.setValue('currency', '');
                     this.unset('_expense_cost', '_expense_qty');
                     return;
                 }
                 var ckey = company + '-' + item,
                 resolve = E.fn(function(v) {
-                    this.set_value('expense_account', v.account);
-                    this.set_value('currency', v.currency);
+                    this.setValue('expense_account', v.account);
+                    this.setValue('currency', v.currency);
                     if (flt(v.cost) > 0) {
-                        this.set_value('cost', v.cost);
-                        this.set_df_property('cost', 'read_only', 1);
+                        this.setValue('cost', v.cost);
+                        this.setFieldProperty('cost', 'read_only', 1);
                     } else if (flt(v.min_cost) > 0 || flt(v.max_cost) > 0) {
                         this.extend('_expense_cost', {min: flt(v.min_cost), max: flt(v.max_cost)});
                     }
                     if (flt(v.qty) > 0) {
-                        this.set_value('qty', v.qty);
-                        this.set_df_property('qty', 'read_only', 1);
+                        this.setValue('qty', v.qty);
+                        this.setFieldProperty('qty', 'read_only', 1);
                     } else if (flt(v.min_qty) > 0 || flt(v.max_qty) > 0) {
                         this.extend('_expense_qty', {min: flt(v.min_qty), max: flt(v.max_qty)});
                     }
@@ -235,10 +237,10 @@ frappe.listview_settings['Expense'] = {
                     {item, company},
                     E.fn(function(ret) {
                         if (
-                            !ret || !E.is_obj(ret)
+                            !ret || !E.isPlainObject(ret)
                             || !ret.account || !ret.currency
                         ) {
-                            this.show_error('Unable to get the currencies of {0}', [item]);
+                            this.showError('Unable to get the currencies of {0}', [item]);
                             return;
                         }
                         this._expense_data[ckey] = ret;
@@ -246,22 +248,22 @@ frappe.listview_settings['Expense'] = {
                     }, this)
                 );
             })
-            .extend('_update_total', function() {
-                let cost = flt(this.get_value('cost')),
-                qty = flt(this.get_value('qty'));
-                this.set_value('total', flt(cost * qty));
+            .extend('_updateTotal', function() {
+                let cost = flt(this.getValue('cost')),
+                qty = flt(this.getValue('qty'));
+                this.setValue('total', flt(cost * qty));
             });
         
         E.call('with_expense_claim', function(ret) {
             if (!!ret) {
-                base.QE.set_field_properties('expense_claim', {
+                base.dialog.setFieldProperties('expense_claim', {
                     options: 'Expense Claim',
                     hidden: 0,
                     get_query: function() {
                         return {
                             filters: {
-                                employee: this.get_value('paid_by'),
-                                company: this.get_value('company'),
+                                employee: this.getValue('paid_by'),
+                                company: this.getValue('company'),
                                 is_paid: 1,
                                 status: 'Paid',
                                 docstatus: 1,
@@ -271,10 +273,10 @@ frappe.listview_settings['Expense'] = {
                 })
                 .extend('with_expense_claim', true);
             }
-        }, function() { base.QE.build(); });
+        }, function() { base.dialog.build(); });
         
         list.page.add_inner_button(
-            __('Quick Add'), function() { frappe.listview_settings.Expense.QE.show(); },
+            __('Quick Add'), function() { frappe.listview_settings.Expense.dialog.show(); },
             null, 'primary'
         );
         list.page.add_actions_menu_item(
@@ -294,7 +296,7 @@ frappe.listview_settings['Expense'] = {
                 });
                 var callback = function() {
                     list.clear_checked_items();
-                    E.set_cache('make-expenses-request', {company, expenses});
+                    E.setCache('make-expenses-request', {company, expenses});
                     frappe.router.set_route('Form', 'Expenses Request');
                 };
                 if (expenses.length !== selected.length) {
@@ -332,7 +334,7 @@ frappe.listview_settings['Expense'] = {
             if (doc.party_type && doc.party) {
                 html.push('<small class="text-muted mr-4">' + __(doc.party_type) + ': ' + doc.party + '</small>');
             }
-            if (frappe.listview_settings.Expense.QE._has_hrm && doc.paid_by) {
+            if (frappe.listview_settings.Expense.dialog._has_hrm && doc.paid_by) {
                 html.push('<small class="text-muted mr-4">' + __('Paid By') + ': ' + doc.paid_by + '</small>');
             }
             html = v + (html.length ? '<br/>' + html.join('') : '');

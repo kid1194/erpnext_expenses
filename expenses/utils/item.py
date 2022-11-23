@@ -7,7 +7,13 @@
 import frappe
 
 from .account import get_company_account_data_by_parent
-from .common import error, get_cache, set_cache, get_cached_value
+from .common import (
+    error,
+    get_cache,
+    set_cache,
+    is_doc_exist,
+    get_cached_value
+)
 from .doctypes import _ITEM, _ITEM_TYPE, _ITEM_ACCOUNTS
 from .search import filter_search, prepare_data
 from .type import (
@@ -18,7 +24,7 @@ from .type import (
 
 ## Expense Type
 def items_of_expense_type_exists(expense_type):
-    return frappe.db.exists(_ITEM, {_ITEM_TYPE: expense_type})
+    return is_doc_exist(_ITEM, {_ITEM_TYPE: expense_type})
 
 
 ## Expense Form
@@ -59,6 +65,9 @@ def get_item_company_account_data(item, company):
     if cache and isinstance(cache, dict):
         return cache
     
+    if not is_doc_exist(_ITEM, item):
+        return {}
+    
     expense_type = get_cached_value(_ITEM, item, _ITEM_TYPE)
     if (data := get_type_company_account_data(expense_type, company)):
         if (item_data := get_company_account_data_by_parent(
@@ -73,8 +82,14 @@ def get_item_company_account_data(item, company):
                         data[k] = v;
     
     else:
-        account = get_cached_value("Company", company, "default_expense_account")
-        currency = get_cached_value("Account", account, "account_currency")
+        account = ""
+        currency = ""
+        
+        if is_doc_exist("Company", company):
+            account = get_cached_value("Company", company, "default_expense_account")
+        if account and is_doc_exist("Account", account):
+            currency = get_cached_value("Account", account, "account_currency")
+        
         data = frappe._dict({
             "account": account,
             "currency": currency,

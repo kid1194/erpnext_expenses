@@ -23,7 +23,7 @@ frappe.listview_settings['Expenses Request'] = {
             return __('Make expenses entry for {0}', [doc.name]);
         },
         action: function(doc) {
-            E.set_cache('make-expenses-entry', doc.name);
+            E.setCache('make-expenses-entry', doc.name);
             frappe.set_route('Form', 'Expenses Entry');
         },
     },

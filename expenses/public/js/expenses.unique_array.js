@@ -7,54 +7,54 @@
 
 
 class UniqueArray {
-    constructor(data) {
-        this._d = E.is_arr(data) ? E.clone(data) : [];
-        this._r = {};
+    constructor() {
+        this._d = [];
+        this._r = [];
     }
     get length() {
         return this._d.length;
     }
-    index(v) {
-        return this._d.indexOf(v);
+    has(v) {
+        return v != null && this._d.indexOf(v) >= 0;
     }
-    has(v, r) {
-        return (v != null && this.index(v) >= 0) || (r != null && this._r[r] != null);
+    hasRef(r) {
+        return r != null && this._r.indexOf(r) >= 0;
     }
     push(v, r) {
-        if (v != null && !this.has(v, r)) {
+        this.del(v);
+        if (v != null && !this.has(v)) {
             this._d.push(v);
-            if (r != null) this._r[r] = v;
+            this._r.push(r);
         }
         return this;
     }
-    rpush(v, r) {
-        if (this.has(v, r)) this.del(v, r);
-        return this.push(v, r);
-    }
-    del(v, r) {
+    del(v) {
         if (v != null) {
-            if (r == null) {
-                for (var k in this._r) {
-                    if (this._r[k] === v) return this.del(v, k);
-                }
+            let idx = this._d.indexOf(v);
+            if (idx >= 0) {
+                this._d.splice(idx, 1);
+                this._r.splice(idx, 1);
             }
-            let idx = this.index(v);
-            if (idx >= 0) this._d.splice(idx, 1);
         }
+        return this;
+    }
+    delRef(r) {
         if (r != null) {
-            if (v == null && this._r[r] != null) {
-                return this.del(this._r[r], r);
+            let idx = this._r.indexOf(r);
+            if (idx >= 0) {
+                this._d.splice(idx, 1);
+                this._r.splice(idx, 1);
             }
-            delete this._r[r];
         }
         return this;
     }
     all() {
-        return E.clone(this._d);
+        return this._d;
     }
     copy() {
-        let list = new UniqueArray(this._d);
-        list._r = E.clone(this._r);
+        let list = new UniqueArray();
+        E.merge(list._d, this._d);
+        E.merge(list._r, this._r);
         return list;
     }
     clear() {
@@ -65,7 +65,7 @@ class UniqueArray {
 }
 
 if (window.E) {
-    window.E.extend('unique_array', function(data) {
-        return new UniqueArray(data);
+    window.E.extend('uniqueArray', function() {
+        return new UniqueArray();
     });
 }

@@ -12,10 +12,12 @@ from frappe.model.document import Document
 from expenses.utils import (
     error,
     clear_document_cache,
+    is_doc_exist,
     get_item_company_account_data,
     with_expense_claim,
     requests_of_expense_exists,
-    entries_of_expense_exists
+    entries_of_expense_exists,
+    delete_attach_files
 )
 
 
@@ -67,23 +69,23 @@ class Expense(Document):
     
     def validate(self):
         if not self.company:
-            error(_("The company is mandatory"))
-        elif not self.expense_item:
-            error(_("The expense item is mandatory"))
-        elif not self.required_by or not getdate(self.required_by):
-            error(_("The required by date is mandatory"))
-        elif not self.currency:
-            error(_("The currency is mandatory"))
-        elif flt(self.cost) <= 0:
-            error(_("The cost is mandatory"))
-        elif flt(self.qty) <= 0:
-            error(_("The quantity is mandatory"))
-        elif cint(self.is_paid) and not self.paid_by:
-            error(_("The paid by is mandatory"))
-        elif cint(self.is_paid) and with_expense_claim():
+            error(_("Company is mandatory"))
+        if not self.expense_item:
+            error(_("Expense item is mandatory"))
+        if not self.required_by or not getdate(self.required_by):
+            error(_("Required by date is mandatory"))
+        if not self.currency:
+            error(_("Currency is mandatory"))
+        if flt(self.cost) <= 0:
+            error(_("Cost is mandatory"))
+        if flt(self.qty) <= 0:
+            error(_("Quantity is mandatory"))
+        if cint(self.is_paid) and not self.paid_by:
+            error(_("Paid by is mandatory"))
+        if cint(self.is_paid) and with_expense_claim():
             if not self.expense_claim:
-                error(_("The expense claim is mandatory"))
-            elif not frappe.db.exists('Expense Claim', {
+                error(_("Expense claim is mandatory"))
+            elif not is_doc_exist('Expense Claim', {
                 "name": self.expense_claim,
                 "employee": self.paid_by,
                 "company": self.company,
@@ -91,15 +93,16 @@ class Expense(Document):
                 "status": "Paid",
                 "docstatus": 1
             }):
-                error(_("The expense claim is invalid"))
-        elif self.party_type and not self.party:
-            error(_("The party is mandatory"))
-        elif cint(self.is_requested):
+                error(_("Expense claim is invalid"))
+        if self.party_type and not self.party:
+            error(_("Party is mandatory"))
+        if cint(self.is_requested):
             self.check_changes()
     
     
     def before_save(self):
-        self.load_doc_before_save()
+        if not self.get_doc_before_save():
+            self.load_doc_before_save()
         clear_document_cache(
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
@@ -112,25 +115,43 @@ class Expense(Document):
             requests_of_expense_exists(self.name) or
             entries_of_expense_exists(self.name)
         ):
-            error(_("The expense cannot be removed before removing its reference in the expenses request doctype"))
+            error(
+                _("{0} cannot be removed before removing its expenses request references")
+                .format(self.doctype)
+            )
+        
+        if self.attachments:
+            delete_attach_files(
+                self.doctype,
+                self.name,
+                [v.file for v in self.attachments]
+            )
     
     
     def check_changes(self):
-        self.load_doc_before_save()
-        old = self.get_doc_before_save()
-        keys = [
-            "company", "expense_item", "required_by", "description",
-            "currency", "paid_by", "expense_claim", "project",
-            "party_type", "party"
-        ]
-        for k in keys:
-            if cstr(self.get(k)) != cstr(old.get(k)):
-                error(_("The expense cannot be modified after adding it to an expenses request"))
-        
-        if (
-            flt(self.cost) != flt(old.cost) or
-            flt(self.qty) != flt(old.qty) or
-            cint(self.is_paid) != cint(old.is_paid) or
-            cint(self.is_advance) != cint(old.is_advance)
-        ):
-            error(_("The expense cannot be modified after adding it to an expenses request"))
+        if not self.get_doc_before_save():
+            self.load_doc_before_save()
+        if self.get_doc_before_save():
+            old = self.get_doc_before_save()
+            keys = [
+                "company", "expense_item", "required_by", "description",
+                "currency", "paid_by", "expense_claim", "project",
+                "party_type", "party"
+            ]
+            for k in keys:
+                if cstr(self.get(k)) != cstr(old.get(k)):
+                    error(
+                        _("{0} cannot be modified after being requested")
+                        .format(self.doctype)
+                    )
+            
+            if (
+                flt(self.cost) != flt(old.cost) or
+                flt(self.qty) != flt(old.qty) or
+                cint(self.is_paid) != cint(old.is_paid) or
+                cint(self.is_advance) != cint(old.is_advance)
+            ):
+                error(
+                    _("{0} cannot be modified after being requested")
+                    .format(self.doctype)
+                )

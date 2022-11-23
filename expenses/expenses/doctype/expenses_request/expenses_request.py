@@ -39,11 +39,11 @@ class ExpensesRequest(Document):
     
     def validate(self):
         if not self.company:
-            error(_("The company is mandatory"))
+            error(_("Company is mandatory"))
         if not self.posting_date:
-            error(_("The posting date is mandatory"))
+            error(_("Posting date is mandatory"))
         if not self.expenses:
-            error(_("The expenses table must have at least one expense"))
+            error(_("Expenses table must have at least one expense"))
         if self.docstatus.is_draft():
             self.validate_expenses()
             if not self.workflow_state:
@@ -57,7 +57,8 @@ class ExpensesRequest(Document):
             for k in self.expenses_virtual_fields:
                 v[k] = None
         
-        self.load_doc_before_save()
+        if not self.get_doc_before_save():
+            self.load_doc_before_save()
         clear_document_cache(
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
@@ -94,7 +95,10 @@ class ExpensesRequest(Document):
     
     def before_cancel(self):
         if self.status == "Processed":
-            error(_("Cannot cancel a processed expenses request before canceling its expenses entry"))
+            error(
+                _("Cannot cancel a processed {0} before canceling its expenses entry")
+                .format(self.doctype)
+            )
         elif self.status == "Rejected":
             if self.workflow_state != self.status:
                 self.workflow_state = "Rejected"
@@ -109,7 +113,7 @@ class ExpensesRequest(Document):
     
     def on_trash(self):
         if not self.docstatus.is_cancelled():
-            error(_("Cannot delete a non-cancelled expenses request"))
+            error(_("Cannot delete a non-cancelled {0}").format(self.doctype))
     
     
     def validate_expenses(self):
@@ -118,25 +122,27 @@ class ExpensesRequest(Document):
             self.company
         )):
             error(
-                (_("Some of the expenses does not belong to {0}")
-                    .format(self.company))
+                (_("{0}: Some of the expenses does not belong to {1}")
+                    .format(self.doctype, self.company))
             )
     
     
     def check_changes(self):
-        self.load_doc_before_save()
-        old = self.get_doc_before_save()
-        if (
-            self.company != old.company or
-            self.posting_date != old.posting_date or
-            len(self.expenses) != len(old.expenses)
-        ):
-            error(_("The expenses request cannot be modified after submit"))
-        
-        old_expenses = [v.expense for v in old.expenses]
-        for v in self.expenses:
-            if v.expense not in old_expenses:
-                error(_("The expenses table cannot be modified after submit"))
+        if not self.get_doc_before_save():
+            self.load_doc_before_save()
+        if self.get_doc_before_save():
+            old = self.get_doc_before_save()
+            if (
+                self.company != old.company or
+                self.posting_date != old.posting_date or
+                len(self.expenses) != len(old.expenses)
+            ):
+                error(_("{0} cannot be modified after submit").format(self.doctype))
+            
+            old_expenses = [v.expense for v in old.expenses]
+            for v in self.expenses:
+                if v.expense not in old_expenses:
+                    error(_("{0} cannot be modified after submit").format(self.doctype))
     
     
     def handle_expenses(self):
@@ -165,10 +171,10 @@ class ExpensesRequest(Document):
     
     def change_status(self, status, action, ignore_permissions=False):
         if not self.docstatus.is_submitted():
-            error(_("The expenses request cannot be {0}").format(status.lower()))
+            error(_("{0} cannot be {1}").format(self.doctype, status.lower()))
         else:
             if not ignore_permissions and "Expenses Reviewer" not in frappe.get_roles():
-                error(_("Insufficient permission to {0} expenses request").format(action))
+                error(_("{0}: Insufficient permission to {1}").format(self.doctype, action))
             
             self.status = status
             self.workflow_state = status

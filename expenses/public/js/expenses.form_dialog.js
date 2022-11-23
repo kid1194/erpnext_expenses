@@ -6,11 +6,12 @@
 */
 
 
-class ExpensesDocDialog {
-    constructor(doctype, title, indicator) {
-        this._doctype = doctype;
+class FormDialog {
+    constructor(title, indicator) {
         this._title = title;
         this._indicator = indicator;
+        
+        this._doctype = null;
         
         this._add_fields = [];
         this._remove_fields = [];
@@ -23,6 +24,8 @@ class ExpensesDocDialog {
         this._custom_actions = [];
         
         this._setup = false;
+        this._on_setup = null;
+        
         this._fields = null;
         this._fields_by_ref = [];
         this._fields_by_name = {};
@@ -34,95 +37,113 @@ class ExpensesDocDialog {
         this._dialog = null;
         this._custom_btns = {};
         this._extends = [];
-        
-        this._setup();
     }
-    add_field(field, start) {
-        this._add_fields.push([field, start]);
-        return this;
-    }
-    remove_field(name) {
-        this._remove_fields.push(name);
-        return this;
-    }
-    remove_fields() {
-        E.merge(this._remove_fields, arguments);
-        return this;
-    }
-    set_field_property(name, key, value) {
-        this._properties[name] = this._properties[name] || {};
-        this._properties[name][key] = value;
-        return this;
-    }
-    set_field_properties(name, props) {
-        this._properties[name] = this._properties[name] || {};
-        E.merge(this._properties[name], props);
-        return this;
-    }
-    set_fields_properties(data) {
-        E.each(data, function(props, name) {
-            this.set_field_properties(name, props);
+    setDoctype(dt) {
+        this._doctype = dt;
+        E.runTask(function() {
+            let meta = frappe.get_meta(this._doctype);
+            if (meta && E.isArray(meta.fields)) {
+                var fields = E.clone(meta.fields),
+                invalid = false;
+                E.each(fields, function(f) {
+                    if (f.fieldtype.includes('Table') && !E.isArray(f.fields)) {
+                        let table_meta = frappe.get_meta(f.options);
+                        if (table_meta && E.isArray(table_meta.fields)) {
+                            f.fields = table_meta.fields;
+                        } else {
+                            invalid = true;
+                            return false;
+                        }
+                    }
+                });
+                if (!invalid) {
+                    this._setFields(fields);
+                    return;
+                }
+            }
+            E.call(
+                'get_docfields',
+                {doctype: this._doctype},
+                E.fn(function(fields) {
+                    if (!E.isArray(fields)) {
+                        E.error('Unable to get the fields of {0}.', [this._doctype]);
+                        return;
+                    }
+                    this._setFields(fields);
+                }, this)
+            );
         }, this);
         return this;
     }
-    replace_properties(data) {
+    setTitle(value) {
+        if (this._dialog) this._dialog.set_title(__(text));
+        else this._title = value;
+        return this;
+    }
+    setIndicator(color) {
+        if (this._dialog) {
+            this._dialog.indicator = color;
+            this._dialog.set_indicator();
+        } else this._indicator = color;
+        return this;
+    }
+    addField(field, position) {
+        this._add_fields.push([field, position]);
+        return this;
+    }
+    removeField(name) {
+        this._remove_fields.push(name);
+        return this;
+    }
+    removeFields() {
+        E.merge(this._remove_fields, arguments);
+        return this;
+    }
+    setFieldProperty(name, key, value) {
+        if (this._dialog) this._dialog.set_df_property(name, key, value);
+        else {
+            this._properties[name] = this._properties[name] || {};
+            this._properties[name][key] = value;
+        }
+        return this;
+    }
+    setFieldProperties(name, props) {
+        E.each(props, function(v, k) {
+            this.setFieldProperty(name, k, v);
+        }, this);
+        return this;
+    }
+    setFieldsProperties(data) {
+        E.each(data, function(props, name) {
+            this.setFieldProperties(name, props);
+        }, this);
+        return this;
+    }
+    replaceProperties(data) {
         E.merge(this._replace_properties, data);
         return this;
     }
-    remove_properties() {
+    removeProperties() {
         E.merge(this._remove_properties, arguments);
         return this;
     }
-    sort_fields(fields) {
+    sortFields(fields) {
         this._sort_fields = fields;
         return this;
     }
-    set_primary_action(label, callback) {
+    setPrimaryAction(label, callback) {
         this._primary_action = [label, callback];
         return this;
     }
-    set_secondary_action(label, callback) {
+    setSecondaryAction(label, callback) {
         this._secondary_action = [label, callback];
         return this;
     }
-    add_custom_action(label, callback, type, position) {
+    addCustomAction(label, callback, type, position) {
         this._custom_actions.push([label, callback, type, position]);
         return this;
     }
-    _setup() {
-        let meta = frappe.get_meta(this._doctype);
-        if (meta && E.is_arr(meta.fields)) {
-            var fields = E.clone(meta.fields),
-            invalid = false;
-            E.each(fields, function(f) {
-                if (f.fieldtype.includes('Table') && !E.is_arr(f.fields)) {
-                    let table_meta = frappe.get_meta(f.options);
-                    if (table_meta && E.is_arr(table_meta.fields)) {
-                        f.fields = table_meta.fields;
-                    } else {
-                        invalid = true;
-                        return false;
-                    }
-                }
-            });
-            if (!invalid) {
-                this._set_fields(fields);
-                return;
-            }
-        }
-        E.call(
-            'get_docfields',
-            {doctype: this._doctype},
-            E.fn(function(fields) {
-                if (!E.is_arr(fields)) {
-                    E.error('Unable to get the fields of {0}.', [this._doctype]);
-                    return;
-                }
-                this._set_fields(fields);
-            }, this)
-        );
-    }
-    _set_fields(fields) {
+    _setFields(fields) {
         this._fields = fields;
         this._fields.unshift({
             fieldname: 'error_message',
@@ -130,17 +151,19 @@ class ExpensesDocDialog {
             read_only: 1,
             hidden: 1
         });
-        this._prepare_fields(this._fields);
+        this._setup = true;
+        if (this._on_setup) {
+            E.fnCall(this[this._on_setup]);
+            this._on_setup = null;
+        }
+    }
+    _setupFields() {
+        if (!this.fields) this._setFields([]);
         if (this._add_fields.length) {
             E.each(this._add_fields, function(d) {
                 let field = d[0];
                 if (d[1]) this._fields.splice(1, 0, field);
                 else this._fields.push(field);
-                let name = field.fieldname;
-                if (this._fields_by_name[name] == null) {
-                    this._fields_by_name[name] = this._fields_by_ref.length;
-                    this._fields_by_ref.push(field);
-                }
             }, this);
             E.clear(this._add_fields);
         }
@@ -148,20 +171,15 @@ class ExpensesDocDialog {
             this._fields = this._fields.filter(E.fn(function(f) {
                 return !E.contains(this._remove_fields, f.fieldname);
             }, this));
-            E.each(this._remove_fields, function(name) {
-                if (this._fields_by_name[name] != null) {
-                    this._fields_by_ref.splice(this._fields_by_name[name], 1);
-                    delete this._fields_by_name[name];
-                }
-            }, this);
             E.clear(this._remove_fields);
         }
+        this._prepareFields(this._fields);
         if (Object.keys(this._properties).length) {
             E.each(this._properties, function(prop, name) {
-                var field = this.get_df_by_name(name);
-                if (field && E.is_obj(prop)) {
+                var field = this.getFieldByName(name);
+                if (field && E.isPlainObject(prop)) {
                     E.each(prop, function(v, k) {
-                        if (v && E.is_func(v)) v = E.fn(v, this);
+                        if (v && E.isFunction(v)) v = E.fn(v, this);
                         field[k] = v;
                     }, this);
                 }
@@ -170,7 +188,7 @@ class ExpensesDocDialog {
         }
         if (Object.keys(this._replace_properties).length) {
             E.each(this._replace_properties, function(v, k) {
-                if (E.is_arr(v)) {
+                if (E.isArray(v)) {
                     E.each(this._fields_by_ref, function(f) {
                         if (f[k] != null) {
                             delete f[k];
@@ -179,7 +197,7 @@ class ExpensesDocDialog {
                     });
                     return;
                 }
-                var f = this.get_df_by_name(k);
+                var f = this.getFieldByName(k);
                 if (!f) return;
                 E.each(v, function(y, x) {
                     delete f[x];
@@ -200,9 +218,8 @@ class ExpensesDocDialog {
             }, this));
             E.clear(this._sort_fields);
         }
-        this._setup = true;
     }
-    _prepare_fields(fields, parent_name) {
+    _prepareFields(fields, parent_name) {
         E.each(fields, function(f) {
             let name = (parent_name ? parent_name + '.' : '') + f.fieldname;
             this._fields_by_name[name] = this._fields_by_ref.length;
@@ -210,25 +227,27 @@ class ExpensesDocDialog {
             if (f.fields) {
                 delete f.options;
                 f.editable_grid = 1;
-                this._prepare_fields(f.fields, name);
+                this._prepareFields(f.fields, name);
             }
         }, this);
     }
-    get_df_by_name(name) {
+    getFieldByName(name) {
         let idx = this._fields_by_name[name];
         return (idx != null && this._fields_by_ref[idx]) || null;
     }
     build() {
         if (!this._setup) {
+            this._on_setup = 'build';
             return this;
         }
         if (this._ready) return this;
+        this._setupFields();
         this._dialog = new frappe.ui.Dialog({
             title: __(this._title),
             indicator: this._indicator || 'green',
             fields: this._fields,
         });
-        let f = this._dialog.get_field('error_message');
+        let f = this.getField('error_message');
         if (f && f.$wrapper) {
             f.$wrapper.append(`<div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <strong class="error-message"></strong>
@@ -281,167 +300,150 @@ class ExpensesDocDialog {
         }
         this._ready = true;
         if (this.__on_ready.length) {
-            frappe.run_serially(this.__on_ready)
+            E.runTasks(this.__on_ready)
             .finally(E.fn(function() { E.clear(this.__on_ready); }, this));
         }
         return this;
     }
-    _on_ready(fn, args) {
+    _onReady(fn, args) {
         this.__on_ready.push(E.fn(function() {
             if (args) this[fn].apply(this, args);
             else this[fn].call(this);
         }, this));
         return this;
     }
-    set_title(text) {
-        if (!this._ready) return this._on_ready('set_title', arguments);
-        this._dialog.set_title(__(text));
-        return this;
-    }
     show() {
-        if (!this._ready) return this._on_ready('show');
+        if (!this._ready) return this._onReady('show');
         this._dialog.show();
         return this;
     }
     hide() {
-        if (!this._ready) return this._on_ready('hide');
+        if (!this._ready) return this._onReady('hide');
         this._dialog.hide();
         this.clear();
         return this;
     }
-    get_field(name) {
+    getField(name) {
         return (this._dialog && this._dialog.get_field(name)) || null;
     }
-    get_values() {
-        return (this._dialog && this._dialog.get_values()) || null;
+    getValues() {
+        return (this._dialog && this._dialog.getValues()) || null;
     }
-    get_value(name) {
+    getValue(name) {
         return (this._dialog && this._dialog.get_value(name)) || null;
     }
-    set_value(name, value) {
-        if (!this._ready) return this._on_ready('set_value', arguments);
+    setValue(name, value) {
+        if (!this._ready) return this._onReady('setValue', arguments);
         this._dialog.set_value(name, value);
         return this;
     }
-    set_values(values) {
-        if (!this._ready) return this._on_ready('set_values', arguments);
+    setValues(values) {
+        if (!this._ready) return this._onReady('setValues', arguments);
         this._dialog.set_values(values);
         return this;
     }
-    get_row(table, idx) {
-        let t = this.get_field(table);
+    getRow(table, idx) {
+        let t = this.getField(table);
         return t && t.grid && t.grid.get_row ? t.get_row(idx) : null;
     }
-    get_row_name(table, idx) {
-        let f = this.get_row(table, idx);
+    getRowName(table, idx) {
+        let f = this.getRow(table, idx);
         return (f && f.doc && (f.doc.name || f.doc.idx)) || null;
     }
-    get_child_value(table, idx, name) {
-        let f = this.get_row(table, idx);
-        if (f && f.get_field) f = f.get_field(name);
+    getRowField(table, idx, name) {
+        let f = this.getRow(table, idx);
+        return f && f.get_field ? f.get_field(name) : null;
+    }
+    getRowFieldValue(table, idx, name) {
+        let f = this.getRowField(table, idx, name);
         return f && f.get_value && f.get_value();
     }
-    set_child_value(table, idx, name, val) {
-        let f = this.get_row(table, idx);
-        if (f && f.get_field) f = f.get_field(name);
+    setRowFieldValue(table, idx, name, val) {
+        let f = this.getRowField(table, idx, name);
         if (f && f.set_value) f.set_value(val);
         return this;
     }
-    set_invalid(name, error) {
-        this.set_df_property(name, 'invalid', 1);
-        let f = this.get_field(name);
+    setInvalid(name, error) {
+        this.setFieldProperty(name, 'invalid', 1);
+        let f = this.getField(name);
         if (f && f.set_invalid) f.set_invalid();
-        if (E.is_str(error) && f && f.set_new_description) f.set_new_description(error);
+        if (E.isString(error) && f && f.set_new_description) f.set_new_description(error);
         return this;
     }
-    set_child_invalid(table, idx, name, error) {
-        let f = this.get_row(table, idx);
-        if (f && f.get_field) f = f.get_field(name);
+    setRowFieldInvalid(table, idx, name, error) {
+        let f = this.getRowField(table, idx, name);
         if (f && f.df) f.df.invalid = 1;
         if (f && f.set_invalid) f.set_invalid();
-        if (E.is_str(error) && f && f.set_new_description) f.set_new_description(error);
+        if (E.isString(error) && f && f.set_new_description) f.set_new_description(error);
         return this;
     }
-    set_valid(name) {
-        this.set_df_property(name, 'invalid', false);
-        let f = this.get_field(name);
+    setValid(name) {
+        this.setFieldProperty(name, 'invalid', false);
+        let f = this.getField(name);
         if (f && f.set_invalid) f.set_invalid();
         if (f && f.set_description) f.set_description();
         return this;
     }
-    set_child_valid(table, idx, name) {
-        let f = this.get_row(table, idx);
-        if (f && f.get_field) f = f.get_field(name);
+    setRowFieldValid(table, idx, name) {
+        let f = this.getRowField(table, idx, name);
         if (f && f.df) f.df.invalid = 0;
         if (f && f.set_invalid) f.set_invalid();
         if (f && f.set_description) f.set_description();
         return this;
     }
-    get_all_fields() {
+    getAllFields() {
         return this._dialog ? this._dialog.fields_dict : {};
     }
-    set_df_property(name, prop, value) {
-        if (!this._ready) return this._on_ready('set_df_property', arguments);
-        this._dialog.set_df_property(name, prop, value);
-        return this;
-    }
-    set_df_properties(name, props) {
-        if (!this._ready) return this._on_ready('set_df_properties', arguments);
-        E.each(props, function(v, k) {
-            this._dialog.set_df_property(name, k, v);
+    enableAllFields() {
+        if (!this._ready) return this._onReady('enableAllFields');
+        E.each(this.getAllFields(), function(f) {
+            this.setFieldProperty(f.df.fieldname, 'read_only', 0);
         }, this);
         return this;
     }
-    enable_all_fields() {
-        if (!this._ready) return this._on_ready('enable_all_fields');
-        E.each(this.get_all_fields(), function(f) {
-            this.set_df_property(f.df.fieldname, 'read_only', 0);
+    disableAllFields() {
+        if (!this._ready) return this._onReady('disableAllFields');
+        E.each(this.getAllFields(), function(f) {
+            this.setFieldProperty(f.df.fieldname, 'read_only', 1);
         }, this);
         return this;
     }
-    disable_all_fields() {
-        if (!this._ready) return this._on_ready('disable_all_fields');
-        E.each(this.get_all_fields(), function(f) {
-            this.set_df_property(f.df.fieldname, 'read_only', 1);
-        }, this);
-        return this;
-    }
-    show_error(txt) {
+    showError(txt) {
         if (this.$alert && this.$error) {
             this.$error.html(txt);
             this.$alert.alert('show');
             frappe.ui.scroll(this.$alert);
         }
-        this.set_df_property('error_message', 'hidden', 0);
+        this.setFieldProperty('error_message', 'hidden', 0);
         window.setTimeout(E.fn(function() { this.hide_error(); }, this), 3000);
     }
-    hide_error() {
+    hideError() {
         if (this.$alert && this.$error) {
             this.$alert.alert('close');
             this.$error.html('');
         }
-        this.set_df_property('error_message', 'hidden', 1);
+        this.setFieldProperty('error_message', 'hidden', 1);
     }
-    on_clear(fn) {
+    onClear(fn) {
         this.__on_clear.push(E.fn(fn, this));
         return this;
     }
     clear() {
-        if (!this._ready) return this._on_ready('clear');
+        if (!this._ready) return this._onReady('clear');
         this._dialog.clear();
-        frappe.run_serially(this.__on_clear)
-        .then(E.fn(function() { E.clear(this.__on_clear); }, this));
+        E.runTasks(this.__on_clear)
+        .finally(E.fn(function() { E.clear(this.__on_clear); }, this));
         return this;
     }
     extend(key, val) {
-        if (E.is_obj(key)) {
+        if (E.isPlainObject(key)) {
             E.each(key, function(v, k) {
                 this.extend(k, v);
             }, this);
             return this;
         }
-        if (E.is_str(key) && !E.has(this._extends, key)) {
-            this[key] = E.is_func(val) ? E.fn(val, this) : val;
+        if (E.isString(key) && !E.has(this._extends, key)) {
+            this[key] = E.isFunction(val) ? E.fn(val, this) : val;
             this._extends.push(key);
         }
         return this;
@@ -458,7 +460,7 @@ class ExpensesDocDialog {
 }
 
 if (window.E) {
-    window.E.extend('doc_dialog', function(doctype, title, indicator) {
-        return new ExpensesDocDialog(doctype, title, indicator);
+    window.E.extend('formDialog', function(title, indicator) {
+        return new FormDialog(title, indicator);
     });
 }
