@@ -130,6 +130,18 @@ bench restart
   - Create a company expense and fill the cost, quantity, etc..
   - The attachments can be added before or after including the expense in an expenses request
 
+4. **Expenses Request**
+  - Create a request for a company list of expenses so that it can be approved or rejected
+
+5. **Expenses Entry**
+  - Create entries based on a request or manually add company related expenses
+  - When submitted, all the expenses will be posted to the journal
+
+6. **Expenses Settings**
+  - Plugin update notification Settings
+
+ℹ️ *Note: Plugin update notification will be functional in the PRODUCTION stage*
+
 ---
 
 ### Issues
@@ -138,6 +150,7 @@ If you find bug in the plugin, please create a [bug report](https://github.com/k
 ---
 
 ### Contributors
+- [Monolith Online](https://github.com/monolithon) (Testing & Debugging)
 
 ---
 
