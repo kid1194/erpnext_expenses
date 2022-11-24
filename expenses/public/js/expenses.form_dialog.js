@@ -15,7 +15,7 @@ class FormDialog {
         
         this._add_fields = [];
         this._remove_fields = [];
-        this._properties = {};
+        this._add_properties = {};
         this._replace_properties = {};
         this._remove_properties = {};
         this._sort_fields = null;
@@ -33,7 +33,6 @@ class FormDialog {
         this._ready = false;
         this.__on_ready = [];
         this.__on_clear = [];
-        this._to_remove = [];
         this._dialog = null;
         this._custom_btns = {};
         this._extends = [];
@@ -102,8 +101,8 @@ class FormDialog {
     setFieldProperty(name, key, value) {
         if (this._dialog) this._dialog.set_df_property(name, key, value);
         else {
-            this._properties[name] = this._properties[name] || {};
-            this._properties[name][key] = value;
+            this._add_properties[name] = this._add_properties[name] || {};
+            this._add_properties[name][key] = value;
         }
         return this;
     }
@@ -174,8 +173,8 @@ class FormDialog {
             E.clear(this._remove_fields);
         }
         this._prepareFields(this._fields);
-        if (Object.keys(this._properties).length) {
-            E.each(this._properties, function(prop, name) {
+        if (Object.keys(this._add_properties).length) {
+            E.each(this._add_properties, function(prop, name) {
                 var field = this.getFieldByName(name);
                 if (field && E.isPlainObject(prop)) {
                     E.each(prop, function(v, k) {
@@ -184,7 +183,7 @@ class FormDialog {
                     }, this);
                 }
             }, this);
-            E.clear(this._properties);
+            E.clear(this._add_properties);
         }
         if (Object.keys(this._replace_properties).length) {
             E.each(this._replace_properties, function(v, k) {
@@ -449,12 +448,20 @@ class FormDialog {
         return this;
     }
     unset() {
-        E.each(arguments, function(k) {
+        E.each(arguments, function(key) {
             if (!E.has(this._extends, key)) return;
             delete this[key];
             let idx = this._extends.indexOf(key);
             if (idx >= 0) this._extends.splice(idx, 1);
         }, this);
+        return this;
+    }
+    reset() {
+        this.clear();
+        E.each(this._extends, function(key) {
+            delete this[key];
+        }, this);
+        E.clear(this._extends);
         return this;
     }
 }

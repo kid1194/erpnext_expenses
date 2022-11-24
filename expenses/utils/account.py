@@ -12,7 +12,7 @@ from .doctypes import _ACCOUNT
 
 ## Self Type
 ## Self Item
-def get_company_account_data_by_parent(company, parent, parenttype, parentfield):
+def get_company_account_data_by_parent(company, parent, parent_type, parent_field):
     doc = frappe.qb.DocType(_ACCOUNT)
     aDoc = frappe.qb.DocType("Account")
     data = (
@@ -31,12 +31,13 @@ def get_company_account_data_by_parent(company, parent, parenttype, parentfield)
         .on(aDoc.name == doc.account)
         .where(doc.company == company)
         .where(doc.parent == parent)
-        .where(doc.parenttype == parenttype)
-        .where(doc.parentfield == parentfield)
+        .where(doc.parenttype == parent_type)
+        .where(doc.parentfield == parent_field)
         .limit(1)
     ).run(as_dict=True)
     
     data = data.pop(0) if data and isinstance(data, list) else None
+    
     if data:
         data = frappe._dict(data)
         for k in ["cost", "qty"]:

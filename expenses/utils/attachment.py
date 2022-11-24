@@ -42,7 +42,7 @@ def delete_attach_files(doctype, name, files):
 
 
 ## Self Expense
-def get_attachments_by_parents(parents, parenttype, parentfield):
+def get_attachments_by_parents(parents, parent_type, parent_field):
     doc = frappe.qb.DocType(_ATTACHMENT)
     data = (
         frappe.qb.from_(doc)
@@ -52,8 +52,8 @@ def get_attachments_by_parents(parents, parenttype, parentfield):
             doc.description,
         )
         .where(doc.parent.isin(parents))
-        .where(doc.parenttype == parenttype)
-        .where(doc.parentfield == parentfield)
+        .where(doc.parenttype == parent_type)
+        .where(doc.parentfield == parent_field)
     ).run(as_dict=True)
     
     if not data or not isinstance(data, list):

@@ -17,7 +17,21 @@ window.E = (function() {
     }
     function ofType(v, t) { return objectType(v) === t; }
     function ofAny(v, t) { return t.split(' ').indexOf(objectType(v)) >= 0; }
-    function propertyOf(v, k) { return Object.prototype.hasOwnProperty.call(v, k); }
+    function propertyOf(v, k) {
+        return Object.prototype.hasOwnProperty.call(v, k);
+    }
+    function isObjectLike(v) { return v != null && typeof v === 'object'; }
+    function isLength(v) {
+        return ofType(v, 'Number') && !isNaN(v)
+        && v >= 0 && v % 1 == 0 && v <= 9007199254740991;
+    }
+    function isInteger(v) {
+        return ofType(v, 'Number') && !isNaN(v) && v === Number(parseInt(v));
+    }
+    function isArrayLike(v) {
+        return v != null && !$.isFunction(v) && isObjectLike(v)
+        && v !== window && !isInteger(v.nodeType) && isLength(v.length);
+    }
     
     class Expenses {
         constructor() {
@@ -30,39 +44,45 @@ window.E = (function() {
         isFunction(v) { return v != null && $.isFunction(v); }
         isString(v) { return v != null && typeof v === 'string'; }
         isArray(v) { return v != null && $.isArray(v); }
-        isObjectLike(v) { return v != null && typeof v === 'object'; }
         isObject(v) {
-            return this.isObjectLike(v)
-            && this.isObjectLike(Object.getPrototypeOf(Object(v)) || {})
+            return isObjectLike(v)
+            && isObjectLike(Object.getPrototypeOf(Object(v)) || {})
             && !ofAny(v, 'String Number Boolean Array RegExp Date URL');
         }
         isPlainObject(v) { return v != null && $.isPlainObject(v); }
-        isIteratable(v) { return this.isArray(v) || this.isObject(v); }
+        isIteratable(v) {
+            return isArrayLike(v) || (this.isObject(v) && !isInteger(v.nodeType));
+        }
         isUrl(v) { try { new URL(v); } catch(e) { return false; } return true; }
         
         // Bind
         fn(f, b) {
             return function() {
-                if (this) Array.prototype.push.call(arguments, this);
+                if (this && this !== b) {
+                    Array.prototype.push.call(arguments, this);
+                }
                 return E.fnApply(f, arguments, b);
             };
         }
         fnCall(f, a, b) {
-            return this.isFunction(f) && f.call(b || this, a);
+            return this.isFunction(f) ? f.call(b || this, a) : null;
         }
         fnApply(f, a, b) {
-            return this.isFunction(f) && f.apply(b || this, a);
+            return this.isFunction(f) ? f.apply(b || this, a) : null;
         }
         
         // Converter
         toArray(v) {
             if (v == null) return [];
             if (this.isArray(v)) return v;
-            return !this.isString(v) && v.length != null ? Array.prototype.slice.call(v) : [v];
+            return isArrayLike(v) ? Array.prototype.slice.call(v)
+                : (this.isObject(v) && !isInteger(v.nodeType)
+                    ? Object.entries(v) : []);
         }
         toObject(v) {
             if (v == null) return {};
-            if (this.isObject(v)) return v;
+            if (this.isPlainObject(v)) return v;
+            if (this.isObject(v)) return Object.entries(v);
             let t = {};
             t[v] = v;
             return t;
@@ -88,13 +108,13 @@ window.E = (function() {
             if (this.isArray(d)) {
                 for (let i = 0, l = d.length; i < l; i++) {
                     let r = fn.apply(b, [d[i], i]);
-                    if (r != null) return r;
+                    if (r !== undefined) return r;
                 }
             } else if (this.isObject(d)) {
                 for (let k in d) {
                     if (propertyOf(d, k)) {
                         let r = fn.apply(b, [d[k], k]);
-                        if (r != null) return r;
+                        if (r !== undefined) return r;
                     }
                 }
             }
@@ -151,7 +171,7 @@ window.E = (function() {
             if (this.isArray(d)) {
                 Array.prototype.push.call(d, this.toArray(v));
             } else if (this.isObject(d)) {
-                Object.assign(d, this.toObject(v));
+                $.extend(d, this.toObject(v));
             }
             return d;
         }
@@ -166,7 +186,7 @@ window.E = (function() {
         }
         clone(d) {
             if (!this.isIteratable(d)) return d;
-            return this.parseJson(this.toJson(d), null);
+            return this.parseJson(this.toJson(d));
         }
         filter(d, fn) {
             if (fn == null) fn = function(v) { return v != null; };
@@ -277,9 +297,8 @@ window.E = (function() {
                 success = args;
                 args = null;
             }
-            let data = {type: 'GET'};
-            if (args) {
-                data.type = 'POST';
+            let data = {type: args != null ? 'POST' : 'GET'};
+            if (args != null) {
                 if (!this.isPlainObject(args)) data.args = {'data': args};
                 else {
                     data.args = args;
@@ -290,7 +309,9 @@ window.E = (function() {
                 }
             }
             if (this.isString(method)) {
-                if (!this.isUrl(method)) method = this.path(method);
+                if (!this.isUrl(method) && !method.startsWith('frappe.')) {
+                    method = this.path(method);
+                }
                 data.method = method;
             } else if (this.isArray(method)) {
                 data.doc = method[0];
@@ -387,8 +408,8 @@ window.E = (function() {
             if (this.isObject(v)) this._frm = v;
             return this;
         }
-        setDocValue(doc, fname, val) {
-            frappe.model.set_value(doc, fname, val);
+        setDocValue(doc, field, val) {
+            frappe.model.set_value(doc, field, val);
             return this;
         }
         refreshField() {
