@@ -25,7 +25,7 @@ frappe.treeview_settings['Expense Type'] = {
             companies: E.uniqueArray(),
         };
         base.ET.dialog
-            .setDoctype(treeview.doctype)
+            .loadDoctype(treeview.doctype)
             .extend({
                 'treeview': treeview,
                 'ET': base.ET,

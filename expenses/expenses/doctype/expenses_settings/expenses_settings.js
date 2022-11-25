@@ -7,11 +7,23 @@
 
 
 frappe.ui.form.on('Expenses Settings', {
+    setup: function(frm) {
+        frm.E = {
+            update_messages: [
+                __('No new version is found'),
+                __('A new version is available'),
+            ],
+            update_tags: ['span', 'strong'],
+            update_classes: ['text-muted', 'text-danger'],
+        };
+    },
     refresh: function(frm) {
+        let idx = cint(frm.doc.has_update);
         frm.get_field('update_note').$wrapper.html(
-            cint(frm.doc.has_update)
-            ? '<strong class="text-danger">A new version is available</strong>'
-            : '<span class="text-muted">No new version is found</span>'
+            '<' + frm.E.update_tags[idx]
+            + 'class="' + frm.E.update_classes[idx] + '">'
+            + frm.E.update_messages[idx]
+            + '</' + frm.E.update_tags[idx] + '>'
         );
     },
     check_for_update: function(frm) {

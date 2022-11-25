@@ -37,7 +37,7 @@ class FormDialog {
         this._custom_btns = {};
         this._extends = [];
     }
-    setDoctype(dt) {
+    loadDoctype(dt) {
         this._doctype = dt;
         E.runTask(function() {
             let meta = frappe.get_meta(this._doctype);
@@ -306,8 +306,7 @@ class FormDialog {
     }
     _onReady(fn, args) {
         this.__on_ready.push(E.fn(function() {
-            if (args) this[fn].apply(this, args);
-            else this[fn].call(this);
+            E.fnCall(this[fn], args, this);
         }, this));
         return this;
     }
@@ -377,7 +376,7 @@ class FormDialog {
         return this;
     }
     setValid(name) {
-        this.setFieldProperty(name, 'invalid', false);
+        this.setFieldProperty(name, 'invalid', 0);
         let f = this.getField(name);
         if (f && f.set_invalid) f.set_invalid();
         if (f && f.set_description) f.set_description();

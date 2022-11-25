@@ -61,14 +61,11 @@ window.E = (function() {
                 if (this && this !== b) {
                     Array.prototype.push.call(arguments, this);
                 }
-                return E.fnApply(f, arguments, b);
+                return E.fnCall(f, arguments, b);
             };
         }
         fnCall(f, a, b) {
-            return this.isFunction(f) ? f.call(b || this, a) : null;
-        }
-        fnApply(f, a, b) {
-            return this.isFunction(f) ? f.apply(b || this, a) : null;
+            return this.isFunction(f) ? f.call(b || this, this.toArray(a)) : null;
         }
         
         // Converter
@@ -194,7 +191,7 @@ window.E = (function() {
             if (this.isArray(d)) return d.filter(fn);
             let r = d.constructor();
             this.each(d, function(v, k) {
-                if (this.fnApply(fn, [v, k]) !== false) r[k] = v;
+                if (this.fnCall(fn, [v, k]) !== false) r[k] = v;
             });
             return r;
         }
@@ -203,7 +200,7 @@ window.E = (function() {
             if (this.isArray(d)) return d.map(fn);
             let r = d.constructor();
             this.each(d, function(v, k) {
-                r[k] = this.fnApply(fn, [v, k]);
+                r[k] = this.fnCall(fn, [v, k]);
             });
             return r;
         }
@@ -402,6 +399,22 @@ window.E = (function() {
             })).finally(this.fn(always));
             return this;
         }
+        isDocExists(dt, name, callback, always) {
+            var ckey = this._key(dt, name);
+            if (this._has(ckey)) {
+                try {
+                    this.fnCall(callback, this._get(ckey));
+                } finally {
+                    this.fnCall(always);
+                }
+                return this;
+            }
+            frappe.db.exists(dt, name).then(this.fn(function(ret) {
+                this._set(ckey, ret);
+                this.fnCall(callback, ret);
+            })).finally(this.fn(always));
+            return this;
+        }
         
         // Form
         form(v) {
@@ -504,19 +517,22 @@ window.E = (function() {
                 this.setRowFieldsProperty(table, cdn, fields, k, props[k]);
             return this;
         }
+        setFieldError(field, error, args, _throw) {
+            this.fnCall(this.getField(field).set_invalid);
+            this.error(error, args, _throw);
+            return this;
+        }
         
         // Background
         runTask(fn, b) {
             return Promise.resolve().then(this.fn(fn, b));
         }
-        runTasks(tasks) {
-            var p = Promise.resolve();
-            this.each(tasks, function(task) {
-                if (!task) return;
-                p = p.then(task);
-                if (!p.then) p = Promise.resolve();
+        runTasks(d, b) {
+            let tasks = [];
+            this.each(d, function(fn) {
+                if (fn) list.push(this.runTask(fn, b));
             });
-            return p;
+            return Promise.all(tasks);
         }
         
         extend(key, fn) {

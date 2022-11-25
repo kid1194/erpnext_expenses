@@ -33,5 +33,6 @@ def after_install():
         
         doc.latest_version = __version__
         doc.latest_check = now()
+        doc.has_update = 0
         
         doc.save(ignore_permissions=True)

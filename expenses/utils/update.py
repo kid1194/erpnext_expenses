@@ -51,11 +51,13 @@ def check_for_update():
         return 0
     
     latest_version = re.sub("[^0-9\.]", "", str(data.get("tag_name")))
+    has_update = 1 if compare_versions(latest_version, __version__) > 0 else 0
     
     doc = settings(True)
+    doc.has_update = has_update
     doc.latest_check = now()
     
-    if compare_versions(latest_version, __version__) > 0:
+    if has_update:
         doc.latest_version = latest_version
         if cint(doc.send_update_notification):
             enqueue_send_notification(

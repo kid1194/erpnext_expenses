@@ -66,7 +66,7 @@ frappe.ui.form.on('Expense Type', {
             frm.get_field('expense_accounts').grid.add_custom_button(
                 __('Add All Companies'),
                 function() {
-                    frappe.dom.freeze(__('Adding all companies'));
+                    frappe.dom.freeze(__('Adding Expense Accounts'));
                     E.getList(
                         'Company',
                         {
@@ -74,7 +74,7 @@ frappe.ui.form.on('Expense Type', {
                             filters: {is_group: 0},
                         },
                         function(ret) {
-                            if (!E.is_arr(ret) || !ret.length) {
+                            if (!E.isArray(ret) || !ret.length) {
                                 E.error('Unable to get the list of companies');
                                 return;
                             }
@@ -101,6 +101,14 @@ frappe.ui.form.on('Expense Type', {
     },
     is_group: function(frm) {
         if (!frm.E.is_new) frm.trigger('toggle_disabled_desc');
+    },
+    validate: function(frm) {
+        if (!frm.doc.type_name) {
+            E.setFieldError('type_name', 'Name is mandatory', true);
+        }
+        if (cint(frm.doc.is_group) && !frm.doc.parent_type) {
+            E.setFieldError('parent_type', 'Parent type is mandatory', true);
+        }
     },
     after_save: function(frm) {
         if (frm.E.add_all_companies_btn && frm.E.is_new) {

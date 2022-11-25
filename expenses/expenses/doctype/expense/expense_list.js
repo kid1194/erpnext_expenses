@@ -34,7 +34,7 @@ frappe.listview_settings['Expense'] = {
         var base = frappe.listview_settings[list.doctype];
         base.dialog = E.formDialog('Add Expense', 'blue');
         base.dialog
-            .setDoctype(list.doctype)
+            .loadDoctype(list.doctype)
             .extend('is_super', !!frappe.perm.has_perm(list.doctype, 1, 'create'));
         if (!base.dialog.is_super) {
             let today = frappe.datetime.moment_to_date_obj(moment());

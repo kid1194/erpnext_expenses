@@ -68,8 +68,8 @@
    "fieldname": "has_update",
    "fieldtype": "Check",
    "label": "Has Update",
-   "hidden": 1,
-   "is_virtual": 1
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "latest_version",

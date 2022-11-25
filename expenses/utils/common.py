@@ -10,18 +10,18 @@ import frappe
 from frappe import _
 from frappe.utils.logger import set_log_level
 
-from expenses import __production__
+from expenses import __module__, __production__
 
 
 if not __production__:
     set_log_level("DEBUG")
-    _LOGGER = frappe.logger("expenses", file_count=50)
+    _LOGGER = frappe.logger(__module__.lower(), file_count=50)
 
 
 def error(msg, throw=True):
-    frappe.log_error("Expenses", msg)
+    frappe.log_error(__module__, msg)
     if throw:
-        frappe.throw(msg, title="Expenses")
+        frappe.throw(msg, title=__module__)
 
 
 def log_error(data):
@@ -50,7 +50,7 @@ def log_fallback(data):
             pass
     
     if raw:
-        frappe.log_error("Expenses Log", raw)
+        frappe.log_error(__module__ + " Log", raw)
 
 
 def get_cache(dt, key):
