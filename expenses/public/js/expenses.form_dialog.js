@@ -288,7 +288,7 @@ class FormDialog {
                 </button>`),
                 primary = this._dialog.get_primary_btn();
                 let key = frappe.scrub(label);
-                key = key.replace('&', '_');
+                key = key.replace(/\&/g, '_');
                 this._custom_btns[key] = btn;
                 if (position === pos[0]) primary.parent().prepend(btn);
                 else if (position === pos[2]) primary.parent().append(btn);
