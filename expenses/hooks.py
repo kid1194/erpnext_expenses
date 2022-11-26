@@ -54,7 +54,7 @@ doctype_tree_js = {
 
 
 after_install = "expenses.setup.install.after_install"
-before_uninstall = "expenses.setup.uninstall.before_uninstall"
+after_uninstall = "expenses.setup.uninstall.after_uninstall"
 
 
 fixtures = [

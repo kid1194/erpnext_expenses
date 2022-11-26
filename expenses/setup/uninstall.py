@@ -7,7 +7,7 @@
 import frappe
 
 
-def before_uninstall():
+def after_uninstall():
     data = {
         "Role": "Expenses Reviewer",
         "Workflow": "Expenses Request Review",
@@ -38,7 +38,9 @@ def delete_doc(doctype, name):
     frappe.delete_doc(
         doctype,
         name,
+        force=True,
         ignore_permissions=True,
+        ignore_on_trash=True,
         ignore_missing=True,
         delete_permanently=True
     )
