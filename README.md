@@ -151,6 +151,7 @@ If you find bug in the plugin, please create a [bug report](https://github.com/k
 
 ### Contributors
 - [Monolith Online](https://github.com/monolithon) (Testing & Debugging)
+- [Andrew Rogers](https://github.com/agrogers) (Testing)
 
 ---
 
