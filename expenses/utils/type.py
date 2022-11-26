@@ -124,7 +124,7 @@ def add_type_node(args=None):
         args = frappe.local.form_dict
     
     if not args:
-        return {"error", "{0} data is invalid", "args": [_TYPE]}
+        return {"error": "{0} data is invalid", "args": [_TYPE]}
     
     args.doctype = _TYPE
     args = make_tree_args(**args)
