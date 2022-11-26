@@ -57,29 +57,6 @@ after_install = "expenses.setup.install.after_install"
 before_uninstall = "expenses.setup.uninstall.before_uninstall"
 
 
-doc_events = {
-    "Role": {
-        "before_rename": "expenses.events.role.before_rename",
-        "on_trash": "expenses.events.role.on_trash",
-    },
-    "Workflow": {
-        "before_save": "expenses.events.workflow.before_save",
-        "before_rename": "expenses.events.workflow.before_rename",
-        "on_trash": "expenses.events.workflow.on_trash",
-    },
-    "Workflow Action Master": {
-        "before_save": "expenses.events.workflow_action_master.before_save",
-        "before_rename": "expenses.events.workflow_action_master.before_rename",
-        "on_trash": "expenses.events.workflow_action_master.on_trash",
-    },
-    "Workflow State": {
-        "before_save": "expenses.events.workflow_state.before_save",
-        "before_rename": "expenses.events.workflow_state.before_rename",
-        "on_trash": "expenses.events.workflow_state.on_trash",
-    }
-}
-
-
 fixtures = [
     "Role",
     "Workflow",
