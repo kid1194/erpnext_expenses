@@ -153,7 +153,7 @@ def add_type_node(args=None):
                 doc.set(_TYPE_PARENT, args.get(parent_field))
         
         if not doc.get(_TYPE_PARENT):
-            return {"error", "{0} must have a parent", "args": [_TYPE]}
+            return {"error": "{0} must have a parent", "args": [_TYPE]}
     
     doc.insert(ignore_permissions=True)
     
