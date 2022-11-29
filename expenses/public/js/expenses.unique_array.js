@@ -64,8 +64,9 @@ class UniqueArray {
     }
 }
 
-if (window.E) {
-    window.E.extend('uniqueArray', function() {
+$(document).ready(function() {
+    if (!E) throw new Error('Expenses library is not loaded.');
+    E.extend('uniqueArray', function() {
         return new UniqueArray();
     });
-}
+});

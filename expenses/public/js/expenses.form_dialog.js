@@ -465,8 +465,9 @@ class FormDialog {
     }
 }
 
-if (window.E) {
-    window.E.extend('formDialog', function(title, indicator) {
+$(document).ready(function() {
+    if (!E) throw new Error('Expenses library is not loaded.');
+    E.extend('formDialog', function(title, indicator) {
         return new FormDialog(title, indicator);
     });
-}
+});
