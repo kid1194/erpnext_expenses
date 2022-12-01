@@ -6,27 +6,6 @@
 
 import frappe
 
-from expenses.utils.common import clear_document_cache
-from expenses.utils.doctypes import _REQUEST, _ENTRY
-
-
-def before_uninstall():
-    clear_document_cache(_ENTRY)
-    eDoc = frappe.qb.DocType(_ENTRY)
-    (
-        frappe.qb.update(eDoc)
-        .set(eDoc.docstatus, 2)
-        .where(eDoc.docstatus == 1)
-    ).run()
-    
-    clear_document_cache(_REQUEST)
-    rDoc = frappe.qb.DocType(_REQUEST)
-    (
-        frappe.qb.update(rDoc)
-        .set(rDoc.docstatus, 2)
-        .where(rDoc.docstatus == 1)
-    ).run()
-
 
 def after_uninstall():
     data = {
