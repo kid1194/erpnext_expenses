@@ -190,7 +190,7 @@ frappe.ui.form.on('Expense', {
                 {
                     doctype: frm.doctype,
                     name: frm.doc.name,
-                    files: frm.E.del_files.all(),
+                    files: frm.E.del_files.all,
                 },
                 function() { frm.E.del_files.clear(); }
             );

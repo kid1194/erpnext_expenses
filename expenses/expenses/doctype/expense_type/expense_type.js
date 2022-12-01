@@ -40,7 +40,7 @@ frappe.ui.form.on('Expense Type', {
         frm.set_query('company', 'expense_accounts', function(doc, cdt, cdn) {
             let filters = {is_group: 0};
             if (frm.E.companies.length) {
-                filters.name = ['not in', frm.E.companies.all()];
+                filters.name = ['not in', frm.E.companies.all];
             }
             return {filters};
         });
@@ -192,12 +192,12 @@ frappe.ui.form.on('Expense Type', {
 
 frappe.ui.form.on('Expense Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
-        frm.E.companies.delRef(cdn);
+        frm.E.companies.del(cdn, 1);
     },
     company: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         if (!row.company) {
-            frm.E.companies.delRef(cdn);
+            frm.E.companies.del(cdn, 1);
             E.setDocValue(row, 'account', '');
             return;
         }

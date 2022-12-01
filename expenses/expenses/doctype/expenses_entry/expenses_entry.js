@@ -45,15 +45,14 @@ frappe.ui.form.on('Expenses Entry', {
         };
         frm.E.update_exchange_rates = function() {
             if (!frm.E.base_currency || !frm.doc.payment_currency) return;
-            var cc = frm.E.base_currency,
-            tasks = [];
-            E.each(frm.doc.expenses, function(r) {
-                tasks.push(frm.E.get_exchange_rate(r.account_currency, cc, function(v) {
-                    if (v > flt(r.exchange_rate)) r.exchange_rate = v;
-                }));
-            });
-            Promise.all(tasks).finally(function() {
-                E.clear(tasks);
+            var cc = frm.E.base_currency;
+            E.runTasks(
+                E.map(frm.doc.expenses, function(r) {
+                    return frm.E.get_exchange_rate(r.account_currency, cc, function(v) {
+                        if (v > flt(r.exchange_rate)) r.exchange_rate = v;
+                    });
+                })
+            ).finally(function() {
                 frm.E.get_exchange_rate(frm.doc.payment_currency, cc, function(v) {
                     if (v > flt(frm.doc.exchange_rate))
                         frm.set_value('exchange_rate', v);
@@ -243,7 +242,7 @@ frappe.ui.form.on('Expenses Entry', {
                 {
                     doctype: frm.doctype,
                     name: frm.doc.name || frm.docname,
-                    files: frm.E.del_files.all(),
+                    files: frm.E.del_files.all,
                 },
                 function() { frm.E.del_files.clear(); }
             );

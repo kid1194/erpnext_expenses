@@ -22,7 +22,13 @@ frappe.ui.form.on('Expense Item', {
         E.setFieldsProperty('cost qty', 'in_list_view', 1, 'expense_accounts');
         
         frm.set_query('expense_type', {query: E.path('search_types')});
-        frm.set_query('company', 'expense_accounts', {filters: {is_group: 0}});
+        frm.set_query('company', 'expense_accounts', function(doc, cdt, cdn) {
+            let filters = {is_group: 0};
+            if (frm.E.companies.length) {
+                filters.name = ['not in', frm.E.companies.all];
+            }
+            return {filters};
+        });
         frm.set_query('account', 'expense_accounts', function(doc, cdt, cdn) {
             return {filters: {
                 is_group: 0,
@@ -43,12 +49,12 @@ frappe.ui.form.on('Expense Item', {
 
 frappe.ui.form.on('Expense Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
-        frm.E.companies.delRef(cdn);
+        frm.E.companies.del(cdn, 1);
     },
     company: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         if (!row.company) {
-            frm.E.companies.delRef(cdn);
+            frm.E.companies.del(cdn, 1);
             E.setDocValue(row, 'account', '');
             return;
         }

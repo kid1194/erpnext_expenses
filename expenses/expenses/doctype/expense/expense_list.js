@@ -19,13 +19,12 @@ frappe.listview_settings['Expense'] = {
             var args = this._get_args(),
             dt = this.doctype;
             if (!args.fields) args.fields = [];
-            if (dt === 'Expense')
-                E.each(
+            if (dt === 'Expense') {
+                E.merge(args.fields, E.map(
                     ['party_type', 'party', 'paid_by', 'is_requested', 'is_approved'],
-                    function(f) {
-                        args.fields.push(frappe.model.get_full_column_name(f, dt));
-                    }
-                );
+                    function(f) { return frappe.model.get_full_column_name(f, dt); }
+                ));
+            }
             return args;
         };
         list.setup_columns();

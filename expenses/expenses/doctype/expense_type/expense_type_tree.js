@@ -52,14 +52,15 @@ frappe.treeview_settings['Expense Type'] = {
                         if (table && (table.grid || '').get_data) {
                             let data = table.grid.get_data();
                             if (E.isArray(data) && data.length !== ET.rows.length) {
-                                var rows = data.filter(function(r) {
+                                var rows = E.filter(data, function(r) {
                                     return (r.name || r.idx) != null;
-                                }).map(function(r) {
+                                });
+                                rows = E.map(rows, function(r) {
                                     return r.name || r.idx;
                                 });
                                 E.each(ET.rows, function(r) {
                                     if (rows.indexOf(r) < 0) {
-                                        ET.companies.delRef(r);
+                                        ET.companies.del(r, 1);
                                     }
                                 });
                                 E.clear(ET.rows);
@@ -68,7 +69,7 @@ frappe.treeview_settings['Expense Type'] = {
                         }
                         let filters = {is_group: 0};
                         if (ET.companies.length) {
-                            filters.name = ['not in', ET.companies.all()];
+                            filters.name = ['not in', ET.companies.all];
                         }
                         return {filters};
                     },
