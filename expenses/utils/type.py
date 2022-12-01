@@ -9,7 +9,7 @@ from frappe import _
 from pypika.terms import Criterion
 from pypika.enums import Order
 
-from .account import *
+from .account import get_company_account_data_by_parent
 from .common import (
     error,
     get_cache,
