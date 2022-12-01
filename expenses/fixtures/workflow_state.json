@@ -24,7 +24,7 @@
   "workflow_state_name": "Pending"
  },
  {
-  "docstatus": 1,
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": "remove",
   "modified": "2022-04-04 04:04:04.119400",
