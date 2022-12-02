@@ -28,6 +28,7 @@ doctype_js = {
 
 
 doctype_list_js = {
+    "Expense Type": "public/js/expenses.bundle.js",
     "Expense": "public/js/expenses.bundle.js",
 }
 
