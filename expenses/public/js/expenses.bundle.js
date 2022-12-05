@@ -6,10 +6,6 @@
 */
 
 
-if (window.E && window.E._path) {
-    console.info('Expenses library has already been loaded.');
-}
-
 class Expenses {
     constructor() {
         this._path = 'expenses.utils.';
@@ -129,7 +125,7 @@ class Expenses {
     // Data
     each(d, fn, b) {
         b = b || this;
-        if (this.isArray(d)) {
+        if (this.isArrayLike(d)) {
             for (let i = 0, l = d.length; i < l; i++) {
                 let r = this.fnCall(fn, [d[i], i], b);
                 if (r !== undefined) return r;
@@ -165,7 +161,7 @@ class Expenses {
         return true;
     }
     has(d, k) {
-        return this.isIteratable(v) && d[k] != null;
+        return this.isIteratable(d) && d[k] != null;
     }
     hasAny(d, ks) {
         if (!this.isArray(ks)) return false;
@@ -1096,7 +1092,8 @@ class FormDialog {
     }
 }
 
-$(document).ready(function() {
+frappe.E = function() {
+    if (window.E && window.E._path) return window.E;
     window.E = new Expenses();
     window.E.extend('formDialog', function(title, indicator) {
         return new FormDialog(title, indicator);
@@ -1104,4 +1101,7 @@ $(document).ready(function() {
     window.E.extend('uniqueArray', function() {
         return new UniqueArray();
     });
-});
+    return window.E;
+};
+
+$(document).ready(frappe.E);

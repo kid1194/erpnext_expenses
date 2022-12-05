@@ -8,6 +8,7 @@
 
 frappe.ui.form.on('Expenses Settings', {
     setup: function(frm) {
+        frappe.E && frappe.E();
         frm.E = {
             update_messages: [
                 __('No new version is found'),
@@ -21,7 +22,7 @@ frappe.ui.form.on('Expenses Settings', {
         let idx = cint(frm.doc.has_update);
         frm.get_field('update_note').$wrapper.html(
             '<' + frm.E.update_tags[idx]
-            + 'class="' + frm.E.update_classes[idx] + '">'
+            + 'class="' + frm.E.update_classes[idx] + ' mb-4">'
             + frm.E.update_messages[idx]
             + '</' + frm.E.update_tags[idx] + '>'
         );
