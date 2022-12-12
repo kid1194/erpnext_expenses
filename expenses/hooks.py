@@ -18,7 +18,12 @@ app_license = "MIT"
 
 
 doctype_js = {
-    "Expenses Settings": "public/js/expenses.bundle.js"
+    "Expenses Settings": "public/js/expenses.bundle.js",
+    "Expense Type": "public/js/expenses.bundle.js",
+    "Expense Item": "public/js/expenses.bundle.js",
+    "Expense": "public/js/expenses.bundle.js",
+    "Expenses Request": "public/js/expenses.bundle.js",
+    "Expenses Entry": "public/js/expenses.bundle.js",
 }
 
 
