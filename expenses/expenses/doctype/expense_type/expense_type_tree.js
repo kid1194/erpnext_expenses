@@ -17,6 +17,8 @@ frappe.treeview_settings['Expense Type'] = {
     show_expand_all: true,
     get_tree_nodes: window.E ? E.path('get_type_children') : 'expenses.utils.get_type_children',
     onload: function(treeview) {
+        frappe.E();
+        
         let base = frappe.treeview_settings[treeview.doctype];
         base.treeview = treeview;
         base.ET = {

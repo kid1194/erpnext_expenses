@@ -14,6 +14,7 @@ frappe.provide('frappe.session');
 
 frappe.ui.form.on('Expense', {
     setup: function(frm) {
+        frappe.E();
         E.form(frm);
         frm.E = {
             is_requested: !!cint(frm.doc.is_requested),

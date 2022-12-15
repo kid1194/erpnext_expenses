@@ -8,6 +8,7 @@
 
 frappe.ui.form.on('Expenses Entry', {
     setup: function(frm) {
+        frappe.E();
         E.form(frm);
         frm.E = {
             base_currency: frappe.boot.sysdefaults.currency,

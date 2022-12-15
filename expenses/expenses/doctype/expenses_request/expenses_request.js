@@ -8,6 +8,7 @@
 
 frappe.ui.form.on('Expenses Request', {
     setup: function(frm) {
+        frappe.E();
         E.form(frm);
         frm.E = {
             company: frm.doc.company,

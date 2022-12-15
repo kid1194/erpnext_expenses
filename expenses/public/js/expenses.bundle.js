@@ -1095,6 +1095,7 @@ class FormDialog {
 frappe.E = function() {
     if (window.E && window.E._path) return window.E;
     window.E = new Expenses();
+    window.E.log('Library loaded.');
     window.E.extend('formDialog', function(title, indicator) {
         return new FormDialog(title, indicator);
     });
@@ -1103,5 +1104,3 @@ frappe.E = function() {
     });
     return window.E;
 };
-
-$(document).ready(frappe.E);

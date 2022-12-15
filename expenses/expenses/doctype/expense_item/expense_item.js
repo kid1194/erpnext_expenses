@@ -8,6 +8,7 @@
 
 frappe.ui.form.on('Expense Item', {
     setup: function(frm) {
+        frappe.E();
         E.form(frm);
         frm.E = {
             companies: E.uniqueArray(),

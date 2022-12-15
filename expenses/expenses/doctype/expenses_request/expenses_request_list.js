@@ -10,6 +10,9 @@ frappe.provide('frappe.listview_settings');
 
 
 frappe.listview_settings['Expenses Request'] = {
+    onload: function(list) {
+        frappe.E();
+    },
     hide_name_column: true,
     button: {
         show: function(doc) {

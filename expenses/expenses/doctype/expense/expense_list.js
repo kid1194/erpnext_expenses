@@ -14,6 +14,8 @@ frappe.provide('frappe.perm');
 
 frappe.listview_settings['Expense'] = {
     onload: function(list) {
+        frappe.E();
+        
         list._get_args = list.get_args;
         list.get_args = function() {
             var args = this._get_args(),

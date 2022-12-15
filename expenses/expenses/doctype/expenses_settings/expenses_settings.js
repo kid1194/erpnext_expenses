@@ -8,7 +8,7 @@
 
 frappe.ui.form.on('Expenses Settings', {
     setup: function(frm) {
-        frappe.E && frappe.E();
+        frappe.E();
         frm.E = {
             update_messages: [
                 __('No new version is found'),

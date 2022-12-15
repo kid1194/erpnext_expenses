@@ -8,6 +8,7 @@
 
 frappe.ui.form.on('Expense Type', {
     setup: function(frm) {
+        frappe.E();
         E.form(frm);
         frm.E = {
             is_new: frm.is_new(),
