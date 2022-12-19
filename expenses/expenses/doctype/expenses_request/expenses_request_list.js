@@ -11,7 +11,7 @@ frappe.provide('frappe.listview_settings');
 
 frappe.listview_settings['Expenses Request'] = {
     onload: function(list) {
-        frappe.E();
+        frappe.Expenses();
     },
     hide_name_column: true,
     button: {
@@ -26,7 +26,7 @@ frappe.listview_settings['Expenses Request'] = {
             return __('Make expenses entry for {0}', [doc.name]);
         },
         action: function(doc) {
-            E.setCache('make-expenses-entry', doc.name);
+            frappe.E.setCache('make-expenses-entry', doc.name);
             frappe.set_route('Form', 'Expenses Entry');
         },
     },

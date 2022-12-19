@@ -15,16 +15,16 @@ frappe.treeview_settings['Expense Type'] = {
     get_tree_root: false,
     root_label: 'Expense Types',
     show_expand_all: true,
-    get_tree_nodes: window.E ? E.path('get_type_children') : 'expenses.utils.get_type_children',
+    get_tree_nodes: frappe.Expenses ? frappe.Expenses().path('get_type_children') : 'expenses.utils.get_type_children',
     onload: function(treeview) {
-        frappe.E();
+        frappe.Expenses();
         
         let base = frappe.treeview_settings[treeview.doctype];
         base.treeview = treeview;
         base.ET = {
-            dialog: E.formDialog('Add New', 'blue'),
+            dialog: frappe.E.formDialog('Add New', 'blue'),
             rows: [],
-            companies: E.uniqueArray(),
+            companies: frappe.E.uniqueArray(),
         };
         base.ET.dialog
             .loadDoctype(treeview.doctype)
@@ -53,20 +53,20 @@ frappe.treeview_settings['Expense Type'] = {
                         let table = this.getField('expense_accounts');
                         if (table && (table.grid || '').get_data) {
                             let data = table.grid.get_data();
-                            if (E.isArray(data) && data.length !== ET.rows.length) {
-                                var rows = E.filter(data, function(r) {
+                            if (frappe.E.isArray(data) && data.length !== ET.rows.length) {
+                                var rows = frappe.E.filter(data, function(r) {
                                     return (r.name || r.idx) != null;
                                 });
-                                rows = E.map(rows, function(r) {
+                                rows = frappe.E.map(rows, function(r) {
                                     return r.name || r.idx;
                                 });
-                                E.each(ET.rows, function(r) {
+                                frappe.E.each(ET.rows, function(r) {
                                     if (rows.indexOf(r) < 0) {
                                         ET.companies.del(r, 1);
                                     }
                                 });
-                                E.clear(ET.rows);
-                                E.merge(ET.rows, rows);
+                                frappe.E.clear(ET.rows);
+                                frappe.E.merge(ET.rows, rows);
                             }
                         }
                         let filters = {is_group: 0};
@@ -139,16 +139,16 @@ frappe.treeview_settings['Expense Type'] = {
                 data.is_root = !node || node.is_root;
                 this.hide();
                 frappe.dom.freeze(__('Creating {0}', [this._doctype]));
-                E.call(
+                frappe.E.call(
                     'add_type_node',
                     {data},
-                    E.fn(function(ret) {
+                    frappe.E.fn(function(ret) {
                         if (!ret) {
-                            E.error('Unable to create the expense type');
+                            frappe.E.error('Unable to create the expense type');
                             return;
                         }
-                        if (E.isPlainObject(ret) && ret.error) {
-                            E.error(ret.error, ret.args);
+                        if (frappe.E.isPlainObject(ret) && ret.error) {
+                            frappe.E.error(ret.error, ret.args);
                             return;
                         }
                         if (this.selected_node) {
@@ -161,7 +161,7 @@ frappe.treeview_settings['Expense Type'] = {
                             message: __(this._doctype + ' created successfully.')
                         });
                     }, this),
-                    E.fn(function() {
+                    frappe.E.fn(function() {
                         this.unset('selected_node');
                         frappe.dom.unfreeze();
                     }, this)
@@ -187,7 +187,7 @@ frappe.treeview_settings['Expense Type'] = {
             click: function() {
                 let base = frappe.treeview_settings['Expense Type'],
                 treeview = base.treeview,
-                args = E.merge({}, treeview.args);
+                args = frappe.E.merge({}, treeview.args);
                 args.parent_type = treeview.args.parent;
                 base.ET.dialog
                     .setTitle('Add Child')

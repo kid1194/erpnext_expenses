@@ -14,7 +14,7 @@ frappe.provide('frappe.perm');
 
 frappe.listview_settings['Expense'] = {
     onload: function(list) {
-        frappe.E();
+        frappe.Expenses();
         
         list._get_args = list.get_args;
         list.get_args = function() {
@@ -22,7 +22,7 @@ frappe.listview_settings['Expense'] = {
             dt = this.doctype;
             if (!args.fields) args.fields = [];
             if (dt === 'Expense') {
-                E.merge(args.fields, E.map(
+                frappe.E.merge(args.fields, frappe.E.map(
                     ['party_type', 'party', 'paid_by', 'is_requested', 'is_approved'],
                     function(f) { return frappe.model.get_full_column_name(f, dt); }
                 ));
@@ -33,7 +33,7 @@ frappe.listview_settings['Expense'] = {
         list.refresh(true);
         
         var base = frappe.listview_settings[list.doctype];
-        base.dialog = E.formDialog('Add Expense', 'blue');
+        base.dialog = frappe.E.formDialog('Add Expense', 'blue');
         base.dialog
             .loadDoctype(list.doctype)
             .extend('is_super', !!frappe.perm.has_perm(list.doctype, 1, 'create'));
@@ -61,7 +61,7 @@ frappe.listview_settings['Expense'] = {
                     change: function() { this._setAccountData(); },
                 },
                 expense_item: {
-                    get_query: {query: E.path('search_items')},
+                    get_query: {query: frappe.E.path('search_items')},
                     change: function() { this._setAccountData(); },
                 },
                 required_by: {
@@ -154,10 +154,10 @@ frappe.listview_settings['Expense'] = {
                 }
                 this.disableAllFields();
                 frappe.dom.freeze(__('Creating {0}', [this._doctype]));
-                E.call(
+                frappe.E.call(
                     'add_expense',
                     {data},
-                    E.fn(function(ret) {
+                    frappe.E.fn(function(ret) {
                         if (!ret) {
                             this.showError('Unable to save the expense.');
                             return;
@@ -180,12 +180,12 @@ frappe.listview_settings['Expense'] = {
                 }
                 this.hide();
                 frappe.dom.freeze(__('Creating {0}', [this._doctype]));
-                E.call(
+                frappe.E.call(
                     'add_expense',
                     {data},
-                    E.fn(function(ret) {
+                    frappe.E.fn(function(ret) {
                         if (!ret) {
-                            E.error('Unable to save the expense');
+                            frappe.E.error('Unable to save the expense');
                             return;
                         }
                         frappe.show_alert({
@@ -212,7 +212,7 @@ frappe.listview_settings['Expense'] = {
                     return;
                 }
                 var ckey = company + '-' + item,
-                resolve = E.fn(function(v) {
+                resolve = frappe.E.fn(function(v) {
                     this.setValue('expense_account', v.account);
                     this.setValue('currency', v.currency);
                     if (flt(v.cost) > 0) {
@@ -233,12 +233,12 @@ frappe.listview_settings['Expense'] = {
                     resolve(this._expense_data[ckey]);
                     return;
                 }
-                E.call(
+                frappe.E.call(
                     'get_item_company_account_data',
                     {item, company},
-                    E.fn(function(ret) {
+                    frappe.E.fn(function(ret) {
                         if (
-                            !ret || !E.isPlainObject(ret)
+                            !ret || !frappe.E.isPlainObject(ret)
                             || !ret.account || !ret.currency
                         ) {
                             this.showError('Unable to get the currencies of {0}', [item]);
@@ -255,7 +255,7 @@ frappe.listview_settings['Expense'] = {
                 this.setValue('total', flt(cost * qty));
             });
         
-        E.call('with_expense_claim', function(ret) {
+        frappe.E.call('with_expense_claim', function(ret) {
             if (!!ret) {
                 base.dialog.setFieldProperties('expense_claim', {
                     options: 'Expense Claim',
@@ -287,17 +287,17 @@ frappe.listview_settings['Expense'] = {
                 company = null,
                 expenses = [];
                 if (!selected.length) {
-                    E.error('Please select at least one expense');
+                    frappe.E.error('Please select at least one expense');
                     return;
                 }
-                E.each(selected, function(v) {
+                frappe.E.each(selected, function(v) {
                     if (cint(v.is_approved) || cint(v.is_requested)) return;
                     if (!company) company = v.company;
                     if (company === v.company) expenses.push(v.name);
                 });
                 var callback = function() {
                     list.clear_checked_items();
-                    E.setCache('make-expenses-request', {company, expenses});
+                    frappe.E.setCache('make-expenses-request', {company, expenses});
                     frappe.router.set_route('Form', 'Expenses Request');
                 };
                 if (expenses.length !== selected.length) {

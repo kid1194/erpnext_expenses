@@ -8,9 +8,9 @@
 
 frappe.ui.form.on('Expenses Request', {
     setup: function(frm) {
-        frappe.E();
-        E.form(frm);
-        frm.E = {
+        frappe.Expenses();
+        frappe.E.form(frm);
+        frm.X = {
             company: frm.doc.company,
             expenses_ready: 0,
             data: {},
@@ -19,47 +19,47 @@ frappe.ui.form.on('Expenses Request', {
             ],
             set_expense_data: function(cdn) {
                 let row = locals['Expenses Request Details'][cdn],
-                data = frm.E.data[row.expense];
-                E.each(
-                    frm.E.expenses_virtual_fields,
+                data = frm.X.data[row.expense];
+                frappe.E.each(
+                    frm.X.expenses_virtual_fields,
                     function(k) { row[k] = data[k]; }
                 );
                 if (data._attachments) {
-                    E.getRowField('expenses', cdn, 'attachments').html(data.attachments);
+                    frappe.E.getRowField('expenses', cdn, 'attachments').html(data.attachments);
                 }
-                frm.E.update_row_button(cdn);
+                frm.X.update_row_button(cdn);
             },
             update_expenses_data: function() {
                 var cdns = {};
                 let names = [],
                 is_changed = 0;
-                E.each(frm.doc.expenses, function(v) {
+                frappe.E.each(frm.doc.expenses, function(v) {
                     if (v.total.length) return;
                     is_changed = 1;
-                    if (frm.E.data[v.expense]) {
-                        frm.E.set_expense_data(v.name);
+                    if (frm.X.data[v.expense]) {
+                        frm.X.set_expense_data(v.name);
                         return;
                     }
                     cdns[v.expense] = v.name;
                     names.push(v.expense);
                 });
                 if (!names.length) {
-                    if (is_changed) E.refreshField('expenses');
+                    if (is_changed) frappe.E.refreshField('expenses');
                     return;
                 }
-                E.call(
+                frappe.E.call(
                     'get_expenses_data',
                     {expenses: names},
                     function(ret) {
-                        E.each(ret, function(v) {
+                        frappe.E.each(ret, function(v) {
                             v.total = format_currency(v.total, v.currency);
                             v._is_advance = v.is_advance;
                             v.is_advance = __(cint(v.is_advance) ? 'Yes' : 'No');
                             
                             if (v.attachments.length) {
-                                v._attachments = E.clone(v.attachments);
+                                v._attachments = frappe.E.clone(v.attachments);
                                 let attachments = [];
-                                E.each(v.attachments, function(a) {
+                                frappe.E.each(v.attachments, function(a) {
                                     let name = a.file.split('/').pop();
                                     attachments.push(`<tr>
                                         <td scope="row" class="fit text-left">${name}</td>
@@ -88,15 +88,15 @@ frappe.ui.form.on('Expenses Request', {
                                 `;
                             }
                             
-                            frm.E.data[v.name] = v;
-                            frm.E.set_expense_data(cdns[v.name]);
+                            frm.X.data[v.name] = v;
+                            frm.X.set_expense_data(cdns[v.name]);
                         });
-                        E.refreshField('expenses');
+                        frappe.E.refreshField('expenses');
                     }
                 );
             },
             update_row_button: function(cdn) {
-                let row = E.getRow('expenses', cdn);
+                let row = frappe.E.getRow('expenses', cdn);
                 if (
                     row.open_form_button
                     && row.open_form_button.children
@@ -110,17 +110,17 @@ frappe.ui.form.on('Expenses Request', {
     },
     onload: function(frm) {
         if (frm.is_new()) {
-            let req = E.popCache('make-expenses-request');
+            let req = frappe.E.popCache('make-expenses-request');
             if (
-                req && E.isPlainObject(req)
-                && req.company && E.isString(req.company)
-                && E.isArray(req.expenses) && req.expenses.length
+                req && frappe.E.isPlainObject(req)
+                && req.company && frappe.E.isString(req.company)
+                && frappe.E.isArray(req.expenses) && req.expenses.length
             ) {
                 frm.set_value('company', req.company);
-                E.each(req.expenses, function(v) {
-                    if (v && E.isString(v)) frm.add_child('expenses', {expense: v});
+                frappe.E.each(req.expenses, function(v) {
+                    if (v && frappe.E.isString(v)) frm.add_child('expenses', {expense: v});
                 });
-                frm.E.update_expenses_data();
+                frm.X.update_expenses_data();
             }
             req = null;
         }
@@ -129,8 +129,8 @@ frappe.ui.form.on('Expenses Request', {
         }
     },
     refresh: function(frm) {
-        if (!frm.E.expenses_ready) {
-            frm.E.expenses_ready = 1;
+        if (!frm.X.expenses_ready) {
+            frm.X.expenses_ready = 1;
             let wrapper = frm.get_field('expenses').grid.wrapper;
             if (frm.doc.status === 'Draft') {
                 wrapper.find('.grid-add-multiple-rows').addClass('hidden');
@@ -153,9 +153,9 @@ frappe.ui.form.on('Expenses Request', {
     },
     company: function(frm) {
         let company = frm.doc.company;
-        if (company !== frm.E.company) {
-            frm.E.company = company;
-            if (frm.doc.expenses.length) E.clearTable('expenses');
+        if (company !== frm.X.company) {
+            frm.X.company = company;
+            if (frm.doc.expenses.length) frappe.E.clearTable('expenses');
         }
     },
     toggle_company_desc: function(frm) {
@@ -168,15 +168,15 @@ frappe.ui.form.on('Expenses Request', {
     },
     validate: function(frm) {
         if (!frm.doc.expenses.length) {
-            E.error('The expenses table must have at least one expense', true);
+            frappe.E.error('The expenses table must have at least one expense', true);
         }
     },
     toggle_add_expenses: function(frm) {
-        if (frm.E.select_dialog) {
-            frm.E.select_dialog.dialog.show();
+        if (frm.X.select_dialog) {
+            frm.X.select_dialog.dialog.show();
             return;
         }
-        frm.E.select_dialog = new frappe.ui.form.MultiSelectDialog({
+        frm.X.select_dialog = new frappe.ui.form.MultiSelectDialog({
             doctype: 'Expense',
             target: frm,
             add_filters_group: 0,
@@ -188,33 +188,33 @@ frappe.ui.form.on('Expenses Request', {
                     date: frm.doc.posting_date,
                     company: frm.doc.company
                 };
-                E.each(frm.doc.expenses, function(r) {
+                frappe.E.each(frm.doc.expenses, function(r) {
                     existing.push(r.expense);
                 });
                 if (existing.length) filters.existing = existing;
                 return {
-                    query: E.path('search_company_expenses'),
+                    query: frappe.E.path('search_company_expenses'),
                     filters: filters,
                 };
             },
             primary_action_label: __('Add'),
             action: function(vals) {
-                if (E.isArray(vals) && vals.length) {
-                    E.each(vals, function(v) {
-                        if (v && E.isString(v)) frm.add_child('expenses', {expense: v});
+                if (frappe.E.isArray(vals) && vals.length) {
+                    frappe.E.each(vals, function(v) {
+                        if (v && frappe.E.isString(v)) frm.add_child('expenses', {expense: v});
                     });
-                    frm.E.update_expenses_data();
+                    frm.X.update_expenses_data();
                     frm.trigger('toggle_company_desc');
                 }
             }
         });
-        frm.E.select_dialog.dialog.get_secondary_btn().addClass('hide');
+        frm.X.select_dialog.dialog.get_secondary_btn().addClass('hide');
     },
     before_workflow_action: function(frm) {
         if (!frm.selected_workflow_action || frm.doc.reviewer) return;
         return new Promise(function(resolve, reject) {
             var action = frm.selected_workflow_action;
-            frm.E.workflow = {action};
+            frm.X.workflow = {action};
             if (action !== 'Reject') {
                 resolve();
                 return;
@@ -228,7 +228,7 @@ frappe.ui.form.on('Expenses Request', {
                     },
                 ],
                 function(v) {
-                    frm.E.workflow.comment = v.comment;
+                    frm.X.workflow.comment = v.comment;
                     resolve();
                 },
                 __('Reject Request'),
@@ -237,12 +237,12 @@ frappe.ui.form.on('Expenses Request', {
         });
     },
     after_workflow_action: function(frm) {
-        if (!frm.E.workflow) return;
-        let action = frm.E.workflow.action,
-        comment = frm.E.workflow.comment;
-        frm.E.workflow = null;
+        if (!frm.X.workflow) return;
+        let action = frm.X.workflow.action,
+        comment = frm.X.workflow.comment;
+        frm.X.workflow = null;
         if (action === 'Reject' && comment) {
-            E.call(
+            frappe.E.call(
                 'add_request_rejection_comment',
                 {
                     name: frm.doc.name,
@@ -251,7 +251,7 @@ frappe.ui.form.on('Expenses Request', {
                 function(ret) {
                     frm.reload_doc();
                     if (!ret) {
-                        E.error('Unable to post the rejection comment.');
+                        frappe.E.error('Unable to post the rejection comment.');
                         return;
                     }
                     frappe.show_alert({
@@ -298,7 +298,7 @@ frappe.ui.form.on('Expenses Request', {
         
         frm.clear_custom_buttons();
         frm.add_custom_button(btn, function() {
-            E.setCache('make-expenses-entry', frm.doc.name);
+            frappe.E.setCache('make-expenses-entry', frm.doc.name);
             frappe.set_route('Form', 'Expenses Entry');
         });
         frm.change_custom_button_type(btn, null, 'success');
@@ -313,9 +313,9 @@ frappe.ui.form.on('Expenses Request', {
         let btn = __('Appeal');
         if (frm.custom_buttons[btn]) return;
         
-        if (!frm.E.appeal) {
-            frm.E.appeal = E.formDialog(__('Appeal Request'), 'blue');
-            frm.E.appeal
+        if (!frm.X.appeal) {
+            frm.X.appeal = frappe.E.formDialog(__('Appeal Request'), 'blue');
+            frm.X.appeal
                 .addField({
                     fieldname: 'appeal_expenses',
                     fieldtype: 'Table',
@@ -349,7 +349,7 @@ frappe.ui.form.on('Expenses Request', {
                         let args = this.getField('appeal_expenses').grid.get_selected_children();
                         if (args && args.length) {
                             let expenses = args.map(function(v) { return v.expense; });
-                            E.setCache('make-expenses-request', {
+                            frappe.E.setCache('make-expenses-request', {
                                 company: frm.doc.company,
                                 expenses: expenses,
                             });
@@ -365,7 +365,7 @@ frappe.ui.form.on('Expenses Request', {
         
         frm.clear_custom_buttons();
         frm.add_custom_button(btn, function() {
-            frm.E.appeal
+            frm.X.appeal
                 .setValue(
                     'appeal_expenses',
                     frm.doc.expenses.map(function(v) {

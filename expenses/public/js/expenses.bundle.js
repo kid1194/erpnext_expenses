@@ -570,6 +570,8 @@ class Expenses {
 
 class UniqueArray {
     constructor() {
+        frappe.Expenses();
+        
         this._d = [];
         this._r = [];
     }
@@ -616,19 +618,21 @@ class UniqueArray {
     }
     copy() {
         let list = new UniqueArray();
-        E.merge(list._d, this._d);
-        E.merge(list._r, this._r);
+        frappe.E.merge(list._d, this._d);
+        frappe.E.merge(list._r, this._r);
         return list;
     }
     clear() {
-        E.clear(this._d);
-        E.clear(this._r);
+        frappe.E.clear(this._d);
+        frappe.E.clear(this._r);
         return this;
     }
 }
 
 class FormDialog {
     constructor(title, indicator) {
+        frappe.Expenses();
+        
         this._title = title;
         this._indicator = indicator;
         
@@ -660,15 +664,15 @@ class FormDialog {
     }
     loadDoctype(dt) {
         this._doctype = dt;
-        E.runTask(function() {
+        frappe.E.runTask(function() {
             let meta = frappe.get_meta(this._doctype);
-            if (meta && E.isArray(meta.fields)) {
-                var fields = E.clone(meta.fields),
+            if (meta && frappe.E.isArray(meta.fields)) {
+                var fields = frappe.E.clone(meta.fields),
                 invalid = false;
-                E.each(fields, function(f) {
-                    if (f.fieldtype.includes('Table') && !E.isArray(f.fields)) {
+                frappe.E.each(fields, function(f) {
+                    if (f.fieldtype.includes('Table') && !frappe.E.isArray(f.fields)) {
                         let table_meta = frappe.get_meta(f.options);
-                        if (table_meta && E.isArray(table_meta.fields)) {
+                        if (table_meta && frappe.E.isArray(table_meta.fields)) {
                             f.fields = table_meta.fields;
                         } else {
                             invalid = true;
@@ -681,12 +685,12 @@ class FormDialog {
                     return;
                 }
             }
-            E.call(
+            frappe.E.call(
                 'get_docfields',
                 {doctype: this._doctype},
-                E.fn(function(fields) {
-                    if (!E.isArray(fields)) {
-                        E.error('Unable to get the fields of {0}.', [this._doctype]);
+                frappe.E.fn(function(fields) {
+                    if (!frappe.E.isArray(fields)) {
+                        frappe.E.error('Unable to get the fields of {0}.', [this._doctype]);
                         return;
                     }
                     this._setFields(fields);
@@ -717,7 +721,7 @@ class FormDialog {
         return this;
     }
     removeFields() {
-        E.merge(this._remove_fields, arguments);
+        frappe.E.merge(this._remove_fields, arguments);
         return this;
     }
     setFieldProperty(name, key, value) {
@@ -729,23 +733,23 @@ class FormDialog {
         return this;
     }
     setFieldProperties(name, props) {
-        E.each(props, function(v, k) {
+        frappe.E.each(props, function(v, k) {
             this.setFieldProperty(name, k, v);
         }, this);
         return this;
     }
     setFieldsProperties(data) {
-        E.each(data, function(props, name) {
+        frappe.E.each(data, function(props, name) {
             this.setFieldProperties(name, props);
         }, this);
         return this;
     }
     replaceProperties(data) {
-        E.merge(this._replace_properties, data);
+        frappe.E.merge(this._replace_properties, data);
         return this;
     }
     removeProperties() {
-        E.merge(this._remove_properties, arguments);
+        frappe.E.merge(this._remove_properties, arguments);
         return this;
     }
     sortFields(fields) {
@@ -781,36 +785,36 @@ class FormDialog {
     _setupFields() {
         if (!this.fields) this._setFields([]);
         if (this._add_fields.length) {
-            E.each(this._add_fields, function(d) {
+            frappe.E.each(this._add_fields, function(d) {
                 let field = d[0];
                 if (d[1]) this._fields.splice(1, 0, field);
                 else this._fields.push(field);
             }, this);
-            E.clear(this._add_fields);
+            frappe.E.clear(this._add_fields);
         }
         if (this._remove_fields.length) {
-            this._fields = E.filter(this._fields, E.fn(function(f) {
-                return !E.contains(this._remove_fields, f.fieldname);
+            this._fields = frappe.E.filter(this._fields, frappe.E.fn(function(f) {
+                return !frappe.E.contains(this._remove_fields, f.fieldname);
             }, this));
-            E.clear(this._remove_fields);
+            frappe.E.clear(this._remove_fields);
         }
         this._prepareFields(this._fields);
         if (Object.keys(this._add_properties).length) {
-            E.each(this._add_properties, function(prop, name) {
+            frappe.E.each(this._add_properties, function(prop, name) {
                 var field = this.getFieldByName(name);
-                if (field && E.isPlainObject(prop)) {
-                    E.each(prop, function(v, k) {
-                        if (E.isFunction(v)) v = E.fn(v, this);
+                if (field && frappe.E.isPlainObject(prop)) {
+                    frappe.E.each(prop, function(v, k) {
+                        if (frappe.E.isFunction(v)) v = frappe.E.fn(v, this);
                         field[k] = v;
                     }, this);
                 }
             }, this);
-            E.clear(this._add_properties);
+            frappe.E.clear(this._add_properties);
         }
         if (Object.keys(this._replace_properties).length) {
-            E.each(this._replace_properties, function(v, k) {
-                if (E.isArray(v)) {
-                    E.each(this._fields_by_ref, function(f) {
+            frappe.E.each(this._replace_properties, function(v, k) {
+                if (frappe.E.isArray(v)) {
+                    frappe.E.each(this._fields_by_ref, function(f) {
                         if (f[k] != null) {
                             delete f[k];
                             f[v[0]] = v[1];
@@ -820,28 +824,28 @@ class FormDialog {
                 }
                 var f = this.getFieldByName(k);
                 if (!f) return;
-                E.each(v, function(y, x) {
+                frappe.E.each(v, function(y, x) {
                     delete f[x];
                     f[y[0]] = y[1];
                 });
             }, this);
-            E.clear(this._replace_properties);
+            frappe.E.clear(this._replace_properties);
         }
         if (this._remove_properties.length) {
-            E.each(this._fields_by_ref, function(f) {
-                E.each(this._remove_properties, function(k) { delete f[k]; });
+            frappe.E.each(this._fields_by_ref, function(f) {
+                frappe.E.each(this._remove_properties, function(k) { delete f[k]; });
             }, this);
-            E.clear(this._remove_properties);
+            frappe.E.clear(this._remove_properties);
         }
         if (this._sort_fields) {
-            this._fields.sort(E.fn(function(a, b) {
+            this._fields.sort(frappe.E.fn(function(a, b) {
                 return this._sort_fields.indexOf(a.fieldname) - this._sort_fields.indexOf(b.fieldname);
             }, this));
-            E.clear(this._sort_fields);
+            frappe.E.clear(this._sort_fields);
         }
     }
     _prepareFields(fields, parent_name) {
-        E.each(fields, function(f) {
+        frappe.E.each(fields, function(f) {
             let name = (parent_name ? parent_name + '.' : '') + f.fieldname;
             this._fields_by_name[name] = this._fields_by_ref.length;
             this._fields_by_ref.push(f);
@@ -883,23 +887,23 @@ class FormDialog {
         if (this._primary_action) {
             this._dialog.set_primary_action(
                 __(this._primary_action[0]),
-                E.fn(this._primary_action[1], this)
+                frappe.E.fn(this._primary_action[1], this)
             );
             this._primary_action = null;
         }
         if (this._secondary_action) {
             this._dialog.set_secondary_action_label(__(this._secondary_action[0]));
-            this._dialog.set_secondary_action(E.fn(this._secondary_action[1], this));
+            this._dialog.set_secondary_action(frappe.E.fn(this._secondary_action[1], this));
             this._secondary_action = null;
         }
         if (this._custom_actions.length) {
             var pos = ['end', 'start', 'center'];
-            E.each(this._custom_actions, function(v) {
+            frappe.E.each(this._custom_actions, function(v) {
                 let label = v[0],
                 callback = v[1],
                 type = v[2],
                 position = v[3];
-                if (type && E.contains(pos, type)) {
+                if (type && frappe.E.contains(pos, type)) {
                     position = type;
                     type = null;
                 }
@@ -916,20 +920,20 @@ class FormDialog {
                 if (pidx < 1) primary.parent().append(btn);
                 else if (pidx > 1) primary.after(btn);
                 else if (pidx > 0) primary.parent().prepend(btn);
-                btn.on('click', E.fn(callback, this));
+                btn.on('click', frappe.E.fn(callback, this));
             }, this);
-            E.clear(this._custom_actions);
+            frappe.E.clear(this._custom_actions);
         }
         this._ready = true;
         if (this.__on_ready.length) {
-            E.runTasks(this.__on_ready)
-            .finally(E.fn(function() { E.clear(this.__on_ready); }, this));
+            frappe.E.runTasks(this.__on_ready)
+            .finally(frappe.E.fn(function() { frappe.E.clear(this.__on_ready); }, this));
         }
         return this;
     }
     _onReady(fn, args) {
-        this.__on_ready.push(E.fn(function() {
-            E.fnCall(this[fn], args, this);
+        this.__on_ready.push(frappe.E.fn(function() {
+            frappe.E.fnCall(this[fn], args, this);
         }, this));
         return this;
     }
@@ -988,7 +992,7 @@ class FormDialog {
         this.setFieldProperty(name, 'invalid', 1);
         let f = this.getField(name);
         if (f && f.set_invalid) f.set_invalid();
-        if (E.isString(error) && f && f.set_new_description) f.set_new_description(error);
+        if (frappe.E.isString(error) && f && f.set_new_description) f.set_new_description(error);
         return this;
     }
     setRowFieldInvalid(table, idx, name, error) {
@@ -996,7 +1000,7 @@ class FormDialog {
         if (f && f.df && !f.df.invalid) {
             f.df.invalid = 1;
             if (f.set_invalid) f.set_invalid();
-            if (E.isString(error) && f.set_new_description) f.set_new_description(error);
+            if (frappe.E.isString(error) && f.set_new_description) f.set_new_description(error);
         }
         return this;
     }
@@ -1021,14 +1025,14 @@ class FormDialog {
     }
     enableAllFields() {
         if (!this._ready) return this._onReady('enableAllFields');
-        E.each(this.getAllFields(), function(f) {
+        frappe.E.each(this.getAllFields(), function(f) {
             this.setFieldProperty(f.df.fieldname, 'read_only', 0);
         }, this);
         return this;
     }
     disableAllFields() {
         if (!this._ready) return this._onReady('disableAllFields');
-        E.each(this.getAllFields(), function(f) {
+        frappe.E.each(this.getAllFields(), function(f) {
             this.setFieldProperty(f.df.fieldname, 'read_only', 1);
         }, this);
         return this;
@@ -1040,7 +1044,7 @@ class FormDialog {
             frappe.ui.scroll(this.$alert);
         }
         this.setFieldProperty('error_message', 'hidden', 0);
-        window.setTimeout(E.fn(function() { this.hide_error(); }, this), 3000);
+        window.setTimeout(frappe.E.fn(function() { this.hide_error(); }, this), 3000);
     }
     hideError() {
         if (this.$alert && this.$error) {
@@ -1050,32 +1054,32 @@ class FormDialog {
         this.setFieldProperty('error_message', 'hidden', 1);
     }
     onClear(fn) {
-        this.__on_clear.push(E.fn(fn, this));
+        this.__on_clear.push(frappe.E.fn(fn, this));
         return this;
     }
     clear() {
         if (!this._ready) return this._onReady('clear');
         this._dialog.clear();
-        E.runTasks(this.__on_clear)
-        .finally(E.fn(function() { E.clear(this.__on_clear); }, this));
+        frappe.E.runTasks(this.__on_clear)
+        .finally(frappe.E.fn(function() { frappe.E.clear(this.__on_clear); }, this));
         return this;
     }
     extend(key, val) {
-        if (E.isPlainObject(key)) {
-            E.each(key, function(v, k) {
+        if (frappe.E.isPlainObject(key)) {
+            frappe.E.each(key, function(v, k) {
                 this.extend(k, v);
             }, this);
             return this;
         }
-        if (E.isString(key) && !E.has(this._extends, key)) {
-            this[key] = E.isFunction(val) ? E.fn(val, this) : val;
+        if (frappe.E.isString(key) && !frappe.E.has(this._extends, key)) {
+            this[key] = frappe.E.isFunction(val) ? frappe.E.fn(val, this) : val;
             this._extends.push(key);
         }
         return this;
     }
     unset() {
-        E.each(arguments, function(key) {
-            if (!E.has(this._extends, key)) return;
+        frappe.E.each(arguments, function(key) {
+            if (!frappe.E.has(this._extends, key)) return;
             delete this[key];
             let idx = this._extends.indexOf(key);
             if (idx >= 0) this._extends.splice(idx, 1);
@@ -1084,23 +1088,25 @@ class FormDialog {
     }
     reset() {
         this.clear();
-        E.each(this._extends, function(key) {
+        frappe.E.each(this._extends, function(key) {
             delete this[key];
         }, this);
-        E.clear(this._extends);
+        frappe.E.clear(this._extends);
         return this;
     }
 }
 
-frappe.E = function() {
-    if (window.E && window.E._path) return window.E;
-    window.E = new Expenses();
-    window.E.log('Library loaded.');
-    window.E.extend('formDialog', function(title, indicator) {
+frappe.Expenses =function() {
+    if (frappe.E && frappe.E._path) return frappe.E;
+    frappe.E = new Expenses();
+    frappe.E.log('Library loaded.');
+    frappe.E.extend('formDialog', function(title, indicator) {
         return new FormDialog(title, indicator);
     });
-    window.E.extend('uniqueArray', function() {
+    frappe.E.extend('uniqueArray', function() {
         return new UniqueArray();
     });
-    return window.E;
+    return frappe.E;
 };
+
+$(function() { frappe.Expenses(); });

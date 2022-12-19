@@ -8,8 +8,8 @@
 
 frappe.ui.form.on('Expenses Settings', {
     setup: function(frm) {
-        frappe.E();
-        frm.E = {
+        frappe.Expenses();
+        frm.X = {
             update_messages: [
                 __('No new version is found'),
                 __('A new version is available'),
@@ -21,14 +21,14 @@ frappe.ui.form.on('Expenses Settings', {
     refresh: function(frm) {
         let idx = cint(frm.doc.has_update);
         frm.get_field('update_note').$wrapper.html(
-            '<' + frm.E.update_tags[idx]
-            + 'class="' + frm.E.update_classes[idx] + ' mb-4">'
-            + frm.E.update_messages[idx]
-            + '</' + frm.E.update_tags[idx] + '>'
+            '<' + frm.X.update_tags[idx]
+            + 'class="' + frm.X.update_classes[idx] + ' mb-4">'
+            + frm.X.update_messages[idx]
+            + '</' + frm.X.update_tags[idx] + '>'
         );
     },
     check_for_update: function(frm) {
-        E.call(
+        frappe.E.call(
             'check_for_update',
             function() { frm.reload_doc(); }
         );
