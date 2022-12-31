@@ -70,7 +70,7 @@
   },
   {
    "fieldname": "expenses",
-   "fieldtype": "MultiSelect Table",
+   "fieldtype": "Table",
    "label": "Expenses",
    "options": "Expenses Request Details"
   },
