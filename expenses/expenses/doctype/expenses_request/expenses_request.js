@@ -362,7 +362,7 @@ frappe.ui.form.on('Expenses Request', {
                     function() { this.hide(); }
                 )
                 .build();
-        
+        }
         frm.clear_custom_buttons();
         frm.add_custom_button(btn, function() {
             frm.X.appeal
