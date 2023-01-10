@@ -11,6 +11,8 @@ frappe.ui.form.on('Expenses Entry', {
         frappe.Expenses();
         frappe.E.form(frm);
         frm.X = {
+            form_disabled: 0,
+            expenses_grid_btn: 0,
             base_currency: frappe.boot.sysdefaults.currency,
             del_files: frappe.E.uniqueArray(),
         };
@@ -77,6 +79,7 @@ frappe.ui.form.on('Expenses Entry', {
         frm.add_fetch('mode_of_payment', 'type', 'payment_target', frm.doctype);
         
         if (cint(frm.doc.docstatus) > 0) {
+            frm.X.form_disabled = 1;
             frm.disable_form();
             frm.set_intro(__('{0} has been submitted', [frm.doctype]), 'green');
             return;
@@ -160,43 +163,45 @@ frappe.ui.form.on('Expenses Entry', {
                 });
             }
         });
-        
-        frm.get_field('expenses').grid.add_custom_button(
-            __('Update Exchange Rates'),
-            function() {
-                let fields = [],
-                exist = [];
-                frappe.E.each(frm.doc.expenses, function(v) {
-                    if (exist.indexOf(v.account_currency) >= 0) return;
-                    fields.push({
-                        fieldname: v.account_currency + '_ex',
-                        fieldtype: 'Float',
-                        label: frappe.scrub(v.account_currency).toLowerCase(),
-                        precision: '9',
-                        reqd: 1,
-                        bold: 1,
-                        value: v.exchange_rate,
-                    });
-                });
-                frappe.prompt(
-                    fields,
-                    function(ret) {
-                        if (!ret || !frappe.E.isObject(ret)) return;
-                        frappe.E.each(frm.doc.expenses, function(v) {
-                            let k = frappe.scrub(v.account_currency).toLowerCase();
-                            if (!ret[k]) return;
-                            v.exchange_rate = flt(ret[k]);
-                            frappe.E.refreshRowField('expenses', v.name, 'exchange_rate');
-                        });
-                    },
-                    __('Update Exchange Rates'),
-                    __('Save')
-                );
-            },
-            'bottom'
-        );
     },
     refresh: function(frm) {
+        if (!frm.X.form_disabled && !frm.X.expenses_grid_btn) {
+            frm.X.expenses_grid_btn = 1;
+            frm.get_field('expenses').grid.add_custom_button(
+                __('Update Exchange Rates'),
+                function() {
+                    let fields = [],
+                    exist = [];
+                    frappe.E.each(frm.doc.expenses, function(v) {
+                        if (exist.indexOf(v.account_currency) >= 0) return;
+                        fields.push({
+                            fieldname: v.account_currency + '_ex',
+                            fieldtype: 'Float',
+                            label: frappe.scrub(v.account_currency).toLowerCase(),
+                            precision: '9',
+                            reqd: 1,
+                            bold: 1,
+                            value: v.exchange_rate,
+                        });
+                    });
+                    frappe.prompt(
+                        fields,
+                        function(ret) {
+                            if (!ret || !frappe.E.isObject(ret)) return;
+                            frappe.E.each(frm.doc.expenses, function(v) {
+                                let k = frappe.scrub(v.account_currency).toLowerCase();
+                                if (!ret[k]) return;
+                                v.exchange_rate = flt(ret[k]);
+                                frappe.E.refreshRowField('expenses', v.name, 'exchange_rate');
+                            });
+                        },
+                        __('Update Exchange Rates'),
+                        __('Save')
+                    );
+                },
+                'bottom'
+            );
+        }
         frm.X.update_totals();
     },
     company: function(frm) {
