@@ -151,7 +151,7 @@ If you find bug in the plugin, please create a [bug report](https://github.com/k
 
 ### Contributors
 **The list of people who deserves more than a simple thank you.**
-- [Monolith Online](https://github.com/monolithon) ♥ (Testing & Debugging)
+- [Monolith Online](https://github.com/monolithon) ❤❤❤ (Testing & Debugging)
 - [Andrew Rogers](https://github.com/agrogers) 👍 (Testing & Debugging)
 
 ---
