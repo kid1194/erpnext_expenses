@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -7,7 +7,6 @@
 import re
 
 import frappe
-from frappe import _
 from frappe.utils import cint, get_request_session, now, markdown
 
 from frappe.desk.doctype.notification_settings.notification_settings import (
@@ -16,7 +15,8 @@ from frappe.desk.doctype.notification_settings.notification_settings import (
 
 from expenses import __version__
 from .common import log_error, parse_json_if_valid
-from .settings import *
+from .settings import settings
+from .doctypes import _SETTINGS
 
 
 ## Hooks
@@ -64,7 +64,7 @@ def check_for_update():
                 latest_version,
                 doc.update_notification_sender,
                 [v.user for v in doc.update_notification_receivers],
-                markdown(response.get("body"))
+                markdown(data.get("body"))
             )
     
     doc.save(ignore_permissions=True)
@@ -110,7 +110,7 @@ def enqueue_send_notification(version, sender, receivers, message):
 ## Self
 def send_notification(version, sender, receivers, message):
     for receiver in receivers:
-        if is_notifications_enabled(user):
+        if is_notifications_enabled(receiver):
             (frappe.new_doc("Notification Log")
                 .update({
                     "document_type": _SETTINGS,

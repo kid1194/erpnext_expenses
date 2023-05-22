@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -10,8 +10,9 @@ from .search import filter_search, prepare_data
 
 
 @frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def search_reviewers(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+def search_reviewers(
+    doctype, txt, searchfield, start, page_len, filters, as_dict=False
+):
     doctype = "User"
     doc = frappe.qb.DocType(doctype)
     qry = (frappe.qb.from_(doc)

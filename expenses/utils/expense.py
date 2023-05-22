@@ -1,19 +1,18 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
 import frappe
+from frappe import _
 
 from .attachment import get_attachments_by_parents
 from .common import (
-    get_cache,
-    get_cache,
+    error,
     parse_json_if_valid,
     log_error,
-    is_doc_exist,
-    get_cached_doc
+    is_doc_exist
 )
 from .doctypes import _EXPENSE
 from .search import filter_search, prepare_data
@@ -100,8 +99,9 @@ def is_expenses_belongs_to_company(names, company):
 
 ## Expenses Request Form (MultiSelect Dialog)
 @frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def search_company_expenses(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+def search_company_expenses(
+    doctype, txt, searchfield, start, page_len, filters, as_dict=False
+):
     if not filters or not isinstance(filters.get("company"), str):
         return []
     

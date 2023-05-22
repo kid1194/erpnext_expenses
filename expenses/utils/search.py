@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -7,6 +7,7 @@
 import re
 
 import frappe
+from frappe import _
 from frappe.utils import cstr
 from frappe.query_builder.functions import Locate
 from pypika.enums import Order
@@ -15,7 +16,7 @@ from pypika.terms import Criterion
 
 def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     meta = frappe.get_meta(doctype)
-    if txt:
+    if search:
         qry = qry.select(Locate(search, relevance).as_("_relevance"))
         qry = qry.orderby("_relevance", doc.modified, doc.idx, order=Order.desc)
         
@@ -37,7 +38,16 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
                     (
                         fmeta
                         and fmeta.fieldtype
-                        in ["Data", "Text", "Small Text", "Long Text", "Link", "Select", "Read Only", "Text Editor"]
+                        in [
+                            "Data",
+                            "Text",
+                            "Small Text",
+                            "Long Text",
+                            "Link",
+                            "Select",
+                            "Read Only",
+                            "Text Editor"
+                        ]
                     )
                 )
             ):
@@ -56,19 +66,19 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     return qry
 
 
-def prepare_data(data, dt, column, txt, as_dict):
-    if txt and dt in frappe.get_hooks("translated_search_doctypes"):
+def prepare_data(data, dt, column, search, as_dict):
+    if search and dt in frappe.get_hooks("translated_search_doctypes"):
         data = [
             v
             for v in data
             if re.search(
-                re.escape(txt) + ".*",
+                re.escape(search) + ".*",
                 _(v.get(column) if as_dict else v[0]),
                 re.IGNORECASE
             )
         ]
     
-    args = [txt, as_dict]
+    args = [search, as_dict]
     def relevance_sorter(key):
         value = _(key.name if args[1] else key[0])
         return (cstr(value).lower().startswith(args[0].lower()) is not True, value)

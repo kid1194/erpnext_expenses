@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -105,13 +105,17 @@ def get_cached_value(dt, filters, field, as_dict=False):
         val = frappe.db.get_value(dt, filters, field, as_dict=as_dict)
     
     if not val:
-        error(_("Unable to get get the value or values of {0} from {1}, filtered by {2}").format(
-            to_json_if_valid(field),
-            dt,
-            to_json_if_valid(
-                filters.keys() if isinstance(filters, dict) else filters
+        error(
+            _(
+                "Unable to get get the value or values of {0} from {1}, filtered by {2}"
+            ).format(
+                to_json_if_valid(field),
+                dt,
+                to_json_if_valid(
+                    filters.keys() if isinstance(filters, dict) else filters
+                )
             )
-        ))
+        )
     
     if _as_dict and not isinstance(val, dict):
         if isinstance(field, list) and isinstance(val, list):

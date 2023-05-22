@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -6,7 +6,7 @@
 
 import frappe
 
-from .common import is_doc_exist, parse_json_if_valid
+from .common import parse_json_if_valid
 from .doctypes import _ATTACHMENT
 
 

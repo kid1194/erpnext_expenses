@@ -6,6 +6,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import cint
 from pypika.terms import Criterion
 from pypika.enums import Order
 
@@ -25,7 +26,6 @@ from .search import filter_search, prepare_data
 ## Expense Type Form
 ## Expense Item Form
 @frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
 def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     doc = frappe.qb.DocType(_TYPE)
     qry = (frappe.qb.from_(doc)
@@ -174,7 +174,9 @@ def get_type_company_account_data(name, company):
     
     if not data:
         for parent in get_cached_doc(_TYPE, name).get_ancestors():
-            data = get_company_account_data_by_parent(company, parent, _TYPE, _TYPE_ACCOUNTS)
+            data = get_company_account_data_by_parent(
+                company, parent, _TYPE, _TYPE_ACCOUNTS
+            )
             if data and isinstance(data, dict):
                 break
             

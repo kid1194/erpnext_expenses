@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -8,7 +8,6 @@ import frappe
 
 from .account import get_company_account_data_by_parent
 from .common import (
-    error,
     get_cache,
     set_cache,
     is_doc_exist,
@@ -30,7 +29,6 @@ def items_of_expense_type_exists(expense_type):
 ## Expense Form
 ## Expense List
 @frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
 def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     doc = frappe.qb.DocType(_ITEM)
     qry = (frappe.qb.from_(doc)
@@ -79,7 +77,7 @@ def get_item_company_account_data(item, company):
             if isinstance(item_data, dict):
                 for k, v in item_data.items():
                     if v:
-                        data[k] = v;
+                        data[k] = v
     
     else:
         account = ""

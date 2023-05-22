@@ -1,15 +1,14 @@
-# ERPNext Expenses © 2022
+# ERPNext Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
 import frappe
-from frappe import _
 
 from erpnext.setup.utils import get_exchange_rate
 
-from .common import error, get_cached_doc, get_cached_value
+from .common import get_cached_doc, get_cached_value
 from .doctypes import _ENTRY, _ENTRY_EXPENSES, _ENTRY_DETAILS
 
 
@@ -85,4 +84,4 @@ def get_current_exchange_rate(from_currency, to_currency, date=None):
 
 ## Self Journal
 def get_entry_data(name):
-    return get_cached_doc(_Entry, name)
+    return get_cached_doc(_ENTRY, name)
