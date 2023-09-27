@@ -1,5 +1,5 @@
 /*
-*  ERPNext Expenses © 2022
+*  Expenses © 2023
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
@@ -12,20 +12,23 @@ class Expenses {
         this._frm = null;
         this._cache = {};
     }
+    get version() {
+        return '1.0.0';
+    }
     
     // Helpers
-    _getObjectType(v) {
+    _objType(v) {
         if (v == null) return v === undefined ? 'Undefined' : 'Null';
         let t = Object.prototype.toString.call(v).slice(8, -1);
         return t === 'Number' && isNaN(v) ? 'NaN' : t;
     }
     _isOf(v, t) {
-        return this._getObjectType(v) === t;
+        return this._objType(v) === t;
     }
     _isOfAny(v, t) {
-        return t.split(' ').indexOf(this._getObjectType(v)) >= 0;
+        return t.split(' ').indexOf(this._objType(v)) >= 0;
     }
-    _isPropertyOf(v, k) {
+    _isPropOf(v, k) {
         return Object.prototype.hasOwnProperty.call(v, k);
     }
     
@@ -132,7 +135,7 @@ class Expenses {
             }
         } else if (this.isObject(d)) {
             for (let k in d) {
-                if (this._isPropertyOf(d, k)) {
+                if (this._isPropOf(d, k)) {
                     let r = this.fnCall(fn, [d[k], k], b);
                     if (r !== undefined) return r;
                 }
@@ -568,71 +571,86 @@ class Expenses {
     }
 }
 
-class UniqueArray {
+class TableArray {
     constructor() {
-        frappe.Expenses();
-        
-        this._d = [];
-        this._r = [];
+        this._d = {};
+        this._l = 0;
     }
-    get length() {
-        return this._d.length;
+    get length() { return this._l; }
+    has(k, v, c) {
+        if (!frappe.E.isInteger(c)) c = 0;
+        return k != null && v != null && !!this._d[k] && this._d[k][c] === v;
     }
-    has(v) {
-        return v != null && this._d.indexOf(v) >= 0;
-    }
-    hasRef(r) {
-        return r != null && this._r.indexOf(r) >= 0;
-    }
-    push(v, r) {
-        this.del(v);
-        this.del(r, 1);
-        if (v != null && !this.has(v)) {
-            this._d.push(v);
-            this._r.push(r || null);
-        }
-        return this;
-    }
-    del(v, r) {
-        if (v != null) {
-            let idx = !r ? this._d.indexOf(v) : this._r.indexOf(v);
-            if (idx >= 0) {
-                this._d.splice(idx, 1);
-                this._r.splice(idx, 1);
+    add(k, v, c) {
+        this.del(k, c);
+        if (k != null && v != null && !this.has(k, v, c)) {
+            if (!frappe.E.isInteger(c)) c = 0;
+            if (!this._d[k]) {
+                this._d[k] = [];
+                this._l++;
             }
+            this._d[k][c] = v;
         }
         return this;
     }
-    delRef(r) {
-        if (r != null) {
-            let idx = this._r.indexOf(r);
-            if (idx >= 0) {
-                this._d.splice(idx, 1);
-                this._r.splice(idx, 1);
-            }
+    del(k, c) {
+        if (k == null) return this;
+        if (c == null) {
+            if (!!this._d[k]) this._l--;
+            delete this._d[k];
+            return this;
         }
+        if (!frappe.E.isInteger(c)) c = 0;
+        if (!!this._d[k] && this._d[k].length > c)
+            this._d[k][c] = null;
         return this;
     }
-    get all() {
-        return this._d;
+    col(c) {
+        if (!frappe.E.isInteger(c)) c = 0;
+        let ret = [];
+        frappe.E.each(this._d, function(v) {
+            if (v[c] != null) ret.push(v[c]);
+        });
+        return ret;
+    }
+    inCol(v, c) {
+        if (!frappe.E.isInteger(c)) c = 0;
+        let ret = false;
+        if (v != null)
+            frappe.E.each(this._d, function(y) {
+                if (y[c] === v) {
+                    ret = true;
+                    return 1;
+                }
+            });
+        return ret;
+    }
+    eqKey(v, c) {
+        if (!frappe.E.isInteger(c)) c = 0;
+        return frappe.E.each(this._d, function(y, k) {
+            if (y[c] === v) return k;
+        });
+    }
+    eqRow(v, c) {
+        v = this.eqKey(v, c);
+        return v != null ? this._d[v] : null;
     }
     copy() {
-        let list = new UniqueArray();
-        frappe.E.merge(list._d, this._d);
-        frappe.E.merge(list._r, this._r);
+        let list = new TableArray();
+        frappe.E.each(this._d, function(v, k) {
+            list._d[k] = v.slice();
+        });
         return list;
     }
     clear() {
-        frappe.E.clear(this._d);
-        frappe.E.clear(this._r);
+        this._d = {};
+        this._l = 0;
         return this;
     }
 }
 
 class FormDialog {
     constructor(title, indicator) {
-        frappe.Expenses();
-        
         this._title = title;
         this._indicator = indicator;
         
@@ -1096,17 +1114,14 @@ class FormDialog {
     }
 }
 
-frappe.Expenses =function() {
-    if (frappe.E && frappe.E._path) return frappe.E;
+frappe.Expenses = function() {
+    if (frappe.E instanceof Expenses) return frappe.E;
     frappe.E = new Expenses();
-    frappe.E.log('Library loaded.');
     frappe.E.extend('formDialog', function(title, indicator) {
         return new FormDialog(title, indicator);
     });
-    frappe.E.extend('uniqueArray', function() {
-        return new UniqueArray();
+    frappe.E.extend('tableArray', function() {
+        return new TableArray();
     });
     return frappe.E;
 };
-
-$(function() { frappe.Expenses(); });

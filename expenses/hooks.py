@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -35,7 +35,7 @@ doctype_list_js = {
 
 
 after_install = "expenses.setup.install.after_install"
-after_uninstall = "expenses.setup.uninstall.after_uninstall"
+before_uninstall = "expenses.setup.uninstall.before_uninstall"
 
 
 fixtures = [
@@ -48,7 +48,7 @@ fixtures = [
 
 scheduler_events = {
     "daily": [
-        "expenses.utils.update.auto_check_for_update"
+        "expenses.utils.update.auto_check"
     ]
 }
 

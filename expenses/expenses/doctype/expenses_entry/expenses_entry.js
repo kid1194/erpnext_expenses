@@ -1,5 +1,5 @@
 /*
-*  ERPNext Expenses © 2022
+*  Expenses © 2023
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
@@ -14,7 +14,7 @@ frappe.ui.form.on('Expenses Entry', {
             form_disabled: 0,
             expenses_grid_btn: 0,
             base_currency: frappe.boot.sysdefaults.currency,
-            del_files: frappe.E.uniqueArray(),
+            del_files: frappe.E.tableArray(),
         };
         
         frm.X.get_exchange_rate = function(from, to, fn) {
@@ -248,7 +248,7 @@ frappe.ui.form.on('Expenses Entry', {
                 {
                     doctype: frm.doctype,
                     name: frm.doc.name || frm.docname,
-                    files: frm.X.del_files.all,
+                    files: frm.X.del_files.col(0),
                 },
                 function() { frm.X.del_files.clear(); }
             );
@@ -286,10 +286,12 @@ frappe.ui.form.on('Expense Attachment', {
         if (row.expenses_entry_row_ref) {
             frappe.E.error('Removing attachments is not allowed', true);
         }
-        if (row.file) frm.X.del_files.push(row.file);
+        if (cstr(row.file).length)
+            frm.X.del_files.add(row.name || cdn, row.file, 0);
     },
     file: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (row.file) frm.X.del_files.del(row.file);
+        if (cstr(row.file).length)
+            frm.X.del_files.del(row.name || cdn);
     },
 });

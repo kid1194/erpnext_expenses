@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -10,7 +10,7 @@ from frappe.model.document import Document
 
 from expenses.utils import (
     error,
-    clear_document_cache,
+    clear_doc_cache,
     is_expenses_belongs_to_company,
     reserve_request_expenses,
     release_request_expenses,
@@ -45,11 +45,11 @@ class ExpensesRequest(Document):
         if not self.expenses:
             error(_("Expenses table must have at least one expense"))
         if self.docstatus.is_draft():
-            self.validate_expenses()
+            self._validate_expenses()
             if not self.workflow_state:
                 self.workflow_state = "Draft"
         else:
-            self.check_changes()
+            self._check_changes()
     
     
     def before_save(self):
@@ -59,7 +59,7 @@ class ExpensesRequest(Document):
         
         if not self.get_doc_before_save():
             self.load_doc_before_save()
-        clear_document_cache(
+        clear_doc_cache(
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
         )
@@ -68,20 +68,20 @@ class ExpensesRequest(Document):
     
     
     def before_submit(self):
-        clear_document_cache(self.doctype, self.name)
-        self.check_changes()
+        clear_doc_cache(self.doctype, self.name)
+        self._check_changes()
         if self.status == "Draft":
             self.status = "Pending"
             self.workflow_state = "Pending"
     
     
     def on_update(self):
-        self.handle_expenses()
+        self._handle_expenses()
     
     
     def before_update_after_submit(self):
-        clear_document_cache(self.doctype, self.name)
-        self.check_changes()
+        clear_doc_cache(self.doctype, self.name)
+        self._check_changes()
         if self.status == "Approved":
             if self.workflow_state != self.status:
                 self.workflow_state = "Approved"
@@ -90,7 +90,7 @@ class ExpensesRequest(Document):
     
     
     def on_update_after_submit(self):
-        self.handle_expenses()
+        self._handle_expenses()
     
     
     def before_cancel(self):
@@ -106,9 +106,9 @@ class ExpensesRequest(Document):
     
     
     def on_cancel(self):
-        clear_document_cache(self.doctype, self.name)
+        clear_doc_cache(self.doctype, self.name)
         self._release_expenses = True
-        self.handle_expenses()
+        self._handle_expenses()
     
     
     def on_trash(self):
@@ -116,7 +116,19 @@ class ExpensesRequest(Document):
             error(_("Cannot delete a non-cancelled {0}").format(self.doctype))
     
     
-    def validate_expenses(self):
+    def approve(self, ignore_permissions=False):
+        self._change_status("Approved", "approve", ignore_permissions)
+    
+    
+    def reject(self, ignore_permissions=False):
+        self._change_status("Rejected", "reject", ignore_permissions)
+    
+    
+    def process(self, ignore_permissions=False):
+        self._change_status("Processed", "process", ignore_permissions)
+    
+    
+    def _validate_expenses(self):
         if (not is_expenses_belongs_to_company(
             [v.expense for v in self.expenses],
             self.company
@@ -127,7 +139,7 @@ class ExpensesRequest(Document):
             )
     
     
-    def check_changes(self):
+    def _check_changes(self):
         if not self.get_doc_before_save():
             self.load_doc_before_save()
         if self.get_doc_before_save():
@@ -145,7 +157,7 @@ class ExpensesRequest(Document):
                     error(_("{0} cannot be modified after submit").format(self.doctype))
     
     
-    def handle_expenses(self):
+    def _handle_expenses(self):
         if self._reserve_expenses:
             self._reserve_expenses = False
             reserve_request_expenses([v.expense for v in self.expenses])
@@ -157,19 +169,7 @@ class ExpensesRequest(Document):
             approve_request_expenses([v.expense for v in self.expenses])
     
     
-    def approve(self, ignore_permissions=False):
-        self.change_status("Approved", "approve", ignore_permissions)
-    
-    
-    def reject(self, ignore_permissions=False):
-        self.change_status("Rejected", "reject", ignore_permissions)
-    
-    
-    def process(self, ignore_permissions=False):
-        self.change_status("Processed", "process", ignore_permissions)
-    
-    
-    def change_status(self, status, action, ignore_permissions=False):
+    def _change_status(self, status, action, ignore_permissions=False):
         if not self.docstatus.is_submitted():
             error(_("{0} cannot be {1}").format(self.doctype, status.lower()))
         else:

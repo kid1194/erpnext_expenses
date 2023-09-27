@@ -3,7 +3,7 @@
  "allow_copy": 1,
  "allow_import": 1,
  "autoname": "format:EXP-ENT-{YYYY}-{#####}",
- "creation": "2022-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04.119400",
  "description": "Expenses entry",
  "doctype": "DocType",
  "document_type": "Document",
@@ -78,8 +78,7 @@
   },
   {
    "fieldname": "main_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "posting_date",
@@ -112,8 +111,7 @@
   },
   {
    "fieldname": "dimensions_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "default_cost_center",
@@ -189,8 +187,7 @@
   },
   {
    "fieldname": "total_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "exchange_rate",
@@ -226,8 +223,7 @@
   },
   {
    "fieldname": "info_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "clearance_date",
@@ -281,7 +277,7 @@
  "icon": "fa fa-file-text",
  "is_submittable": 1,
  "links": [],
- "modified": "2022-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04.119400",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Entry",

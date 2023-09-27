@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2023
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -6,20 +6,19 @@
 
 import frappe
 
-from .common import parse_json_if_valid
-from .doctypes import _ATTACHMENT
+from .common import parse_json
 
 
-## Expense
-## Expense Form
-## Expenses Entry
-## Expenses Entry Form
+# Expense
+# Expense Form
+# Expenses Entry
+# Expenses Entry Form
 @frappe.whitelist(methods=["POST"])
 def delete_attach_files(doctype, name, files):
     if not files:
         return 0
     
-    files = parse_json_if_valid(files)
+    files = parse_json(files)
     
     if not files or not isinstance(files, list):
         return 0
@@ -36,25 +35,23 @@ def delete_attach_files(doctype, name, files):
         pluck="name"
     )):
         for file in file_names:
-            frappe.get_doc(dt, file).delete(ignore_permissions=True)
+            (frappe.get_doc(dt, file)
+                .delete(ignore_permissions=True))
     
     return 1
 
 
 ## Self Expense
 def get_attachments_by_parents(parents, parent_type, parent_field):
-    doc = frappe.qb.DocType(_ATTACHMENT)
-    data = (
-        frappe.qb.from_(doc)
-        .select(
-            doc.parent,
-            doc.file,
-            doc.description,
-        )
-        .where(doc.parent.isin(parents))
-        .where(doc.parenttype == parent_type)
-        .where(doc.parentfield == parent_field)
-    ).run(as_dict=True)
+    data = frappe.get_all(
+        "Expense Attachment",
+        fields=["parent", "file", "description"],
+        filters=[
+            ["parent", "in", parents],
+            ["parenttype", "=", parent_type],
+            ["parentfield", "=", parent_field]
+        ]
+    )
     
     if not data or not isinstance(data, list):
         return None

@@ -3,7 +3,7 @@
  "allow_copy": 1,
  "allow_import": 1,
  "autoname": "field:type_name",
- "creation": "2022-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04.119400",
  "description": "Expense type",
  "doctype": "DocType",
  "document_type": "Document",
@@ -68,6 +68,7 @@
    "in_filter": 1,
    "in_standard_filter": 1,
    "in_preview": 1,
+   "only_select": 1,
    "search_index": 1
   },
   {
@@ -78,7 +79,9 @@
    "fieldname": "expense_accounts",
    "fieldtype": "Table",
    "label": "Expense Accounts",
-   "options": "Expense Account"
+   "options": "Expense Account",
+   "reqd": 1,
+   "bold": 1
   },
   {
    "fieldname": "lft",
@@ -108,7 +111,7 @@
  "icon": "fa fa-folder-o",
  "is_tree": 1,
  "links": [],
- "modified": "2022-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04.119400",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense Type",

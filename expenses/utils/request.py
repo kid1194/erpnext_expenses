@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -7,20 +7,19 @@
 import frappe
 
 from .common import get_cached_doc
-from .doctypes import _REQUEST, _REQUEST_EXPENSES, _REQUEST_DETAILS
 from .expense import get_expenses_data
 
 
-## Expense
+# Expense
 def requests_of_expense_exists(expense):
-    return frappe.db.exists(_REQUEST_DETAILS, {
-        "parenttype": _REQUEST,
-        "parentfield": _REQUEST_EXPENSES,
+    return frappe.db.exists("Expenses Request Details", {
+        "parenttype": "Expenses Request",
+        "parentfield": "expenses",
         "expense": expense
     })
 
 
-## Expenses Request Form
+# Request Form
 @frappe.whitelist(methods=["POST"])
 def add_request_rejection_comment(name, comment):
     if (
@@ -29,7 +28,7 @@ def add_request_rejection_comment(name, comment):
     ):
         return 0
     
-    (get_cached_doc(_REQUEST, name)
+    (get_cached_doc("Expenses Request", name)
         .add_comment(
             "Workflow",
             comment,
@@ -38,13 +37,13 @@ def add_request_rejection_comment(name, comment):
     return 1
 
 
-## Expenses Entry Form
+# Entry Form
 @frappe.whitelist(methods=["POST"])
 def get_request_data(name):
     if not name or not isinstance(name, str):
         return 0
     
-    data = get_cached_doc(_REQUEST, name).as_dict()
+    data = get_cached_doc("Expenses Request", name).as_dict()
     
     if data.status != "Approved":
         return 0
@@ -58,13 +57,13 @@ def get_request_data(name):
     return data
 
 
-## Expenses Entry
+# Entry
 def process_request(name):
     if name and isinstance(name, str):
-        get_cached_doc(_REQUEST, name, True).process()
+        get_cached_doc("Expenses Request", name, True).process()
 
 
-## Expenses Entry
+# Entry
 def reject_request(name):
     if name and isinstance(name, str):
-        get_cached_doc(_REQUEST, name, True).reject()
+        get_cached_doc("Expenses Request", name, True).reject()

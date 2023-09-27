@@ -1,5 +1,5 @@
 /*
-*  ERPNext Expenses © 2022
+*  Expenses © 2023
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
@@ -10,9 +10,7 @@ frappe.ui.form.on('Expense Item', {
     setup: function(frm) {
         frappe.Expenses();
         frappe.E.form(frm);
-        frm.X = {
-            companies: frappe.E.uniqueArray(),
-        };
+        frm._companies = frappe.E.tableArray();
     },
     onload: function(frm) {
         frappe.E.setFieldProperties('expense_accounts.account', {reqd: 0, bold: 0});
@@ -25,9 +23,8 @@ frappe.ui.form.on('Expense Item', {
         frm.set_query('expense_type', {query: frappe.E.path('search_types')});
         frm.set_query('company', 'expense_accounts', function(doc, cdt, cdn) {
             let filters = {is_group: 0};
-            if (frm.X.companies.length) {
-                filters.name = ['not in', frm.X.companies.all];
-            }
+            if (frm._companies.length)
+                filters.name = ['not in', frm._companies.col(0)];
             return {filters};
         });
         frm.set_query('account', 'expense_accounts', function(doc, cdt, cdn) {
@@ -42,7 +39,9 @@ frappe.ui.form.on('Expense Item', {
         
         if (!frm.is_new()) {
             frappe.E.each(frm.doc.expense_accounts, function(v) {
-                frm.X.companies.push(v.company, v.name);
+                frm._companies
+                    .add(v.name, v.company, 0)
+                    .add(v.name, v.account, 1);
             });
         }
     },
@@ -50,30 +49,40 @@ frappe.ui.form.on('Expense Item', {
 
 frappe.ui.form.on('Expense Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
-        frm.X.companies.del(cdn, 1);
+        let row = locals[cdt][cdn];
+        frm._companies.del(row.name || cdn);
     },
     company: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (!row.company) {
-            frm.X.companies.del(cdn, 1);
-            frappe.E.setDocValue(row, 'account', '');
-            return;
-        }
-        if (!frm.X.companies.has(row.company)) {
-            frm.X.companies.push(row.company, cdn);
-            return;
-        }
-        frappe.E.error(
-            'The expense account for {0} has already been set',
-            [row.company]
-        );
-        frappe.E.setDocValue(row, 'company', '');
+        if (!cstr(row.company).length) {
+            frm._companies.del(row.name || cdn);
+            if (cstr(row.account).length)
+                frappe.E.setDocValue(row, 'account', '');
+        } else frm._companies.add(row.name || cdn, row.company, 0);
     },
     account: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (!row.account || row.company) return;
-        frappe.E.error('Please select a company first');
-        frappe.E.setDocValue(row, 'account', '');
+        if (!cstr(row.company).length) {
+            frappe.E.error('Please select a company first');
+            if (cstr(row.account).length)
+                frappe.E.setDocValue(row, 'account', '');
+            return;
+        }
+        if (!cstr(row.account).length && !cstr(row.company).length) return;
+        let ckey = frm._companies.eqKey(row.account, 1),
+        crow = frm._companies.eqRow(row.account, 1);
+        if (
+            ckey && crow && ckey !== (row.name || cdn)
+            && crow[0] === row.company
+        ) {
+            frappe.E.error(
+                'The expense account "{0}" for "{1}" already exist',
+                [row.account, row.company]
+            );
+            frappe.E.setDocValue(row, 'account', '');
+            return;
+        }
+        frm._companies.add(row.name || cdn, row.account, 1);
     },
     cost: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];

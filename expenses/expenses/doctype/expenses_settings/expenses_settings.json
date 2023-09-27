@@ -1,6 +1,6 @@
 {
  "actions": [],
- "creation": "2022-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04.119400",
  "description": "Expenses settings",
  "doctype": "DocType",
  "document_type": "Document",
@@ -44,7 +44,8 @@
    "label": "Update Notification Sender",
    "options": "User",
    "read_only_depends_on": "eval:!doc.send_update_notification",
-   "mandatory_depends_on": "eval:doc.send_update_notification"
+   "mandatory_depends_on": "eval:doc.send_update_notification",
+   "only_select": 1
   },
   {
    "fieldname": "update_notification_receivers",
@@ -93,7 +94,7 @@
  "icon": "fa fa-cog",
  "issingle": 1,
  "links": [],
- "modified": "2022-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04.119400",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Settings",

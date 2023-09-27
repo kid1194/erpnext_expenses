@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -11,8 +11,7 @@ from frappe.utils import flt
 
 from expenses.utils import (
     error,
-    clear_document_cache,
-    is_doc_exist,
+    clear_doc_cache,
     get_cached_value,
     get_mode_of_payment_data,
     get_current_exchange_rate,
@@ -114,41 +113,13 @@ class ExpensesEntry(Document):
                 error(_("Reference / clearance date is mandatory"))
         
         if self.docstatus.is_draft():
-            self.validate_expenses()
-    
-    
-    def validate_expenses(self):
-        _with_expense_claim = with_expense_claim()
-        for v in self.expenses:
-            if not is_doc_exist("Account", v.account):
-                error(
-                    _("Expense account \"{0}\" does not exist").format(v.account)
-                )
-            if not is_doc_exist("Account", {"name": v.account, "company": v.company}):
-                error(
-                    _("Expense account \"{0}\" does not belong to company \"{1}\"")
-                    .format(v.account, v.company)
-                )
-            if cint(v.is_paid) and not v.paid_by:
-                error(_("Paid by for expense account \"{0}\" is mandatory").format(v.account))
-            if cint(v.is_paid) and _with_expense_claim:
-                if not v.expense_claim:
-                    error(_("Expense claim for expense account \"{0}\" is mandatory").format(v.account))
-                elif not is_doc_exist('Expense Claim', {
-                    "name": v.expense_claim,
-                    "employee": v.paid_by,
-                    "company": self.company,
-                    "is_paid": 1,
-                    "status": "Paid",
-                    "docstatus": 1
-                }):
-                    error(_("Expense claim for expense account \"{0}\" is invalid").format(v.account))
+            self._validate_expenses()
     
     
     def before_save(self):
         if not self.get_doc_before_save():
             self.load_doc_before_save()
-        clear_document_cache(
+        clear_doc_cache(
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
         )
@@ -161,35 +132,8 @@ class ExpensesEntry(Document):
     
     
     def before_update_after_submit(self):
-        clear_document_cache(self.doctype, self.name)
-        self.check_changes()
-    
-    
-    def check_changes(self):
-        if not self.get_doc_before_save():
-            self.load_doc_before_save()
-        if self.get_doc_before_save():
-            old = self.get_doc_before_save()
-            as_len = ["expenses", "attachments"]
-            as_flt = ["exchange_rate", "total"]
-            for k, v in old.items():
-                if (
-                    (k in as_len and len(v) != len(self.get(k))) or
-                    (k in as_flt and flt(v) != flt(self.get(k))) or
-                    (v != self.get(k))
-                ):
-                    error(_("{0} cannot be modified after submit").format(self.doctype))
-            
-            as_flt = ["cost_in_account_currency", "exchange_rate", "cost"]
-            as_int = ["is_advance", "is_paid"]
-            for i in range(len(self.expenses)):
-                for k, v in self.expenses[i].items():
-                    if (
-                        (k in as_flt and flt(v) != flt(old.expenses[i].get(k))) or
-                        (k in as_int and cint(v) != cint(old.expenses[i].get(k))) or
-                        (v != old.expenses[i].get(k))
-                    ):
-                        error(_("{0} cannot be modified after submit").format(self.doctype))
+        clear_doc_cache(self.doctype, self.name)
+        self._check_changes()
     
     
     def after_submit(self):
@@ -202,7 +146,7 @@ class ExpensesEntry(Document):
     
     
     def on_cancel(self):
-        clear_document_cache(self.doctype, self.name)
+        clear_doc_cache(self.doctype, self.name)
         self.handle_request()
         if self.docstatus.is_submitted():
             cancel_journal_entry(self.name)
@@ -227,3 +171,58 @@ class ExpensesEntry(Document):
                 self.name,
                 [v.file for v in self.attachments]
             )
+    
+    
+    def _validate_expenses(self):
+        _with_expense_claim = with_expense_claim()
+        for v in self.expenses:
+            if not frappe.db.exists("Account", v.account):
+                error(
+                    _("Expense account \"{0}\" does not exist").format(v.account)
+                )
+            if not frappe.db.exists("Account", {"name": v.account, "company": v.company}):
+                error(
+                    _("Expense account \"{0}\" does not belong to company \"{1}\"")
+                    .format(v.account, v.company)
+                )
+            if cint(v.is_paid) and not v.paid_by:
+                error(_("Paid by for expense account \"{0}\" is mandatory").format(v.account))
+            if cint(v.is_paid) and _with_expense_claim:
+                if not v.expense_claim:
+                    error(_("Expense claim for expense account \"{0}\" is mandatory").format(v.account))
+                elif not frappe.db.exists('Expense Claim', {
+                    "name": v.expense_claim,
+                    "employee": v.paid_by,
+                    "company": self.company,
+                    "is_paid": 1,
+                    "status": "Paid",
+                    "docstatus": 1
+                }):
+                    error(_("Expense claim for expense account \"{0}\" is invalid").format(v.account))
+    
+    
+    def _check_changes(self):
+        if not self.get_doc_before_save():
+            self.load_doc_before_save()
+        if self.get_doc_before_save():
+            old = self.get_doc_before_save()
+            as_len = ["expenses", "attachments"]
+            as_flt = ["exchange_rate", "total"]
+            for k, v in old.items():
+                if (
+                    (k in as_len and len(v) != len(self.get(k))) or
+                    (k in as_flt and flt(v) != flt(self.get(k))) or
+                    (v != self.get(k))
+                ):
+                    error(_("{0} cannot be modified after submit").format(self.doctype))
+            
+            as_flt = ["cost_in_account_currency", "exchange_rate", "cost"]
+            as_int = ["is_advance", "is_paid"]
+            for i in range(len(self.expenses)):
+                for k, v in self.expenses[i].items():
+                    if (
+                        (k in as_flt and flt(v) != flt(old.expenses[i].get(k))) or
+                        (k in as_int and cint(v) != cint(old.expenses[i].get(k))) or
+                        (v != old.expenses[i].get(k))
+                    ):
+                        error(_("{0} cannot be modified after submit").format(self.doctype))

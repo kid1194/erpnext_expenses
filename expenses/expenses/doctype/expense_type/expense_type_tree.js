@@ -1,5 +1,5 @@
 /*
-*  ERPNext Expenses © 2022
+*  Expenses © 2023
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
@@ -24,7 +24,7 @@ frappe.treeview_settings['Expense Type'] = {
         base.ET = {
             dialog: frappe.E.formDialog('Add New', 'blue'),
             rows: [],
-            companies: frappe.E.uniqueArray(),
+            companies: frappe.E.tableArray(),
         };
         base.ET.dialog
             .loadDoctype(treeview.doctype)
@@ -62,7 +62,7 @@ frappe.treeview_settings['Expense Type'] = {
                                 });
                                 frappe.E.each(ET.rows, function(r) {
                                     if (rows.indexOf(r) < 0) {
-                                        ET.companies.del(r, 1);
+                                        ET.companies.del(r);
                                     }
                                 });
                                 frappe.E.clear(ET.rows);
@@ -70,9 +70,8 @@ frappe.treeview_settings['Expense Type'] = {
                             }
                         }
                         let filters = {is_group: 0};
-                        if (ET.companies.length) {
-                            filters.name = ['not in', ET.companies.all];
-                        }
+                        if (ET.companies.length)
+                            filters.name = ['not in', ET.companies.col(0)];
                         return {filters};
                     },
                     change: function() {
@@ -84,16 +83,9 @@ frappe.treeview_settings['Expense Type'] = {
                             return;
                         }
                         let ET = this.ET;
-                        if (ET.companies.has(company)) {
-                            this.setRowFieldInvalid(
-                                'expense_accounts', -1, 'company',
-                                __('The expense account for {0} already exist', [company])
-                            );
-                            return;
-                        }
                         this.setRowFieldValid('expense_accounts', -1, 'company');
                         let name = this.getRowName('expense_accounts', -1);
-                        ET.companies.push(company, name);
+                        ET.companies.add(name, company, 0);
                         if (name) ET.rows.push(name);
                     },
                 },
@@ -110,15 +102,36 @@ frappe.treeview_settings['Expense Type'] = {
                     change: function() {
                         let account = this.getRowFieldValue('expense_accounts', -1, 'account'),
                         company = this.getRowFieldValue('expense_accounts', -1, 'company');
-                        if (!account && company) {
+                        if (!company) {
+                            this.setRowFieldInvalid(
+                                'expense_accounts', -1, 'company',
+                                __('Please select a company first')
+                            );
+                            if (account)
+                                this.setRowFieldValue('expense_accounts', -1, 'account', '');
+                            return;
+                        }
+                        if (!account && !company) return;
+                        let name = this.getRowName('expense_accounts', -1),
+                        ET = this.ET,
+                        ckey = ET.companies.eqKey(account, 1),
+                        crow = ET.companies.eqRow(account, 1);
+                        if (
+                            ckey && crow && ckey !== name
+                            && crow[0] === company
+                        ) {
                             this.setRowFieldValue('expense_accounts', -1, 'account', '');
                             this.setRowFieldInvalid(
                                 'expense_accounts', -1, 'account',
-                                __('Please select a company first')
+                                __(
+                                    'The expense account "{0}" for "{1}" already exist',
+                                    [row.account, row.company]
+                                )
                             );
-                        } else {
-                            this.setRowFieldValid('expense_accounts', -1, 'account');
+                            return;
                         }
+                        ET.companies.add(name, account, 1);
+                        this.setRowFieldValid('expense_accounts', -1, 'account');
                     },
                 },
             })

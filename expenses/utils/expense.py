@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2023
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -10,30 +10,28 @@ from frappe import _
 from .attachment import get_attachments_by_parents
 from .common import (
     error,
-    parse_json_if_valid,
     log_error,
-    is_doc_exist
+    parse_json
 )
-from .doctypes import _EXPENSE
 from .search import filter_search, prepare_data
 
 
-## Expense Item
+# Expense Item
 def expenses_of_item_exists(item):
-    return is_doc_exist(_EXPENSE, {"expense_item": item})
+    return frappe.db.exists("Expense", {"expense_item": item})
 
 
-## Expense
-## Expense Form
-## Expense List
-## Expense Entry
-## Expense Entry Form
+# Expense
+# Expense Form
+# Expense List
+# Expense Entry
+# Expense Entry Form
 @frappe.whitelist()
 def with_expense_claim():
-    return 1 if is_doc_exist("DocType", "Expense Claim") else 0
+    return 1 if frappe.db.exists("DocType", "Expense Claim") else 0
 
 
-## Self
+# Internal
 _EXPENSE_FIELDS_ = [
     "company",
     "expense_item",
@@ -55,11 +53,11 @@ _EXPENSE_FIELDS_ = [
 ]
 
 
-## Expense List
+# Expense List
 @frappe.whitelist(methods=["POST"])
 def add_expense(data):
     if data:
-        data = parse_json_if_valid(data)
+        data = parse_json(data)
     
     if not data or not isinstance(data, dict):
         return 0
@@ -67,7 +65,9 @@ def add_expense(data):
     data = {k:v for k, v in data.items() if k in _EXPENSE_FIELDS_}
     
     try:
-        frappe.new_doc(_EXPENSE).update(data).insert()
+        (frappe.new_doc("Expense")
+            .update(data)
+            .insert(ignore_permissions=True, ignore_mandatory=True))
     except Exception as exc:
         log_error(exc)
         return 0
@@ -75,7 +75,7 @@ def add_expense(data):
     return 1
 
 
-## Expenses Request
+# Expenses Request
 def is_expenses_belongs_to_company(names, company):
     if (
         not names or not isinstance(names, list) or
@@ -84,7 +84,7 @@ def is_expenses_belongs_to_company(names, company):
         return False
     
     data = frappe.get_all(
-        _EXPENSE,
+        "Expense",
         fields=["name"],
         filters={
             "name": ["in", names],
@@ -97,7 +97,7 @@ def is_expenses_belongs_to_company(names, company):
     return len(data) == len(names)
 
 
-## Expenses Request Form (MultiSelect Dialog)
+# Expenses Request Form (MultiSelect Dialog)
 @frappe.whitelist()
 def search_company_expenses(
     doctype, txt, searchfield, start, page_len, filters, as_dict=False
@@ -105,7 +105,8 @@ def search_company_expenses(
     if not filters or not isinstance(filters.get("company"), str):
         return []
     
-    doc = frappe.qb.DocType(_EXPENSE)
+    dt = "Expense"
+    doc = frappe.qb.DocType(dt)
     qry = (frappe.qb.from_(doc)
         .select(
             doc.name,
@@ -120,10 +121,10 @@ def search_company_expenses(
         .where(doc.owner == frappe.session.user)
         .where(doc.docstatus != 2))
     
-    qry = filter_search(doc, qry, _EXPENSE, txt, doc.name, "name")
+    qry = filter_search(doc, qry, dt, txt, doc.name, "name")
     
     if (existing := filters.get("existing")):
-        existing = parse_json_if_valid(existing)
+        existing = parse_json(existing)
         
         if existing and isinstance(existing, list):
             qry = qry.where(doc.name.notin(existing))
@@ -134,14 +135,14 @@ def search_company_expenses(
     
     data = qry.run(as_dict=as_dict)
     
-    data = prepare_data(data, _EXPENSE, "name", txt, as_dict)
+    data = prepare_data(data, dt, "name", txt, as_dict)
     
     return data
 
 
-## Expenses Request
+# Expenses Request
 def reserve_request_expenses(expenses):
-    doc = frappe.qb.DocType(_EXPENSE)
+    doc = frappe.qb.DocType("Expense")
     (
         frappe.qb.update(doc)
         .set(doc.is_requested, 1)
@@ -151,9 +152,9 @@ def reserve_request_expenses(expenses):
     ).run()
 
 
-## Expenses Request
+# Expenses Request
 def release_request_expenses(expenses):
-    doc = frappe.qb.DocType(_EXPENSE)
+    doc = frappe.qb.DocType("Expense")
     (
         frappe.qb.update(doc)
         .set(doc.is_requested, 0)
@@ -164,9 +165,9 @@ def release_request_expenses(expenses):
     ).run()
 
 
-## Expenses Request
+# Expenses Request
 def approve_request_expenses(expenses):
-    doc = frappe.qb.DocType(_EXPENSE)
+    doc = frappe.qb.DocType("Expense")
     (
         frappe.qb.update(doc)
         .set(doc.is_approved, 1)
@@ -177,19 +178,19 @@ def approve_request_expenses(expenses):
     ).run()
 
 
-## Expenses Request Form
-## Self Request
+# Expenses Request Form
+# Self Request
 @frappe.whitelist(methods=["POST"])
 def get_expenses_data(expenses):
     if isinstance(expenses, str):
-        expenses = parse_json_if_valid(expenses)
+        expenses = parse_json(expenses)
     
     if not expenses or not isinstance(expenses, list):
         return []
     
     expenses = [str(v) for v in expenses]
     
-    doc = frappe.qb.DocType(_EXPENSE)
+    doc = frappe.qb.DocType("Expense")
     data = (
         frappe.qb.from_(doc)
         .select(
@@ -218,7 +219,7 @@ def get_expenses_data(expenses):
     
     if (attachments := get_attachments_by_parents(
         [v["name"] for v in data],
-        _EXPENSE,
+        "Expense",
         "attachments"
     )):
         for i in range(len(data)):

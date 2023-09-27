@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -8,8 +8,10 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt
 
-from expenses.utils.common import error, get_cached_value
-from expenses.utils.entry import _ENTRY
+from expenses.utils import (
+    error,
+    get_cached_value
+)
 
 
 def execute(filters=None):
@@ -89,7 +91,7 @@ def get_columns(currency):
 
 
 def get_result(filters, currency):
-    doc = frappe.qb.DocType(_ENTRY)
+    doc = frappe.qb.DocType("Expense Entry")
     qry = (
         frappe.qb.from_(doc)
         .select(

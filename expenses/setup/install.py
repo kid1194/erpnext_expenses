@@ -1,15 +1,14 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
-import frappe
 from frappe.utils import now
 from frappe.utils.user import get_system_managers
 
 from expenses import __version__
-from expenses.utils.settings import settings
+from expenses.utils
 
 
 def after_install():
@@ -36,3 +35,54 @@ def after_install():
         doc.has_update = 0
         
         doc.save(ignore_permissions=True)
+    
+    _add_link_to_workspace()
+
+
+def _add_link_to_workspace():
+    dt = "Workspace"
+    
+    name = "Expenses"
+    if frappe.db.exists(dt, name):
+        db_doc = frappe.qb.DocType(dt)
+        (
+            frappe.qb.from_(db_doc)
+            .delete()
+            .where(db_doc.name == name)
+        ).run()
+    
+    name = "Accounting"
+    if not frappe.db.exists(dt, name):
+        return 0
+        
+    doc = frappe.get_doc(dt, name)
+    keys = [
+        "Expense Type",
+        "Expense Item",
+        "Expense",
+        "Expenses Entry",
+        "Expenses Request",
+        "Expenses Settings"
+    ]
+    
+    for v in doc.links:
+        if v.type == "Link" and v.label in keys:
+            try:
+                doc.links.remove(v)
+            except Exception:
+                pass
+    
+    for key in keys:
+        doc.append("links", {
+            "dependencies": "",
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": key,
+            "link_count": 0,
+            "link_to": key,
+            "link_type": "DocType",
+            "onboard": 0,
+            "type": "Link"
+        })
+    
+    doc.save(ignore_permissions=True)

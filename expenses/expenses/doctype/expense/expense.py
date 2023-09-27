@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -11,8 +11,7 @@ from frappe.model.document import Document
 
 from expenses.utils import (
     error,
-    clear_document_cache,
-    is_doc_exist,
+    clear_doc_cache,
     get_item_company_account_data,
     with_expense_claim,
     requests_of_expense_exists,
@@ -85,7 +84,7 @@ class Expense(Document):
         if cint(self.is_paid) and with_expense_claim():
             if not self.expense_claim:
                 error(_("Expense claim is mandatory"))
-            elif not is_doc_exist('Expense Claim', {
+            elif not frappe.db.exists('Expense Claim', {
                 "name": self.expense_claim,
                 "employee": self.paid_by,
                 "company": self.company,
@@ -103,7 +102,7 @@ class Expense(Document):
     def before_save(self):
         if not self.get_doc_before_save():
             self.load_doc_before_save()
-        clear_document_cache(
+        clear_doc_cache(
             self.doctype,
             self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
         )

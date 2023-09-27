@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2023
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -8,21 +8,23 @@ import frappe
 
 from erpnext.setup.utils import get_exchange_rate
 
-from .common import get_cached_doc, get_cached_value
-from .doctypes import _ENTRY, _ENTRY_EXPENSES, _ENTRY_DETAILS
+from .cache import (
+    get_cached_doc,
+    get_cached_value
+)
 
 
-## Expense
+# Expense
 def entries_of_expense_exists(expense):
-    return frappe.db.exists(_ENTRY_DETAILS, {
-        "parenttype": _ENTRY,
-        "parentfield": _ENTRY_EXPENSES,
+    return frappe.db.exists("Expenses Entry Details", {
+        "parenttype": "Expenses Entry",
+        "parentfield": "expenses",
         "expense_ref": expense
     })
 
 
-## Expenses Entry Form
-## Expenses Entry
+# Entry Form
+# Entry
 @frappe.whitelist(methods=["POST"])
 def get_mode_of_payment_data(mode_of_payment, company):
     if (
@@ -70,8 +72,8 @@ def get_mode_of_payment_data(mode_of_payment, company):
     return data
 
 
-## Expenses Entry Form
-## Expenses Entry
+# Entry Form
+# Entry
 @frappe.whitelist(methods=["POST"])
 def get_current_exchange_rate(from_currency, to_currency, date=None):
     rate = get_exchange_rate(from_currency, to_currency, date, "for_buying")
@@ -82,6 +84,6 @@ def get_current_exchange_rate(from_currency, to_currency, date=None):
     return rate
 
 
-## Self Journal
+# Journal
 def get_entry_data(name):
-    return get_cached_doc(_ENTRY, name)
+    return get_cached_doc("Expenses Entry", name)

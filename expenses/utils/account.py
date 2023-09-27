@@ -1,19 +1,18 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
 import frappe
+from frappe import _dict
 from frappe.utils import flt
 
-from .doctypes import _ACCOUNT
 
-
-## Self Type
-## Self Item
+# Type
+# Item
 def get_company_account_data_by_parent(company, parent, parent_type, parent_field):
-    doc = frappe.qb.DocType(_ACCOUNT)
+    doc = frappe.qb.DocType("Expense Account")
     aDoc = frappe.qb.DocType("Account")
     data = (
         frappe.qb.from_(doc)
@@ -36,13 +35,13 @@ def get_company_account_data_by_parent(company, parent, parent_type, parent_fiel
         .limit(1)
     ).run(as_dict=True)
     
-    data = data.pop(0) if data and isinstance(data, list) else None
+    if not data or not isinstance(data, list):
+        return None
     
-    if data:
-        data = frappe._dict(data)
-        for k in ["cost", "qty"]:
-            data[k] = flt(data[k])
-            data["min_" + k] = flt(data["min_" + k])
-            data["max_" + k] = flt(data["max_" + k])
+    data = data.pop(0)
+    for k in ["cost", "qty"]:
+        data[k] = flt(data[k])
+        data["min_" + k] = flt(data["min_" + k])
+        data["max_" + k] = flt(data["max_" + k])
     
-    return data
+    return _dict(data)

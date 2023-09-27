@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2023
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -7,25 +7,34 @@
 import re
 
 import frappe
-from frappe.utils import cint, get_request_session, now, markdown
+from frappe import _
+from frappe.utils import (
+    cint,
+    now,
+    markdown,
+    get_request_session
+)
 
 from frappe.desk.doctype.notification_settings.notification_settings import (
     is_notifications_enabled
 )
 
-from expenses import __version__
-from .common import log_error, parse_json_if_valid
+from expenses import __version__, __module__
+from .common import (
+    log_error,
+    parse_json
+)
 from .settings import settings
-from .doctypes import _SETTINGS
 
 
-## Hooks
-def auto_check_for_update():
+# Hooks
+def auto_check():
     if cint(settings().auto_check_for_update):
         check_for_update()
 
 
-## Self
+# Settings Form
+# Internal
 def check_for_update():
     try:
         http = get_request_session()
@@ -42,7 +51,7 @@ def check_for_update():
     if status_code != 200 and status_code != 201:
         return 0
     
-    data = parse_json_if_valid(data)
+    data = parse_json(data)
     
     if (
         not data or not isinstance(data, dict) or
@@ -60,7 +69,7 @@ def check_for_update():
     if has_update:
         doc.latest_version = latest_version
         if cint(doc.send_update_notification):
-            enqueue_send_notification(
+            enqueue_notifications(
                 latest_version,
                 doc.update_notification_sender,
                 [v.user for v in doc.update_notification_receivers],
@@ -71,7 +80,7 @@ def check_for_update():
     return 1
 
 
-## Self
+# Internal
 def compare_versions(verA, verB):
     verA = verA.split(".")
     lenA = len(verA)
@@ -94,8 +103,8 @@ def compare_versions(verA, verB):
     return 0
 
 
-## Self
-def enqueue_send_notification(version, sender, receivers, message):
+# Internal
+def enqueue_notifications(version, sender, receivers, message):
     frappe.enqueue(
         "expenses.utils.update.send_notification",
         job_name=f"expenses-send-notification-{version}",
@@ -107,18 +116,18 @@ def enqueue_send_notification(version, sender, receivers, message):
     )
 
 
-## Self
+# Internal
 def send_notification(version, sender, receivers, message):
     for receiver in receivers:
         if is_notifications_enabled(receiver):
             (frappe.new_doc("Notification Log")
                 .update({
-                    "document_type": _SETTINGS,
-                    "document_name": _SETTINGS,
+                    "document_type": "Expenses Settings",
+                    "document_name": "Expenses Settings",
                     "from_user": sender,
                     "for_user": receiver,
-                    "subject": "Expenses: A New Version Is Available",
+                    "subject": "{0}: {1}".format(__module__, _("New Version Available")),
                     "type": "Alert",
-                    "email_content": f"<p><h2>Version {version}</h2></p>{message}",
+                    "email_content": "<p><h2>{0} {1}</h2></p>{2}".format(_("Version"), version, _(message))
                 })
                 .insert(ignore_permissions=True, ignore_mandatory=True))

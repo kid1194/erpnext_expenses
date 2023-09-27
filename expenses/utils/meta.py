@@ -1,4 +1,4 @@
-# ERPNext Expenses © 2022
+# Expenses © 2023
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -6,7 +6,10 @@
 
 import frappe
 
-from .common import get_cache, set_cache
+from .common import (
+    get_cache,
+    set_cache
+)
 
 
 # Expenses Doc Dialog
@@ -27,7 +30,7 @@ def get_docfields(doctype):
     return fields
 
 
-# Self
+# Internal
 def get_doctype_fields(doctype):
     fields = frappe.get_all(
         "DocField",
