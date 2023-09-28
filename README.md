@@ -6,6 +6,14 @@ An expenses management module for ERPNext.
 
 ---
 
+### Contributors
+**The list of people who deserves more than a simple thank you.**
+- [Monolith Online](https://github.com/monolithon) ❤❤❤ (Testing & Debugging)
+- [Andrew Rogers](https://github.com/agrogers) 👍 (Testing & Debugging)
+- [washaqq](https://github.com/washaqq) 👍 (Testing & Debugging)
+
+---
+
 ### Table of Contents
 - [Requirements](#requirements)
 - [Setup](#setup)
@@ -14,7 +22,6 @@ An expenses management module for ERPNext.
   - [Uninstall](#uninstall)
 - [Usage](#usage)
 - [Issues](#issues)
-- [Contributors](#contributors)
 - [License](#license)
 
 ---
@@ -146,13 +153,6 @@ bench restart
 
 ### Issues
 If you find bug in the plugin, please create a [bug report](https://github.com/kid1194/erpnext_expenses/issues/new?assignees=&labels=&template=bug_report.md&title=) and let us know about it.
-
----
-
-### Contributors
-**The list of people who deserves more than a simple thank you.**
-- [Monolith Online](https://github.com/monolithon) ❤❤❤ (Testing & Debugging)
-- [Andrew Rogers](https://github.com/agrogers) 👍 (Testing & Debugging)
 
 ---
 
