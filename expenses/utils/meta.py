@@ -6,7 +6,7 @@
 
 import frappe
 
-from .common import (
+from .cache import (
     get_cache,
     set_cache
 )

@@ -4,7 +4,7 @@
 # Licence: Please refer to LICENSE file
 
 
-from .common import get_cached_doc
+from .cache import get_cached_doc
 
 
 # Common

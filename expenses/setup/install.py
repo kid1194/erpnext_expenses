@@ -8,7 +8,7 @@ from frappe.utils import now
 from frappe.utils.user import get_system_managers
 
 from expenses import __version__
-from expenses.utils
+from expenses.utils import settings
 
 
 def after_install():

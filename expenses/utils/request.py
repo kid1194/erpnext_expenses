@@ -6,7 +6,7 @@
 
 import frappe
 
-from .common import get_cached_doc
+from .cache import get_cached_doc
 from .expense import get_expenses_data
 
 
