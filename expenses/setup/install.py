@@ -4,6 +4,7 @@
 # Licence: Please refer to LICENSE file
 
 
+import frappe
 from frappe.utils import now
 from frappe.utils.user import get_system_managers
 
