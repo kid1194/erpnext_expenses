@@ -41,6 +41,9 @@ def after_install():
     doc = settings()
     
     if (managers := get_system_managers(only_name=True)):
+        doc.auto_check_for_update = 1
+        doc.send_update_notification = 1
+        
         if "Administrator" in managers:
             sender = "Administrator"
         else:
@@ -56,6 +59,13 @@ def after_install():
                 "update_notification_receivers",
                 {"user": manager}
             )
+        
+        if not doc.update_notification_receivers:
+            doc.send_update_notification = 0
+            
+    else:
+        doc.auto_check_for_update = 0
+        doc.send_update_notification = 0
     
     doc.current_version = __version__
     doc.latest_version = __version__
