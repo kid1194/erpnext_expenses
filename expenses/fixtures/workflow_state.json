@@ -14,7 +14,7 @@
  {
   "docstatus": 0,
   "doctype": "Workflow State",
-  "icon": "question-sign",
+  "icon": "time",
   "modified": "2023-04-04 04:04:04.119400",
   "name": "Pending",
   "parent": null,

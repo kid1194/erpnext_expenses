@@ -1,13 +1,13 @@
 /*
-*  Expenses © 2023
+*  Expenses © 2024
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
 */
 
 
-frappe.query_reports['Expenses Entry'] = {
-    'filters': [
+frappe.query_reports['Expenses Entry Report'] = {
+    filters: [
         {
             'fieldname': 'company',
             'label': __('Company'),

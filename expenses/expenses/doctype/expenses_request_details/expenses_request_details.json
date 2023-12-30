@@ -4,7 +4,7 @@
  "allow_import": 1,
  "autoname": "hash",
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Expense details for expenses request",
+ "description": "Expenses request details for Expenses",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
@@ -72,8 +72,5 @@
  "name": "Expenses Request Details",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

@@ -1,4 +1,4 @@
-# Expenses © 2023
+# Expenses © 2024
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -16,6 +16,6 @@ def get_data():
             "icon": "octicon octicon-note",
             "type": "module",
             "label": _("Expenses"),
-            "description": _("Expenses Management")
+            "description": _("Expenses management for ERPNext")
         }
     ]

@@ -1,5 +1,5 @@
 /*
-*  Expenses © 2023
+*  Expenses © 2024
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
@@ -8,36 +8,71 @@
 
 frappe.ui.form.on('Expenses Settings', {
     setup: function(frm) {
-        frappe.Expenses();
-        frm._update_ready = false;
-        frm._update = {
-            messages: [
-                __('App is up to date'),
-                __('A new version is available'),
-            ],
-            tags: ['span', 'strong'],
-            classes: ['text-muted', 'text-danger'],
+        frappe.exp({startup: true});
+        frm._settings = {
+            ready: false,
         };
     },
     refresh: function(frm) {
-        if (!frm._update_ready) frm.trigger('setup_note');
+        if (!frm._settings.ready) frm.trigger('setup_update_note');
     },
     check_for_update: function(frm) {
-        frappe.E.call(
-            'check_for_update',
-            function(ret) {
-                if (ret) frm.reload_doc();
-            }
-        );
+        if (cint(frm.doc.is_enabled))
+            frappe.exp().request(
+                'check_for_update',
+                null,
+                function(ret) {
+                    if (ret) {
+                        frm._settings.ready = false;
+                        frm.reload_doc();
+                    }
+                }
+            );
     },
-    setup_note: function(frm) {
-        frm._update_ready = true;
-        let idx = cint(frm.doc.has_update);
-        frm.get_field('update_note').$wrapper.html(
-            '<' + frm._update.tags[idx]
-            + 'class="' + frm._update.classes[idx] + ' mb-4">'
-            + frm._update.messages[idx]
-            + '</' + frm._update.tags[idx] + '>'
+    validate: function(frm) {
+        if (
+            cint(frm.doc.is_enabled)
+            && cint(frm.doc.send_update_notification)
+        ) {
+            if (!cstr(frm.doc.update_notification_sender).length) {
+                frappe.throw(__('A valid update notification sender is required.'));
+                return false;
+            }
+            if (!(frm.doc.update_notification_receivers || []).length) {
+                frappe.throw(__('At least one valid update notification receiver is required.'));
+                return false;
+            }
+        }
+    },
+    setup_update_note: function(frm) {
+        frm._settings.ready = true;
+        let has_update = cint(frm.doc.has_update) > 0,
+        list = [
+            '<li><strong>' + __('Status') + ':</strong> '
+                + (has_update
+                    ? '<strong class="text-danger">'
+                        + __('A new version is available')
+                    + '</strong>'
+                    : __('App is up to date')
+                )
+            + '</li>',
+            '<li><strong>' + __('Current Version') + ':</strong> '
+                + cstr(frm.doc.current_version)
+            + '</li>'
+        ];
+        if (has_update)
+            list.push(
+                '<li><strong>' + __('Latest Version') + ':</strong> '
+                    + cstr(frm.doc.latest_version)
+                + '</li>'
+            );
+        list.push(
+            '<li><strong>' + __('Latest Check') + ':</strong> '
+                + frappe.datetime.user_to_str(frm.doc.latest_check)
+            + '</li>'
         );
+        
+        frm.get_field('update_note').$wrapper
+            .empty().append($('<ul>').append(list));
     },
 });

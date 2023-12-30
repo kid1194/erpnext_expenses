@@ -1,10 +1,7 @@
-# Expenses © 2023
+# Expenses © 2024
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
-
-
-from . import __version__ as app_version
 
 
 app_name = "expenses"
@@ -28,9 +25,11 @@ doctype_js = {
 
 
 doctype_list_js = {
+    "Expense Item": "public/js/expenses.bundle.js",
     "Expense Type": "public/js/expenses.bundle.js",
     "Expense": "public/js/expenses.bundle.js",
     "Expenses Request": "public/js/expenses.bundle.js",
+    "Expenses Entry": "public/js/expenses.bundle.js",
 }
 
 
@@ -48,7 +47,7 @@ fixtures = [
 
 scheduler_events = {
     "daily": [
-        "expenses.utils.update.auto_check"
+        "expenses.libs.update.auto_check"
     ]
 }
 

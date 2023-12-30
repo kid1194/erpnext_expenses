@@ -4,7 +4,7 @@
  "allow_import": 1,
  "autoname": "hash",
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Expense details for expenses entry",
+ "description": "Expenses entry details for Expenses module",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
@@ -139,7 +139,7 @@
   {
    "fieldname": "cost",
    "fieldtype": "Currency",
-   "label": "Cost In Company Currency",
+   "label": "Cost (Company Currency)",
    "options": "Company:company:default_currency",
    "non_negative": 1,
    "bold": 1,
@@ -247,8 +247,5 @@
  "name": "Expenses Entry Details",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

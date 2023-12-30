@@ -2,18 +2,17 @@
  "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
- "autoname": "field:type_name",
+ "autoname": "Prompt",
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Expense type",
+ "description": "Expense type for Expenses",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "main_section",
-  "type_name",
   "disabled",
-  "is_group",
   "main_column",
+  "is_group",
   "parent_type",
   "accounts_section",
   "expense_accounts",
@@ -26,37 +25,27 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "type_name",
-   "fieldtype": "Data",
-   "label": "Name",
-   "unique": 1,
-   "reqd": 1,
-   "bold": 1,
-   "in_preview": 1,
-   "translatable": 1
-  },
-  {
    "fieldname": "disabled",
    "fieldtype": "Check",
    "label": "Is Disabled",
-   "depends_on": "eval:!doc.__islocal",
+   "read_only_depends_on": "eval:doc.__islocal",
    "search_index": 1
+  },
+  {
+   "fieldname": "main_column",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "is_group",
    "fieldtype": "Check",
    "label": "Is Group",
    "description": "Type items can only be created under Groups and Expense Items can only belong to type items",
-   "depends_on": "eval:doc.__islocal",
+   "read_only_depends_on": "eval:!doc.__islocal",
    "in_list_view": 1,
    "in_filter": 1,
    "in_standard_filter": 1,
    "in_preview": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "main_column",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "parent_type",
@@ -69,6 +58,7 @@
    "in_standard_filter": 1,
    "in_preview": 1,
    "only_select": 1,
+   "ignore_user_permissions": 1,
    "search_index": 1
   },
   {
@@ -79,7 +69,7 @@
    "fieldname": "expense_accounts",
    "fieldtype": "Table",
    "label": "Expense Accounts",
-   "options": "Expense Account",
+   "options": "Expense Type Account",
    "reqd": 1,
    "bold": 1
   },
@@ -91,9 +81,7 @@
    "read_only": 1,
    "print_hide": 1,
    "report_hide": 1,
-   "search_index": 1,
-   "show_days": 1,
-   "show_seconds": 1
+   "search_index": 1
   },
   {
    "fieldname": "rgt",
@@ -103,9 +91,7 @@
    "read_only": 1,
    "print_hide": 1,
    "report_hide": 1,
-   "search_index": 1,
-   "show_days": 1,
-   "show_seconds": 1
+   "search_index": 1
   }
  ],
  "icon": "fa fa-folder-o",
@@ -116,7 +102,7 @@
  "module": "Expenses",
  "name": "Expense Type",
  "nsm_parent_field": "parent_type",
- "naming_rule": "By fieldname",
+ "naming_rule": "Set by user",
  "owner": "Administrator",
  "permissions": [
   {

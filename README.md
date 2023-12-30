@@ -126,28 +126,34 @@ bench restart
 
 ℹ️ *Note: The expense accounts are inherited from parents if not set*
 
+ℹ️ *Note: Child expense types will be required to add expense accounts unless is already set in parent type or in one of its ancestors*
+
 2. **Expense Item**
   - Create the expense items that reflect your expenses
   - Add each expense item to the expense type that it belongs to
-  - Customize the expense account for each company and/or set the expense defaults (cost, quantity, etc..)
+  - Change the expense account for each company and/or set the expense defaults (cost, quantity, etc..)
 
-ℹ️ *Note: The expense accounts are inherited from expense types if not set*
+ℹ️ *Note: The expense accounts are inherited from expense types if not changed*
 
 3. **Expense**
   - Create a company expense and fill the cost, quantity, etc..
-  - The attachments can be added before or after including the expense in an expenses request
+  - Attachments can be added or removed even after submit, but before adding the expense to an expenses request
 
 4. **Expenses Request**
   - Create a request for a company list of expenses so that it can be approved or rejected
+  - When requests are rejected, the linked expenses will be automatically rejected & cancelled
+  - Rejected requests can be appealed and after appealing, the status of linked expenses will be automatically restored and set as Requested
 
 5. **Expenses Entry**
   - Create entries based on a request or manually add company related expenses
-  - When submitted, all the expenses will be posted to the journal
+  - After submit, all the expenses will be posted to the journal
 
 6. **Expenses Settings**
-  - Plugin update notification Settings
+  - Enable the module (Enabled by default)
+  - Modify the update notification settings
+  - Check for update manually
 
-ℹ️ *Note: Plugin update notification will be functional in the PRODUCTION stage*
+ℹ️ *Note: Plugin update functionality will only be enabled in the PRODUCTION stage*
 
 ---
 

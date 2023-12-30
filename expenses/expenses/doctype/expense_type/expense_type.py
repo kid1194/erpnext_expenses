@@ -1,59 +1,49 @@
-# Expenses © 2023
+# Expenses © 2024
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
 import frappe
-from frappe import _
+from frappe import _, throw
 from frappe.utils import cint, flt
 from frappe.utils.nestedset import NestedSet
 
 from expenses.utils import (
-    error,
     clear_doc_cache,
-    get_cached_value,
+    get_cached_doc,
+    get_count,
+    type_exists,
+    account_exists,
     type_children_exists,
-    items_of_expense_type_exists,
-    disable_type_descendants
+    items_of_type_exists,
+    disable_type_descendants,
+    emit_type_changed
 )
 
 
 class ExpenseType(NestedSet):
     nsm_parent_field = "parent_type"
+    _disable_descendants = False
+    _emit_change = False
     
     
     def before_validate(self):
-        if not cint(self.is_group) and self.parent_type:
-            self.parent_type = None
-        
         if self.expense_accounts:
-            existing = {}
-            for i in range(len(self.expense_accounts)):
-                v = self.expense_accounts[i]
+            existing = []
+            for v in self.expense_accounts:
                 if (
-                    not v.company or not v.account or
-                    (v.company in existing and existing[v.company] == v.account)
+                    not v.company or
+                    not v.account or
+                    v.company in existing
                 ):
                     self.expense_accounts.remove(v)
+                
                 else:
-                    existing[v.company] = v.account
-                    # v.cost = 0
-                    # v.min_cost = 0
-                    # v.max_cost = 0
-                    # v.qty = 0
-                    # v.min_qty = 0
-                    # v.max_qty = 0
+                    existing.append(v.company)
     
     
     def validate(self):
-        if not self.type_name:
-            error(_("{0} name is mandatory").format(self.doctype))
-        if not cint(self.is_group) and not self.parent_type:
-            error(_("{0} parent is mandatory").format(self.doctype))
-        if not self.expense_accounts:
-            error(_("{0} must have at least one expense account").format(self.doctype))
-        
         self._validate_name()
         self._validate_parent()
         self._validate_type()
@@ -61,54 +51,87 @@ class ExpenseType(NestedSet):
     
     
     def before_save(self):
-        if not self.get_doc_before_save():
-            self.load_doc_before_save()
-        clear_doc_cache(
-            self.doctype,
-            self.name if not self.get_doc_before_save() else self.get_doc_before_save().name
-        )
-        if (
-            not self.is_new() and cint(self.disabled) and
-            cint(self.is_group) and type_children_exists(self.name) and
-            self.get_doc_before_save() and not cint(self.get_doc_before_save().disabled)
-        ):
-            self._disable_descendants = True
+        doc = self._get_old_doc()
+        name = self._get_name(doc)
+        clear_doc_cache(self.doctype, name)
+        
+        if not self.is_new():
+            if (
+                doc and
+                not cint(doc.disabled) and
+                cint(self.disabled) and
+                cint(self.is_group) and
+                type_children_exists(name)
+            ):
+                self._disable_descendants = True
+                self._emit_change = True
+            
+            if not self._emit_change:
+                for f in self.meta.get("fields"):
+                    if self.has_value_changed(f.fieldname):
+                        self._emit_change = True
+                        break
     
     
     def on_update(self):
         if self._disable_descendants:
             self._disable_descendants = False
-            disable_type_descendants(self.lft, self.rgt)
+            lft = cint(self.lft)
+            rgt = cint(self.rgt)
+            if (doc := self._get_old_doc()):
+                if cint(doc.lft) != lft:
+                    lft = cint(doc.lft)
+                if cint(doc.rgt) != rgt:
+                    rgt = cint(doc.rgt)
+            
+            disable_type_descendants(lft, rgt)
+        
         if not frappe.local.flags.ignore_update_nsm:
             super(ExpenseType, self).on_update()
+        
+        if self._emit_change:
+            self._emit_change = False
+            emit_type_changed({
+                "action": "change",
+                "type": self.name,
+                "old_type": self._get_name()
+            })
     
     
     def on_trash(self):
         is_group = cint(self.is_group)
         if is_group and type_children_exists(self.name):
-            error(
-                _("{0} group with child items cannot be deleted")
-                .format(self.doctype)
-            )
-        if not is_group and items_of_expense_type_exists(self.name):
-            error(
-                _("{0} with existing expense items cannot be deleted")
-                .format(self.doctype)
-            )
+            throw(_(
+                "An expense type group with existing child types cannot be removed."
+            ))
+        
+        elif not is_group and items_of_type_exists(self.name):
+            throw(_(
+                "An expense type with existing expense items cannot be removed."
+            ))
         
         super(ExpenseType, self).on_trash(True)
     
     
-    @frappe.whitelist(methods=["POST"])
+    def after_delete(self):
+        emit_type_changed({
+            "action": "trash",
+            "type": self.name
+        })
+    
+    
     def convert_group_to_item(self, parent_type=None):
-        if not self.parent_type and not parent_type:
-            return {"error": "Please provide a parent type"}
+        is_group = cint(self.is_group)
+        if not is_group:
+            return 1
         
-        if cint(self.is_group) and type_children_exists(self.name):
-            return {
-                "error": "{0} group with child items cannot be converted to a child",
-                "args": [self.doctype],
-            }
+        if not self.parent_type and not parent_type:
+            return {"error": _("A valid expense parent type is required.")}
+        
+        if is_group and type_children_exists(self.name):
+            return {"error": _(
+                "An expense type group with existing child types cannot be converted to a child."
+            )}
         
         if parent_type:
             if (error := self._validate_parent(parent_type, True)):
@@ -118,78 +141,122 @@ class ExpenseType(NestedSet):
         
         self.is_group = 0
         self.save()
+        
         return 1
     
     
-    @frappe.whitelist()
     def convert_item_to_group(self):
-        if not cint(self.is_group) and items_of_expense_type_exists(self.name):
-            return {
-                "error": "{0} with existing expense items cannot be converted to a group",
-                "args": [self.doctype],
-            }
+        is_group = cint(self.is_group)
+        if is_group:
+            return 1
+        
+        if not is_group and items_of_type_exists(self.name):
+            return {"error": _(
+                "An expense type with existing expense items cannot be converted to a group"
+            )}
         
         self.is_group = 1
         self.save()
+        
         return 1
     
     
     def _validate_name(self):
-        if frappe.db.exists(self.doctype, self.name):
-            error(_("{0} \"{1}\" already exist").format(self.doctype, self.name))
+        if not self.name:
+            throw(_("A valid expense type name is required."))
+        
+        count = get_count(self.doctype, {"name": self.name})
+        limit = 1 if not self.is_new() else 0
+        if count != limit:
+            throw(_("The expense type \"{0}\" already exists.").format(self.name))
     
     
-    def _validate_parent(self, parent_type=None, return_error=None):
+    def _validate_parent(self, parent_type=None, return_error=False):
         if not parent_type:
             parent_type = self.parent_type
         
+        if (
+            not parent_type and
+            not cint(self.is_group)
+        ):
+            throw(_("A valid expense type parent is required."))
+        
         if parent_type:
-            if not frappe.db.exists(self.doctype, parent_type):
-                error_msg = "{0} \"{1}\" does not exist"
+            if not type_exists(parent_type, enabled=True):
+                err = _("The expense type parent \"{0}\" is disabled or does not exist.").format(parent_type)
                 if return_error:
-                    return {"error": error_msg, "args": [self.doctype, parent_type]}
+                    return {"error": err}
                 else:
-                    error(_(error_msg).format(self.doctype, parent_type))
+                    throw(err)
+            
             else:
-                parent = get_cached_value(self.doctype, parent_type, ["name", "is_group"])
+                parent = get_cached_doc(self.doctype, parent_type)
                 if parent.name == self.name:
-                    error_msg = "{0} \"{1}\" cannot be the parent of itself"
+                    err = _("The expense type cannot be the parent of itself.").format(self.name)
                     if return_error:
-                        return {"error": error_msg, "args": [self.doctype, parent_type]}
+                        return {"error": err}
                     else:
-                        error(_(error_msg).format(self.doctype, parent_type))
+                        throw(err)
+                
                 if not cint(parent.is_group):
-                    error_msg = "{0} \"{1}\" must be a group"
+                    err = _("The expense type parent \"{0}\" must be a group.").format(parent_type)
                     if return_error:
-                        return {"error": error_msg, "args": [self.doctype, parent_type]}
+                        return {"error": err}
                     else:
-                        error(_(error_msg).format(self.doctype, parent_type))
+                        throw(err)
     
     
     def _validate_type(self):
-        if not self.is_new():
-            if not self.get_doc_before_save():
-                self.load_doc_before_save()
-            if self.get_doc_before_save():
-                existing_is_group = cint(self.get_doc_before_save().is_group)
-                is_group = cint(self.is_group)
-                if is_group != existing_is_group:
-                    if is_group and items_of_expense_type_exists(self.name):
-                        error(
-                            _("{0} with existing expense items cannot be converted to a group")
-                            .format(self.doctype)
-                        )
-                    if not is_group and type_children_exists(self.name):
-                        error(
-                            _("{0} group with child nodes cannot be converted to a child")
-                            .format(self.doctype)
-                        )
+        if (doc := self._get_old_doc()):
+            name = self._get_name(doc)
+            is_group = cint(self.is_group)
+            is_old_group = cint(doc.is_group)
+            
+            if (
+                is_group and not is_old_group and
+                items_of_type_exists(name)
+            ):
+                throw(_(
+                    "An expense type with existing expense items cannot be converted to a group."
+                ))
+            
+            if (
+                not is_group and is_old_group and
+                type_children_exists(name)
+            ):
+                throw(_(
+                    "An expense type group with child types cannot be converted to a child."
+                ))
     
     
     def _validate_accounts(self):
+        if not self.expense_accounts:
+            throw(_("At least one valid expense account is required."))
+        
         for v in self.expense_accounts:
-            if not frappe.db.exists("Account", {"name": v.account, "company": v.company}):
-                error(
-                    _("Expense account \"{0}\" does not exist or does not belong to company \"{1}\"")
-                    .format(v.account, v.company)
-                )
+            if not account_exists(v.account, {"company": v.company}, True):
+                throw(_(
+                    "The expense account \"{0}\" is disabled, does not exist or does not belong to company \"{1}\"."
+                ).format(v.account, v.company))
+    
+    
+    def _get_old_doc(self):
+        if self.is_new():
+            return None
+        
+        doc = self.get_doc_before_save()
+        if not doc:
+            self.load_doc_before_save()
+            doc = self.get_doc_before_save()
+        
+        return doc
+    
+    
+    def _get_name(self, doc=None):
+        if not doc:
+            doc = self._get_old_doc()
+        
+        if doc and doc.name and doc.name != self.name:
+            return doc.name
+        
+        return self.name

@@ -1,5 +1,5 @@
 /*
-*  Expenses © 2023
+*  Expenses © 2024
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
@@ -13,200 +13,122 @@ frappe.treeview_settings['Expense Type'] = {
     breadcrumb: 'Expense Types',
     title: __('Chart of Expense Types'),
     get_tree_root: false,
+    disable_add_node: true,
     root_label: 'Expense Types',
     show_expand_all: true,
-    get_tree_nodes: frappe.Expenses ? frappe.Expenses().path('get_type_children') : 'expenses.utils.get_type_children',
+    get_tree_nodes: 'expenses.libs.get_type_children',
     onload: function(treeview) {
-        frappe.Expenses();
-        
-        let base = frappe.treeview_settings[treeview.doctype];
-        base.treeview = treeview;
-        base.ET = {
-            dialog: frappe.E.formDialog('Add New', 'blue'),
-            rows: [],
-            companies: frappe.E.tableArray(),
-        };
-        base.ET.dialog
-            .loadDoctype(treeview.doctype)
-            .extend({
-                'treeview': treeview,
-                'ET': base.ET,
+        frappe.treeview_settings[treeview.doctype].treeview = treeview;
+        frappe.treeview_settings[treeview.doctype].exp_enabled = true;
+        frappe.exp()
+            .on('ready', function() {
+                frappe.treeview_settings['Expense Type'].exp_enabled = this.is_enabled;
+                if (!this.is_enabled)
+                    frappe.dom.freeze(
+                        '<strong class="text-danger">'
+                        + __('The Expenses app has been disabled.')
+                        + '</strong>'
+                    );
             })
-            .removeFields('disabled', 'parent_type')
-            .replaceProperties({
-                'depends_on': ['hidden', 1],
-                'read_only_depends_on': ['read_only', 1]
-            })
-            .removeProperties(
-                'in_preview', 'in_list_view', 'in_filter', 'in_standard_filter',
-                'depends_on', 'read_only_depends_on', 'mandatory_depends_on',
-                'search_index', 'print_hide', 'report_hide', 'allow_in_quick_entry',
-                'translatable'
-            )
-            .setFieldsProperties({
-                is_group: {
-                    hidden: 0,
-                },
-                company: {
-                    get_query: function() {
-                        var ET = this.ET;
-                        let table = this.getField('expense_accounts');
-                        if (table && (table.grid || '').get_data) {
-                            let data = table.grid.get_data();
-                            if (frappe.E.isArray(data) && data.length !== ET.rows.length) {
-                                var rows = frappe.E.filter(data, function(r) {
-                                    return (r.name || r.idx) != null;
-                                });
-                                rows = frappe.E.map(rows, function(r) {
-                                    return r.name || r.idx;
-                                });
-                                frappe.E.each(ET.rows, function(r) {
-                                    if (rows.indexOf(r) < 0) {
-                                        ET.companies.del(r);
-                                    }
-                                });
-                                frappe.E.clear(ET.rows);
-                                frappe.E.merge(ET.rows, rows);
-                            }
-                        }
-                        let filters = {is_group: 0};
-                        if (ET.companies.length)
-                            filters.name = ['not in', ET.companies.col(0)];
-                        return {filters};
-                    },
-                    change: function() {
-                        let company = this.getRowFieldValue('expense_accounts', -1, 'company');
-                        if (!company) {
-                            let row = this.getRow('expense_accounts', -1);
-                            row && row.toggle_editable && row.toggle_editable('account', 0);
-                            this.setRowFieldValue('expense_accounts', -1, 'account', '');
-                            return;
-                        }
-                        let ET = this.ET;
-                        this.setRowFieldValid('expense_accounts', -1, 'company');
-                        let name = this.getRowName('expense_accounts', -1);
-                        ET.companies.add(name, company, 0);
-                        if (name) ET.rows.push(name);
-                    },
-                },
-                account: {
-                    get_query: function() {
-                        let filters = {
-                            is_group: 0,
-                            root_type: 'Expense',
-                        },
-                        company = this.getRowFieldValue('expense_accounts', -1, 'company');
-                        if (company) filters.company = company;
-                        return {filters};
-                    },
-                    change: function() {
-                        let account = this.getRowFieldValue('expense_accounts', -1, 'account'),
-                        company = this.getRowFieldValue('expense_accounts', -1, 'company');
-                        if (!company) {
-                            this.setRowFieldInvalid(
-                                'expense_accounts', -1, 'company',
-                                __('Please select a company first')
-                            );
-                            if (account)
-                                this.setRowFieldValue('expense_accounts', -1, 'account', '');
-                            return;
-                        }
-                        if (!account && !company) return;
-                        let name = this.getRowName('expense_accounts', -1),
-                        ET = this.ET,
-                        ckey = ET.companies.eqKey(account, 1),
-                        crow = ET.companies.eqRow(account, 1);
-                        if (
-                            ckey && crow && ckey !== name
-                            && crow[0] === company
-                        ) {
-                            this.setRowFieldValue('expense_accounts', -1, 'account', '');
-                            this.setRowFieldInvalid(
-                                'expense_accounts', -1, 'account',
-                                __(
-                                    'The expense account "{0}" for "{1}" already exist',
-                                    [row.account, row.company]
-                                )
-                            );
-                            return;
-                        }
-                        ET.companies.add(name, account, 1);
-                        this.setRowFieldValid('expense_accounts', -1, 'account');
-                    },
-                },
-            })
-            .sortFields([
-                'main_section', 'type_name', 'main_column', 'is_group',
-                'accounts_section', 'expense_accounts'
-            ])
-            .setPrimaryAction('Create', function() {
-                let data = this.getValues();
-                if (!data) {
-                    this.showError('Unable to get the expense type inputs');
-                    return;
-                }
-                let node = this.selected_node || {};
-                data.parent = node.label;
-                data.parent_type = node.label;
-                data.doctype = this._doctype;
-                data.is_root = !node || node.is_root;
-                this.hide();
-                frappe.dom.freeze(__('Creating {0}', [this._doctype]));
-                frappe.E.call(
-                    'add_type_node',
-                    {data},
-                    frappe.E.fn(function(ret) {
-                        if (!ret) {
-                            frappe.E.error('Unable to create the expense type');
-                            return;
-                        }
-                        if (frappe.E.isPlainObject(ret) && ret.error) {
-                            frappe.E.error(ret.error, ret.args);
-                            return;
-                        }
-                        if (this.selected_node) {
-                            this.treeview.tree.load_children(this.selected_node);
-                        } else {
-                            this.treeview.make_tree();
-                        }
-                        frappe.show_alert({
-                            indicator: 'green',
-                            message: __(this._doctype + ' created successfully.')
-                        });
-                    }, this),
-                    frappe.E.fn(function() {
-                        this.unset('selected_node');
-                        frappe.dom.unfreeze();
-                    }, this)
-                );
-            })
-            .setSecondaryAction('Cancel', function() { this.hide(); })
-            .build();
+            .on('change', function() {
+                frappe.dom.unfreeze();
+                frappe.treeview_settings['Expense Type'].exp_enabled = this.is_enabled;
+                frappe.treeview_settings['Expense Type'].treeview.make_tree();
+                if (!this.is_enabled)
+                    frappe.dom.freeze(
+                        '<strong class="text-danger">'
+                        + __('The Expenses app has been disabled.')
+                        + '</strong>'
+                    );
+            });
     },
     post_render: function(treeview) {
-        treeview.page.set_primary_action(__('New'), function() {
-            frappe.treeview_settings[treeview.doctype].ET.dialog
-                .setTitle('Add New')
-                .show();
-        }, 'add');
+        treeview.page.clear_primary_action();
+        if (frappe.treeview_settings[treeview.doctype].exp_enabled)
+            treeview.page.set_primary_action(__('New'), function() {
+                frappe.exp().set_cache('create-expense-type', {});
+                frappe.set_route('Form', 'Expense Type');
+            }, 'add');
     },
     toolbar: [
         {
             label: __('Add Child'),
             condition: function(node) {
-                return frappe.boot.user.can_create.indexOf('Expense Type') >= 0
-                    && node.expandable && !node.hide_add;
+                let dt = 'Expense Type';
+                return frappe.treeview_settings[dt].exp_enabled
+                    && frappe.boot.user.can_create.indexOf(dt) >= 0
+                    && !node.hide_add;
             },
             click: function() {
-                let base = frappe.treeview_settings['Expense Type'],
-                treeview = base.treeview,
-                args = frappe.E.merge({}, treeview.args);
-                args.parent_type = treeview.args.parent;
-                base.ET.dialog
-                    .setTitle('Add Child')
-                    .setValues(args)
-                    .extend('selected_node', treeview.tree.get_selected_node())
-                    .show();
+                let dt = 'Expense Type',
+                treeview = frappe.treeview_settings[dt].treeview;
+                frappe.exp().set_cache('create-expense-type', {
+                    is_group: cint(treeview.args.expandable),
+                    parent_type: cstr(treeview.args.parent),
+                });
+                frappe.set_route('Form', dt);
+            },
+            btnClass: 'hidden-xs'
+        },
+        {
+            label: __('Convert To Item'),
+            condition: function(node) {
+                let dt = 'Expense Type';
+                return frappe.treeview_settings[dt].exp_enabled
+                    && frappe.boot.user.can_write.indexOf(dt) >= 0
+                    && node.expandable;
+            },
+            click: function() {
+                let dt = 'Expense Type';
+                var treeview = frappe.treeview_settings[dt].treeview;
+                frappe.exp().request(
+                    'convert_group_to_item',
+                    {name: cstr(treeview.args.value)},
+                    function(ret) {
+                        if (!ret)
+                            frappe.exp().error('Unable to convert the expense type group to an item.');
+                        else if (ret.error)
+                            frappe.exp().error(ret.error);
+                        else {
+                            frappe.show_alert({
+                                indicator: 'green',
+                                message: __('The expense type group has been converted to an item successfully.'),
+                            });
+                            treeview.make_tree();
+                        }
+                    }
+                );
+            },
+            btnClass: 'hidden-xs'
+        },
+        {
+            label: __('Convert To Group'),
+            condition: function(node) {
+                let dt = 'Expense Type';
+                return frappe.treeview_settings[dt].exp_enabled
+                    && frappe.boot.user.can_write.indexOf(dt) >= 0
+                    && !node.expandable;
+            },
+            click: function() {
+                let dt = 'Expense Type';
+                var treeview = frappe.treeview_settings[dt].treeview;
+                frappe.exp().request(
+                    'convert_item_to_group',
+                    {name: treeview.args.value},
+                    function(ret) {
+                        if (!ret)
+                            frappe.exp().error('Unable to convert the expense type item to a group.');
+                        else if (ret.error)
+                            frappe.exp().error(ret.error);
+                        else {
+                            frappe.show_alert({
+                                indicator: 'green',
+                                message: __('The expense type item has been converted to a group successfully.'),
+                            });
+                            treeview.make_tree();
+                        }
+                    }
+                );
             },
             btnClass: 'hidden-xs'
         },

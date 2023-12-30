@@ -1,18 +1,19 @@
-# Expenses © 2023
+# Expenses © 2024
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
-import logging
 import os
+import logging
 from logging.handlers import RotatingFileHandler
 
 import frappe
 
-from expenses import __module__
+from expenses import __abbr__
 
 
+# [Common]
 def get_logger(logType):
     if not logType:
         logType = "error"
@@ -20,14 +21,14 @@ def get_logger(logType):
     if not site:
         site = "Frappe"
 
-    logger_name = "{}-{}-{}".format(__module__, site, logType)
+    logger_name = "{}-{}-{}".format(__abbr__, site, logType)
 
     try:
         return frappe.loggers[logger_name]
     except KeyError:
         pass
 
-    logfile = "{}-{}.log".format(__module__, logType)
+    logfile = "{}-{}.log".format(__abbr__, logType)
     log_filename = os.path.join("..", "logs", logfile)
 
     logger = logging.getLogger(logger_name)
@@ -44,6 +45,7 @@ def get_logger(logType):
     return logger
 
 
+# [Internal]
 class LoggingCustomFormatter(logging.Formatter):
     def __init__(self):
         fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'

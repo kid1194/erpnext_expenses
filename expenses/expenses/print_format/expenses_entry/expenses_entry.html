@@ -32,7 +32,7 @@
             <table class="table table-sm table-borderless table-condensed">
                 {%- for fcol, scol in (
                     ((_("Name"), doc.name), (_("Date"), frappe.format_date(doc.posting_date))),
-                    ((_("Company"), doc.company), (_("Status"), _("Submitted") if doc.docstatus == 1 else (_("Cancelled") if doc.docstatus == 2 else _("Pending")))),
+                    ((_("Company"), doc.company), (_("Status"), _("Submitted") if doc.docstatus == 1 else (_("Cancelled") if doc.docstatus == 2 else _("Draft")))),
                     ((_("Mode of Payment"), doc.mode_of_payment), (_("Payment Account"), doc.payment_account)),
                     ((_("Payment Reference"), doc.payment_reference or "N/A"), (_("Payment Clearance"), frappe.format_date(doc.clearance_date) if doc.clearance_date else _("N/A"))),
                 ) -%}

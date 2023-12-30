@@ -1,1127 +1,486 @@
 /*
-*  Expenses © 2023
+*  Expenses © 2024
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
 */
 
 
+frappe.provide('frappe.exp');
+
+
 class Expenses {
-    constructor() {
-        this._path = 'expenses.utils.';
-        this._frm = null;
-        this._cache = {};
-    }
-    get version() {
-        return '1.0.0';
-    }
-    
-    // Helpers
-    _objType(v) {
-        if (v == null) return v === undefined ? 'Undefined' : 'Null';
-        let t = Object.prototype.toString.call(v).slice(8, -1);
-        return t === 'Number' && isNaN(v) ? 'NaN' : t;
-    }
-    _isOf(v, t) {
-        return this._objType(v) === t;
-    }
-    _isOfAny(v, t) {
-        return t.split(' ').indexOf(this._objType(v)) >= 0;
-    }
-    _isPropOf(v, k) {
-        return Object.prototype.hasOwnProperty.call(v, k);
-    }
-    
-    // Check
-    isString(v) {
-        return v != null && this._isOf(v, 'String');
-    }
-    isNumber(v) {
-        return v != null && this._isOf(v, 'Number') && !isNaN(v);
-    }
-    isLength(v) {
-        return this.isNumber(v) && v >= 0 && v % 1 == 0 && v <= 9007199254740991;
-    }
-    isInteger(v) {
-        return this.isNumber(v) && v === Number(parseInt(v));
-    }
-    isFunction(v) {
-        return v != null && $.isFunction(v);
-    }
-    isObjectLike(v) {
-        return v != null && typeof v === 'object';
-    }
-    isObject(v) {
-        return this.isObjectLike(v)
-        && this.isObjectLike(Object.getPrototypeOf(Object(v)) || {})
-        && !this._isOfAny(v, 'String Number Boolean Array RegExp Date URL');
-    }
-    isPlainObject(v) {
-        return v != null && $.isPlainObject(v);
-    }
-    isArrayLike(v) {
-        return v != null && !$.isFunction(v) && this.isObjectLike(v)
-        && v !== window && !this.isInteger(v.nodeType) && this.isLength(v.length);
-    }
-    isArray(v) {
-        return v != null && $.isArray(v);
-    }
-    isIteratable(v) {
-        return this.isArrayLike(v) || (this.isObject(v) && !this.isInteger(v.nodeType));
-    }
-    isUrl(v) {
-        if (!this.isString(v)) return false;
-        try {
-            new URL(v);
-            return true;
-        } catch(e) {
-            return false;
-        }
-    }
-    
-    // Converter
-    toArray(v) {
-        if (this.isArray(v)) return v;
-        if (this.isArrayLike(v)) return Array.prototype.slice.call(v);
-        return this.isObject(v) && !this.isInteger(v.nodeType)
-            ? Object.entries(v) : [];
-    }
-    toObject(v) {
-        if (this.isObject(v)) return v;
-        let t = {};
-        if (v != null) t[0] = v;
-        return t;
-    }
-    
-    // Bind
-    fnCall(f, a, b) {
-        if (this.isFunction(f)) return f.apply(b || this, this.toArray(a));
-    }
-    fn(f, b) {
-        var me = this;
-        return function() {
-            if (this) Array.prototype.push.call(arguments, this);
-            return me.fnCall(f, arguments, b);
+    constructor(opts) {
+        this.set_options(opts);
+        
+        this.is_ready = false;
+        this.is_enabled = true;
+        this._events = {
+            list: {},
+            real: {},
         };
-    }
-    
-    // Json
-    toJson(v, d) {
-        if (d === undefined) d = v;
-        if (!this.isObject(v)) return d;
-        try {
-            return JSON.stringify(v);
-        } catch(e) {
-            return d;
-        }
-    }
-    parseJson(v, d) {
-        if (d === undefined) d = v;
-        if (!this.isString(v)) return d;
-        try {
-            return JSON.parse(v);
-        } catch(e) {
-            return d;
-        }
-    }
-    
-    // Data
-    each(d, fn, b) {
-        b = b || this;
-        if (this.isArrayLike(d)) {
-            for (let i = 0, l = d.length; i < l; i++) {
-                let r = this.fnCall(fn, [d[i], i], b);
-                if (r !== undefined) return r;
-            }
-        } else if (this.isObject(d)) {
-            for (let k in d) {
-                if (this._isPropOf(d, k)) {
-                    let r = this.fnCall(fn, [d[k], k], b);
-                    if (r !== undefined) return r;
+        
+        if (this.startup) {
+            this.is_ready = true;
+            this.emit('ready');
+        } else {
+            this.request(
+                'is_enabled',
+                null,
+                function(ret) {
+                    this.is_ready = true;
+                    this.is_enabled = !!ret;
+                    this._startup();
+                },
+                function() {
+                    this.fatal('Status check failed.');
                 }
+            );
+        }
+    }
+    
+    set_options(opts) {
+        if (this.$isDataObj(opts)) $.extend(this, opts);
+        return this;
+    }
+    _startup() {
+        this.on('exp_app_status_changed', function(ret) {
+            if (!ret || !this.$isDataObj(ret) || this.$isVoid(ret.is_enabled)) {
+                this.fatal('Invalid status change event.');
+            } else {
+                ret.is_enabled = !!ret.is_enabled;
+                let changed = this.is_enabled !== ret.is_enabled;
+                this.is_enabled = ret.is_enabled;
+                if (changed) this.emit('changed');
             }
-        }
-    }
-    contains(d, v) {
-        return this.isIteratable(d) && Object.values(d).indexOf(v) >= 0;
-    }
-    containsAny(d, vs) {
-        if (!this.isArray(vs)) return false;
-        let a = this.isObject(d) ? Object.values(d) : d;
-        if (!this.isArray(a)) return false;
-        for (let i = 0, l = vs.length; i < l; i++) {
-            if (a.indexOf(vs[i]) >= 0) return true;
-        }
-        return false;
-    }
-    containsAll(d, vs) {
-        if (!this.isArray(vs)) return false;
-        let a = this.isObject(d) ? Object.values(d) : d;
-        if (!this.isArray(a)) return false;
-        for (let i = 0, l = vs.length; i < l; i++) {
-            if (a.indexOf(vs[i]) < 0) return false;
-        }
-        return true;
-    }
-    has(d, k) {
-        return this.isIteratable(d) && d[k] != null;
-    }
-    hasAny(d, ks) {
-        if (!this.isArray(ks)) return false;
-        let a = this.isIteratable(d) ? Object.keys(d) : d;
-        if (!this.isArray(a)) return false;
-        for (let i = 0, l = ks.length; i < l; i++) {
-            if (a.indexOf(ks[i]) >= 0) return true;
-        }
-        return false;
-    }
-    hasAll(d, ks) {
-        if (!this.isArray(ks)) return false;
-        let a = this.isIteratable(d) ? Object.keys(d) : d;
-        if (!this.isArray(a)) return false;
-        for (let i = 0, l = ks.length; i < l; i++) {
-            if (a.indexOf(ks[i]) < 0) return false;
-        }
-        return true;
-    }
-    merge(d, v) {
-        if (this.isArray(d)) {
-            Array.prototype.push.apply(d, this.toArray(v));
-        } else if (this.isObject(d)) {
-            $.extend(d, this.toObject(v));
-        }
-        return d;
-    }
-    clear(d) {
-        if (this.isArray(d)) d.length && d.splice(0, d.length);
-        else if (this.isObject(d)) {
-            this.each(d, function(v, k) {
-                delete d[k];
-            });
-        }
-        return d;
-    }
-    clone(d) {
-        return this.isIteratable(d) ? this.parseJson(this.toJson(d)) : d;
-    }
-    filter(d, fn) {
-        if (fn == null) fn = function(v) { return v != null; };
-        if (!this.isIteratable(d) || !this.isFunction(fn)) return d;
-        if (this.isArray(d) && this.isFunction(d.filter)) return d.filter(fn);
-        let r = d.constructor(),
-        p = this.isFunction(d.push);
-        this.each(d, function(v, k) {
-            if (this.fnCall(fn, [v, k]) !== false)
-                ((p && r.push(v)) || (r[k] = v));
         });
-        return r;
-    }
-    map(d, fn) {
-        if (!this.isIteratable(d) || !this.isFunction(fn)) return d;
-        if (this.isArray(d) && this.isFunction(d.map)) return d.map(fn);
-        let r = d.constructor();
-        this.each(d, function(v, k) {
-            r[k] = this.fnCall(fn, [v, k]);
-        });
-        return r;
+        this.emit('ready');
     }
     
-    // Console & Error
-    log() {
-        var pre = '[Expenses]: ';
-        this.each(arguments, function(v) {
-            if (this.isString(v)) console.log(pre + v);
-            else console.log(pre, v);
-        });
-        return this;
-    }
-    elog() {
-        var pre = '[Expenses]: ';
-        this.each(arguments, function(v) {
-            if (this.isString(v)) console.error(pre + v);
-            else console.error(pre, v);
-        });
-        return this;
-    }
-    error(text, args, _throw) {
-        if (_throw == null && args === true) {
-            _throw = args;
-            args = null;
-        }
-        if (_throw) {
-            frappe.throw(__(text, args));
-            return this;
-        }
-        frappe.msgprint({
-            title: __('Error'),
-            indicator: 'Red',
-            message: __(text, args),
-        });
-        return this;
-    }
-    
-    // Temporary Cache
-    _key() {
-        return this.toJson(arguments, '');
-    }
-    _set(key, val) {
-        this._cache[key] = val;
-        return this;
-    }
-    _has(key) {
-        return this._cache[key] !== undefined;
-    }
-    _get(key) {
-        return this._cache[key];
-    }
-    _del(key) {
-        delete this._cache[key];
-        return this;
-    }
-    _clear() {
-        this.clear(this._cache);
-        return this;
-    }
-    
-    // localStorage
-    setCache(key, val) {
-        if (!this.isIteratable(val))
-            val = {___: val};
-        val = this.toJson(val, '');
-        localStorage.setItem(key, val);
-        return this;
-    }
-    getCache(key) {
-        let val = localStorage.getItem(key);
-        val = this.parseJson(val, null);
-        if (this.isPlainObject(val) && val.___ !== undefined)
-            val = val.___;
-        return val;
-    }
-    popCache(key) {
-        let value = this.getCache(key);
-        this.delCache(key);
-        return value;
-    }
-    delCache(key) {
-        localStorage.removeItem(key);
-        return this;
-    }
-    clearCache() {
-        localStorage.clear();
-        return this;
-    }
-    
-    // Call
     path(method) {
-        return this._path + method;
+        return 'expenses.libs.' + method;
     }
-    _call(method, args, success, always, resolve, reject) {
-        if (args && this.isFunction(args)) {
-            if (this.isFunction(success)) always = success;
-            success = args;
-            args = null;
-        }
-        let data = {type: args != null ? 'POST' : 'GET'};
-        if (args != null) {
-            if (!this.isPlainObject(args)) data.args = {'data': args};
-            else {
-                data.args = args;
-                if (args.type && args.args) {
-                    data.type = args.type;
-                    data.args = args.args;
+    request(method, args, callback, error, _freeze) {
+        if (method.indexOf('.') < 0) method = this.path(method);
+        let opts = {
+            method: method,
+            freeze: _freeze != null ? _freeze : false,
+            callback: $.proxy(function(ret) {
+                if (ret && this.$isDataObj(ret)) ret = ret.message || ret;
+                if (ret && !ret.error) {
+                    callback && callback.call(this, ret);
+                    return;
                 }
-            }
+                let message = ret.message || 'The request sent raised an error.';
+                if (!error) this.error(message, args);
+                else error.call(this, {message: __(message, args)});
+            }, this),
+            error: $.proxy(function(ret, txt) {
+                let message = '';
+                if (this.$isStr(ret)) message = ret;
+                else if (this.$isStr(txt)) message = txt;
+                else message = 'The request sent have failed.';
+                if (!error) this.error(message, args);
+                else error.call(this, {message: __(message, args)});
+            }, this)
+        };
+        if (args) {
+            opts.type = 'POST';
+            opts.args = args;
         }
-        if (this.isString(method)) {
-            if (!this.isUrl(method) && !method.startsWith('frappe.')) {
-                method = this.path(method);
-            }
-            data.method = method;
-        } else if (this.isArray(method)) {
-            data.doc = method[0];
-            data.method = method[1];
-        } else {
-            this.elog('The method passed is invalid', arguments);
-            return;
-        }
-        var ckey = this._key(data),
-        error = data.error = this.fn(function(e) {
-            this.elog('Call error.', e);
-            this.error('Unable to make the call to {0}', [data.method]);
-            reject && reject();
-        });
-        data.callback = this.fn(function(ret) {
-            if (ret && this.isPlainObject(ret)) ret = ret.message || ret;
-            this._set(ckey, ret);
-            try {
-                let val = this.fnCall(success, ret);
-                this.fnCall(resolve, val || ret);
-            } catch(e) { error(e); }
-        });
-        if (this._has(ckey)) {
-            try {
-                data.callback(this._get(ckey));
-            } finally {
-                this.fnCall(always);
-            }
-            return this;
-        }
-        if (this.isFunction(always)) data.always = this.fn(always);
         try {
-            frappe.call(data);
+            frappe.call(opts);
         } catch(e) {
-            error(e);
+            if (error) error.call(this, e);
+            else this._error('Error: ' + e.message, e.stack);
+            if (this.has_error) throw e;
+        } finally {
+            this.has_error = false;
         }
-        return this;
-    }
-    call(method, args, success, always) {
-        return this._call(method, args, success, always);
-    }
-    xcall(method, args, success, always) {
-        return new Promise(this.fn(function(resolve, reject) {
-            this._call(method, args, success, always, resolve, reject);
-        }));
-    }
-    
-    // Database
-    getDoc(dt, name, callback, always) {
-        return this.xcall(
-            'frappe.client.get',
-            {type: 'GET', args: {doctype: dt, name: name}},
-            callback,
-            always
-        );
-    }
-    getList(dt, opts, callback, always) {
-        var ckey = this._key(dt, opts);
-        if (this._has(ckey)) {
-            try {
-                this.fnCall(callback, this._get(ckey));
-            } finally {
-                this.fnCall(always);
-            }
-            return this;
-        }
-        frappe.db.get_list(dt, opts).then(this.fn(function(ret) {
-            if (this.isPlainObject(ret)) ret = ret.message || ret;
-            this._set(ckey, ret);
-            this.fnCall(callback, ret);
-        })).finally(this.fn(always));
-        return this;
-    }
-    getValue(dt, name, key, callback, always) {
-        var ckey = this._key(dt, name, key);
-        if (this._has(ckey)) {
-            try {
-                this.fnCall(callback, this._get(ckey));
-            } finally {
-                this.fnCall(always);
-            }
-            return this;
-        }
-        frappe.db.get_value(dt, name, key).then(this.fn(function(ret) {
-            if (this.isPlainObject(ret)) ret = ret.message || ret;
-            this._set(ckey, ret);
-            this.fnCall(callback, ret);
-        })).finally(this.fn(always));
-        return this;
-    }
-    isDocExists(dt, name, callback, always) {
-        var ckey = this._key(dt, name);
-        if (this._has(ckey)) {
-            try {
-                this.fnCall(callback, this._get(ckey));
-            } finally {
-                this.fnCall(always);
-            }
-            return this;
-        }
-        frappe.db.exists(dt, name).then(this.fn(function(ret) {
-            this._set(ckey, ret);
-            this.fnCall(callback, ret);
-        })).finally(this.fn(always));
         return this;
     }
     
-    // Form
-    form(v) {
-        if (this.isObject(v)) this._frm = v;
-        return this;
+    on(event, fn, _realtime) {
+        return this._event_adder(event, fn, 0, _realtime);
     }
-    setDocValue(doc, field, val) {
-        frappe.model.set_value(doc, field, val);
-        return this;
+    once(event, fn, _realtime) {
+        return this._event_adder(event, fn, 1, _realtime);
     }
-    refreshField() {
-        this.each(arguments, function(f) {
-            if (this.isArray(f)) this._frm.refresh_field.apply(this._frm, f);
-            else this._frm.refresh_field(f);
-        });
-        return this;
-    }
-    refreshRowField() {
-        let a = this.toArray(arguments),
-        t = a.shift(),
-        r = a.shift();
-        if (this.isArray(a[0])) a = a.shift();
-        this.each(a, function(f) {
-            this._frm.refresh_field(t, r, f);
-        });
-        return this;
-    }
-    getField(name) {
-        return this._frm.get_field(name);
-    }
-    getRow(table, cdn) {
-        return this.getField(table).grid.get_row(cdn);
-    }
-    removeRow(table, cdn) {
-        this.getRow(table, cdn).remove();
-        return this.refreshField(table);
-    }
-    getRowField(table, cdn, name) {
-        return this.getRow(table, cdn).get_field(name);
-    }
-    clearTable(table) {
-        this._frm.set_value(table, []);
-        return this.refreshField(table);
-    }
-    getFieldPrecision(field) {
-        let k = field.split('.'),
-        f = this.getField(k[0]);
-        if (k[1]) f = f.grid.get_field(k[1]);
-        return f.get_precision();
-    }
-    setFieldProperty(field, key, val, table, cdn) {
-        if (!table && field.includes('.', 1)) {
-            let parts = field.split('.');
-            field = parts[1];
-            table = parts[0];
-        }
-        if (table && !cdn) {
-            this.getField(table).grid.update_docfield_property(field, key, val);
-        } else if (table && cdn) {
-            this.getRow(table, cdn).set_field_property(field, key, val);
-        } else {
-            this._frm.set_df_property(field, key, val);
-        }
-        return this;
-    }
-    setFieldProperties(field, props, table, cdn) {
-        for (var k in props)
-            this.setFieldProperty(field, k, props[k], table, cdn);
-        return this;
-    }
-    setFieldsProperty(fields, key, val, table, cdn) {
-        if (this.isString(fields)) fields = fields.split(' ');
-        this.each(fields, function(f) {
-            this.setFieldProperty(f, key, val, table, cdn);
-        });
-        return this;
-    }
-    setFieldsProperties(fields, props, table, cdn) {
-        for (var k in props)
-            this.setFieldsProperty(fields, k, props[k], table, cdn);
-        return this;
-    }
-    setRowFieldProperty(table, cdn, field, key, val) {
-        this.setFieldProperty(field, key, val, table, cdn);
-        return this;
-    }
-    setRowFieldProperties(table, cdn, field, props) {
-        for (var k in props)
-            this.setRowFieldProperty(table, cdn, field, k, props[k]);
-        return this;
-    }
-    setRowFieldsProperty(table, cdn, fields, key, val) {
-        this.each(fields, function(f) {
-            this.setRowFieldProperty(table, cdn, f, key, val);
-        });
-        return this;
-    }
-    setRowFieldsProperties(table, cdn, fields, props) {
-        for (var k in props)
-            this.setRowFieldsProperty(table, cdn, fields, k, props[k]);
-        return this;
-    }
-    setFieldError(field, error, args, _throw) {
-        this.fnCall(this.getField(field).set_invalid);
-        this.error(error, args, _throw);
-        return this;
-    }
-    
-    // Background
-    runTask(fn, b) {
-        return Promise.resolve().then(this.fn(fn, b));
-    }
-    runTasks(d, b) {
-        let tasks = [];
-        this.each(d, function(fn) {
-            if (fn) list.push(this._isOf(fn, 'Promise')
-                ? fn : this.runTask(fn, b)
-            );
-        });
-        return tasks.length ? Promise.all(tasks) : Promise.reject();
-    }
-    
-    extend(key, fn) {
-        if (!this[key]) this[key] = this.fn(fn);
-        return this;
-    }
-}
-
-class TableArray {
-    constructor() {
-        this._d = {};
-        this._l = 0;
-    }
-    get length() { return this._l; }
-    has(k, v, c) {
-        if (!frappe.E.isInteger(c)) c = 0;
-        return k != null && v != null && !!this._d[k] && this._d[k][c] === v;
-    }
-    add(k, v, c) {
-        this.del(k, c);
-        if (k != null && v != null && !this.has(k, v, c)) {
-            if (!frappe.E.isInteger(c)) c = 0;
-            if (!this._d[k]) {
-                this._d[k] = [];
-                this._l++;
-            }
-            this._d[k][c] = v;
-        }
-        return this;
-    }
-    del(k, c) {
-        if (k == null) return this;
-        if (c == null) {
-            if (!!this._d[k]) this._l--;
-            delete this._d[k];
-            return this;
-        }
-        if (!frappe.E.isInteger(c)) c = 0;
-        if (!!this._d[k] && this._d[k].length > c)
-            this._d[k][c] = null;
-        return this;
-    }
-    col(c) {
-        if (!frappe.E.isInteger(c)) c = 0;
-        let ret = [];
-        frappe.E.each(this._d, function(v) {
-            if (v[c] != null) ret.push(v[c]);
-        });
-        return ret;
-    }
-    inCol(v, c) {
-        if (!frappe.E.isInteger(c)) c = 0;
-        let ret = false;
-        if (v != null)
-            frappe.E.each(this._d, function(y) {
-                if (y[c] === v) {
-                    ret = true;
-                    return 1;
-                }
-            });
-        return ret;
-    }
-    eqKey(v, c) {
-        if (!frappe.E.isInteger(c)) c = 0;
-        return frappe.E.each(this._d, function(y, k) {
-            if (y[c] === v) return k;
-        });
-    }
-    eqRow(v, c) {
-        v = this.eqKey(v, c);
-        return v != null ? this._d[v] : null;
-    }
-    copy() {
-        let list = new TableArray();
-        frappe.E.each(this._d, function(v, k) {
-            list._d[k] = v.slice();
-        });
-        return list;
-    }
-    clear() {
-        this._d = {};
-        this._l = 0;
-        return this;
-    }
-}
-
-class FormDialog {
-    constructor(title, indicator) {
-        this._title = title;
-        this._indicator = indicator;
-        
-        this._doctype = null;
-        
-        this._add_fields = [];
-        this._remove_fields = [];
-        this._add_properties = {};
-        this._replace_properties = {};
-        this._remove_properties = {};
-        this._sort_fields = null;
-        this._primary_action = null;
-        this._secondary_action = null;
-        this._custom_actions = [];
-        
-        this._setup = false;
-        this._on_setup = null;
-        
-        this._fields = null;
-        this._fields_by_ref = [];
-        this._fields_by_name = {};
-        
-        this._ready = false;
-        this.__on_ready = [];
-        this.__on_clear = [];
-        this._dialog = null;
-        this._custom_btns = {};
-        this._extends = [];
-    }
-    loadDoctype(dt) {
-        this._doctype = dt;
-        frappe.E.runTask(function() {
-            let meta = frappe.get_meta(this._doctype);
-            if (meta && frappe.E.isArray(meta.fields)) {
-                var fields = frappe.E.clone(meta.fields),
-                invalid = false;
-                frappe.E.each(fields, function(f) {
-                    if (f.fieldtype.includes('Table') && !frappe.E.isArray(f.fields)) {
-                        let table_meta = frappe.get_meta(f.options);
-                        if (table_meta && frappe.E.isArray(table_meta.fields)) {
-                            f.fields = table_meta.fields;
-                        } else {
-                            invalid = true;
-                            return false;
-                        }
-                    }
-                });
-                if (!invalid) {
-                    this._setFields(fields);
-                    return;
-                }
-            }
-            frappe.E.call(
-                'get_docfields',
-                {doctype: this._doctype},
-                frappe.E.fn(function(fields) {
-                    if (!frappe.E.isArray(fields)) {
-                        frappe.E.error('Unable to get the fields of {0}.', [this._doctype]);
-                        return;
-                    }
-                    this._setFields(fields);
-                }, this)
-            );
-        }, this);
-        return this;
-    }
-    setTitle(value) {
-        if (!this._dialog) this._title = value;
-        else this._dialog.set_title(__(text));
-        return this;
-    }
-    setIndicator(color) {
-        if (!this._dialog) this._indicator = color;
-        else {
-            this._dialog.indicator = color;
-            this._dialog.set_indicator();
-        }
-        return this;
-    }
-    addField(field, position) {
-        this._add_fields.push([field, position]);
-        return this;
-    }
-    removeField(name) {
-        this._remove_fields.push(name);
-        return this;
-    }
-    removeFields() {
-        frappe.E.merge(this._remove_fields, arguments);
-        return this;
-    }
-    setFieldProperty(name, key, value) {
-        if (this._dialog) this._dialog.set_df_property(name, key, value);
-        else {
-            this._add_properties[name] = this._add_properties[name] || {};
-            this._add_properties[name][key] = value;
-        }
-        return this;
-    }
-    setFieldProperties(name, props) {
-        frappe.E.each(props, function(v, k) {
-            this.setFieldProperty(name, k, v);
-        }, this);
-        return this;
-    }
-    setFieldsProperties(data) {
-        frappe.E.each(data, function(props, name) {
-            this.setFieldProperties(name, props);
-        }, this);
-        return this;
-    }
-    replaceProperties(data) {
-        frappe.E.merge(this._replace_properties, data);
-        return this;
-    }
-    removeProperties() {
-        frappe.E.merge(this._remove_properties, arguments);
-        return this;
-    }
-    sortFields(fields) {
-        this._sort_fields = fields;
-        return this;
-    }
-    setPrimaryAction(label, callback) {
-        this._primary_action = [label, callback];
-        return this;
-    }
-    setSecondaryAction(label, callback) {
-        this._secondary_action = [label, callback];
-        return this;
-    }
-    addCustomAction(label, callback, type, position) {
-        this._custom_actions.push([label, callback, type, position]);
-        return this;
-    }
-    _setFields(fields) {
-        this._fields = fields;
-        this._fields.unshift({
-            fieldname: 'error_message',
-            fieldtype: 'HTML',
-            read_only: 1,
-            hidden: 1
-        });
-        this._setup = true;
-        if (this._on_setup) {
-            this[this._on_setup]();
-            this._on_setup = null;
-        }
-    }
-    _setupFields() {
-        if (!this.fields) this._setFields([]);
-        if (this._add_fields.length) {
-            frappe.E.each(this._add_fields, function(d) {
-                let field = d[0];
-                if (d[1]) this._fields.splice(1, 0, field);
-                else this._fields.push(field);
-            }, this);
-            frappe.E.clear(this._add_fields);
-        }
-        if (this._remove_fields.length) {
-            this._fields = frappe.E.filter(this._fields, frappe.E.fn(function(f) {
-                return !frappe.E.contains(this._remove_fields, f.fieldname);
-            }, this));
-            frappe.E.clear(this._remove_fields);
-        }
-        this._prepareFields(this._fields);
-        if (Object.keys(this._add_properties).length) {
-            frappe.E.each(this._add_properties, function(prop, name) {
-                var field = this.getFieldByName(name);
-                if (field && frappe.E.isPlainObject(prop)) {
-                    frappe.E.each(prop, function(v, k) {
-                        if (frappe.E.isFunction(v)) v = frappe.E.fn(v, this);
-                        field[k] = v;
-                    }, this);
-                }
-            }, this);
-            frappe.E.clear(this._add_properties);
-        }
-        if (Object.keys(this._replace_properties).length) {
-            frappe.E.each(this._replace_properties, function(v, k) {
-                if (frappe.E.isArray(v)) {
-                    frappe.E.each(this._fields_by_ref, function(f) {
-                        if (f[k] != null) {
-                            delete f[k];
-                            f[v[0]] = v[1];
-                        }
-                    });
-                    return;
-                }
-                var f = this.getFieldByName(k);
-                if (!f) return;
-                frappe.E.each(v, function(y, x) {
-                    delete f[x];
-                    f[y[0]] = y[1];
-                });
-            }, this);
-            frappe.E.clear(this._replace_properties);
-        }
-        if (this._remove_properties.length) {
-            frappe.E.each(this._fields_by_ref, function(f) {
-                frappe.E.each(this._remove_properties, function(k) { delete f[k]; });
-            }, this);
-            frappe.E.clear(this._remove_properties);
-        }
-        if (this._sort_fields) {
-            this._fields.sort(frappe.E.fn(function(a, b) {
-                return this._sort_fields.indexOf(a.fieldname) - this._sort_fields.indexOf(b.fieldname);
-            }, this));
-            frappe.E.clear(this._sort_fields);
-        }
-    }
-    _prepareFields(fields, parent_name) {
-        frappe.E.each(fields, function(f) {
-            let name = (parent_name ? parent_name + '.' : '') + f.fieldname;
-            this._fields_by_name[name] = this._fields_by_ref.length;
-            this._fields_by_ref.push(f);
-            if (f.fields) {
-                delete f.options;
-                f.editable_grid = 1;
-                this._prepareFields(f.fields, name);
-            }
-        }, this);
-    }
-    getFieldByName(name) {
-        let idx = this._fields_by_name[name];
-        return (idx != null && this._fields_by_ref[idx]) || null;
-    }
-    build() {
-        if (!this._setup) {
-            this._on_setup = 'build';
-            return this;
-        }
-        if (this._ready) return this;
-        this._setupFields();
-        this._dialog = new frappe.ui.Dialog({
-            title: __(this._title),
-            indicator: this._indicator || 'green',
-            fields: this._fields,
-        });
-        let f = this.getField('error_message');
-        if (f && f.$wrapper) {
-            f.$wrapper.append(`<div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong class="error-message"></strong>
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>`);
-            this.$alert = f.$wrapper.find('.alert');
-            this.$error = this.$alert.find('.error-message');
-            this.$alert.alert();
-        }
-        if (this._primary_action) {
-            this._dialog.set_primary_action(
-                __(this._primary_action[0]),
-                frappe.E.fn(this._primary_action[1], this)
-            );
-            this._primary_action = null;
-        }
-        if (this._secondary_action) {
-            this._dialog.set_secondary_action_label(__(this._secondary_action[0]));
-            this._dialog.set_secondary_action(frappe.E.fn(this._secondary_action[1], this));
-            this._secondary_action = null;
-        }
-        if (this._custom_actions.length) {
-            var pos = ['end', 'start', 'center'];
-            frappe.E.each(this._custom_actions, function(v) {
-                let label = v[0],
-                callback = v[1],
-                type = v[2],
-                position = v[3];
-                if (type && frappe.E.contains(pos, type)) {
-                    position = type;
-                    type = null;
-                }
-                type = type || 'primary';
-                position = position || pos[0];
-                let pidx = pos.indexOf(position),
-                btn = $(`<button type='button' class='btn btn-${type} btn-sm'>
-                    ${__(label)}
-                </button>`),
-                primary = this._dialog.get_primary_btn(),
-                key = frappe.scrub(label);
-                key = key.replace(/\&/g, '_');
-                this._custom_btns[key] = btn;
-                if (pidx < 1) primary.parent().append(btn);
-                else if (pidx > 1) primary.after(btn);
-                else if (pidx > 0) primary.parent().prepend(btn);
-                btn.on('click', frappe.E.fn(callback, this));
-            }, this);
-            frappe.E.clear(this._custom_actions);
-        }
-        this._ready = true;
-        if (this.__on_ready.length) {
-            frappe.E.runTasks(this.__on_ready)
-            .finally(frappe.E.fn(function() { frappe.E.clear(this.__on_ready); }, this));
-        }
-        return this;
-    }
-    _onReady(fn, args) {
-        this.__on_ready.push(frappe.E.fn(function() {
-            frappe.E.fnCall(this[fn], args, this);
+    off(event, fn) {
+        if (!this.$isStr(event) || !event.length) return this;
+        if (!this.$isFunc(fn)) fn = null;
+        event.split(' ').forEach($.proxy(function(e) {
+            if (this._events.list[e]) this._event_remover(e, fn);
         }, this));
         return this;
     }
-    show() {
-        if (!this._ready) return this._onReady('show');
-        this._dialog.show();
+    emit(event, args) {
+        if (!this.$isStr(event) || !event.length) return this;
+        args = this.$isArr(args) ? args : (!this.$isVoid(args) ? [args] : null);
+        event.split(' ').forEach($.proxy(function(e) {
+            if (!this._events.list[e]) return;
+            this._emit_looper(e, args);
+            this._events_clear(e);
+        }, this));
         return this;
     }
-    hide() {
-        if (!this._ready) return this._onReady('hide');
-        this._dialog.hide();
-        this.clear();
+    _event_adder(event, fn, _once, _realtime) {
+        if (!this.$isStr(event) || !event.length || !this.$isFunc(fn)) return this;
+        event.split(' ').forEach($.proxy(function(e) {
+            if (e === 'ready' && this.is_ready) return fn.call(this);
+            if (!this._events.list[e]) {
+                this._events.list[e] = [];
+                if (e.indexOf('exp_') >= 0 || _realtime) {
+                    this._events.real[e] = $.proxy(function(ret) {
+                        if (ret && this.$isDataObj(ret)) ret = ret.message || ret;
+                        this.emit(e, [ret]);
+                    }, this);
+                    frappe.realtime.on(e, this._events.real[e]);
+                }
+            }
+            this._events.list[e].push({f: fn, fn: $.proxy(fn, this), o: _once});
+        }, this));
         return this;
     }
-    getField(name) {
-        return (this._dialog && this._dialog.get_field(name)) || null;
+    _event_remover(event, fn) {
+        if (fn)
+            this._events.list[event] = this._events.list[event].filter(function(e) {
+                return e.f !== fn;
+            });
+        this._events_clear(event, !fn);
     }
-    getValues() {
-        return (this._dialog && this._dialog.getValues()) || null;
+    _events_clear(event, all) {
+        if (!all && this._events.list[event].length) return;
+        delete this._events.list[event];
+        if (!this._events.real[event]) return;
+        frappe.realtime.off(event, this._events.real[event]);
+        delete this._events.real[event];
     }
-    getValue(name) {
-        return (this._dialog && this._dialog.get_value(name)) || null;
+    _emit_looper(e, args) {
+        this._events.list[e] = this._events.list[e].filter(function(ev) {
+            if (!args) ev.fn();
+            else ev.fn.apply(null, args);
+            return !ev.o;
+        });
     }
-    setValue(name, value) {
-        if (!this._ready) return this._onReady('setValue', arguments);
-        this._dialog.set_value(name, value);
-        return this;
-    }
-    setValues(values) {
-        if (!this._ready) return this._onReady('setValues', arguments);
-        this._dialog.set_values(values);
-        return this;
-    }
-    getRow(table, idx) {
-        let t = this.getField(table);
-        return t && t.grid && t.grid.get_row ? t.get_row(idx) : null;
-    }
-    getRowName(table, idx) {
-        let f = this.getRow(table, idx);
-        return (f && f.doc && (f.doc.name || f.doc.idx)) || null;
-    }
-    getRowField(table, idx, name) {
-        let f = this.getRow(table, idx);
-        return f && f.get_field ? f.get_field(name) : null;
-    }
-    getRowFieldValue(table, idx, name) {
-        let f = this.getRowField(table, idx, name);
-        return f && f.get_value && f.get_value();
-    }
-    setRowFieldValue(table, idx, name, val) {
-        let f = this.getRowField(table, idx, name);
-        if (f && f.set_value) f.set_value(val);
-        return this;
-    }
-    setInvalid(name, error) {
-        this.setFieldProperty(name, 'invalid', 1);
-        let f = this.getField(name);
-        if (f && f.set_invalid) f.set_invalid();
-        if (frappe.E.isString(error) && f && f.set_new_description) f.set_new_description(error);
-        return this;
-    }
-    setRowFieldInvalid(table, idx, name, error) {
-        let f = this.getRowField(table, idx, name);
-        if (f && f.df && !f.df.invalid) {
-            f.df.invalid = 1;
-            if (f.set_invalid) f.set_invalid();
-            if (frappe.E.isString(error) && f.set_new_description) f.set_new_description(error);
+    
+    // form
+    setup_form(frm, workflow) {
+        try {
+            if (!this.is_enabled) {
+                frm._app_disabled = true;
+                if (!frm._form_disabled) {
+                    this.disable_form(frm, workflow);
+                    frm.set_intro(__('Expenses app is disabled.'), 'red');
+                }
+                frm._form_disabled = true;
+            } else {
+                frm._app_disabled = false;
+                if (frm._form_disabled) {
+                    this.enable_form(frm, workflow);
+                    frm.set_intro();
+                }
+                frm._form_disabled = false;
+            }
+        } catch(e) {
+            this._error('Setup form', e.message, e.stack);
+        } finally {
+            this.has_error = false;
         }
         return this;
     }
-    setValid(name) {
-        this.setFieldProperty(name, 'invalid', 0);
-        let f = this.getField(name);
-        if (f && f.set_invalid) f.set_invalid();
-        if (f && f.set_description) f.set_description();
-        return this;
-    }
-    setRowFieldValid(table, idx, name) {
-        let f = this.getRowField(table, idx, name);
-        if (f && f.df && f.df.invalid) {
-            f.df.invalid = 0;
-            if (f.set_invalid) f.set_invalid();
-            if (f.set_description) f.set_description();
+    enable_form(frm, workflow) {
+        try {
+            var fields = null;
+            if (this.$isArr(frm._disabled_fields) && frm._disabled_fields.length)
+                fields = frm._disabled_fields.splice(0, frm._disabled_fields.length);
+            frm.fields.forEach(function(field) {
+                if (!fields || fields.indexOf(field.df.fieldname) >= 0)
+                    frm.set_df_property(field.df.fieldname, 'read_only', '0');
+            });
+            if (
+                !workflow || frm.doc.__islocal
+                || (workflow && !frm.states.get_state())
+            ) frm.enable_save();
+            else frm.page.show_actions_menu();
+        } catch(e) {
+            this._error('Enable form', e.message, e.stack);
+        } finally {
+            this.has_error = false;
         }
         return this;
     }
-    getAllFields() {
-        return this._dialog ? this._dialog.fields_dict : {};
-    }
-    enableAllFields() {
-        if (!this._ready) return this._onReady('enableAllFields');
-        frappe.E.each(this.getAllFields(), function(f) {
-            this.setFieldProperty(f.df.fieldname, 'read_only', 0);
-        }, this);
-        return this;
-    }
-    disableAllFields() {
-        if (!this._ready) return this._onReady('disableAllFields');
-        frappe.E.each(this.getAllFields(), function(f) {
-            this.setFieldProperty(f.df.fieldname, 'read_only', 1);
-        }, this);
-        return this;
-    }
-    showError(txt) {
-        if (this.$alert && this.$error) {
-            this.$error.html(txt);
-            this.$alert.alert('show');
-            frappe.ui.scroll(this.$alert);
-        }
-        this.setFieldProperty('error_message', 'hidden', 0);
-        window.setTimeout(frappe.E.fn(function() { this.hide_error(); }, this), 3000);
-    }
-    hideError() {
-        if (this.$alert && this.$error) {
-            this.$alert.alert('close');
-            this.$error.html('');
-        }
-        this.setFieldProperty('error_message', 'hidden', 1);
-    }
-    onClear(fn) {
-        this.__on_clear.push(frappe.E.fn(fn, this));
-        return this;
-    }
-    clear() {
-        if (!this._ready) return this._onReady('clear');
-        this._dialog.clear();
-        frappe.E.runTasks(this.__on_clear)
-        .finally(frappe.E.fn(function() { frappe.E.clear(this.__on_clear); }, this));
-        return this;
-    }
-    extend(key, val) {
-        if (frappe.E.isPlainObject(key)) {
-            frappe.E.each(key, function(v, k) {
-                this.extend(k, v);
-            }, this);
-            return this;
-        }
-        if (frappe.E.isString(key) && !frappe.E.has(this._extends, key)) {
-            this[key] = frappe.E.isFunction(val) ? frappe.E.fn(val, this) : val;
-            this._extends.push(key);
+    disable_form(frm, workflow) {
+        try {
+            if (!this.$isArr(frm._disabled_fields))
+                frm._disabled_fields = [];
+            frm.fields.forEach(function(field) {
+                if (!cint(field.df.read_only)) {
+                    frm._disabled_fields.push(field.df.fieldname);
+                    frm.set_df_property(field.df.fieldname, 'read_only', 1);
+                }
+            });
+            if (
+                !workflow || frm.doc.__islocal
+                || (workflow && !frm.states.get_state())
+            ) frm.disable_save();
+            else frm.page.hide_actions_menu();
+        } catch(e) {
+            this._error('Disable form', e.message, e.stack);
+        } finally {
+            this.has_error = false;
         }
         return this;
     }
-    unset() {
-        frappe.E.each(arguments, function(key) {
-            if (!frappe.E.has(this._extends, key)) return;
-            delete this[key];
-            let idx = this._extends.indexOf(key);
-            if (idx >= 0) this._extends.splice(idx, 1);
-        }, this);
+    
+    get_field(frm, key, cdn, fkey, form) {
+        let field = frm.get_field(key);
+        if (field && field.grid && cdn && fkey) {
+            let row = field.grid.get_row(cdn);
+            if (!row) return;
+            field = row.get_field(fkey);
+            if (
+                form && row.grid_form
+                && row.grid_form.fields_dict
+            ) field = row.grid_form.fields_dict[fkey] || field;
+        }
+        return field;
+    }
+    get_grid(frm, key) {
+        let field = frm.get_field(key);
+        if (field) return field.grid;
+    }
+    get_row(frm, key, cdn) {
+        let grid = this.get_grid(frm, key);
+        if (grid) return grid.get_row(cdn);
+    }
+    focus(frm, key, cdn, fkey, form) {
+        let field = this.get_field(frm, key, cdn, fkey, form);
+        if (field && field.$input) field.$input.focus();
+        if (!field || !cdn) return this;
+        let row = this.get_row(frm, key, cdn);
+        if (row && row.row && form) {
+            field = row.row.find('[data-fieldname="' + fkey +'"]');
+            if (field.length) field.first().focus();
+            else {
+                row.row.find('input[type="Text"],textarea,select')
+                    .filter(':visible:first').focus();
+            }
+        } else {
+            field = frm.get_field(key);
+            if (field.grid.wrapper)
+                field.grid.wrapper.focus();
+        }
         return this;
     }
-    reset() {
-        this.clear();
-        frappe.E.each(this._extends, function(key) {
-            delete this[key];
-        }, this);
-        frappe.E.clear(this._extends);
+    field_desc(frm, key, desc, cdn, fkey, form) {
+        let field = this.get_field(frm, key, cdn, fkey, form);
+        if (field && field.set_new_description) {
+            if (desc) field.set_new_description(__(desc));
+            if (field.toggle_description)
+                field.toggle_description(!!desc);
+        }
         return this;
+    }
+    invalid_field(frm, key, err, cdn, fkey, form) {
+        let field = this.get_field(frm, key, cdn, fkey, form);
+        if (!field) return this;
+        let change = 0;
+        if (field.df && field.set_invalid) {
+            field.df.invalid = 1;
+            field.set_invalid();
+            change++;
+        }
+        if (err && field.set_new_description) {
+            field.set_new_description(__(err));
+            if (field.toggle_description)
+                field.toggle_description(true);
+            change++;
+        }
+        if (change) frm.refresh_field(key);
+        return this;
+    }
+    valid_field(frm, key, cdn, fkey, form) {
+        let field = this.get_field(frm, key, cdn, fkey, form);
+        if (!field) return this;
+        let change = 0;
+        if (field.df && field.set_invalid) {
+            field.df.invalid = 0;
+            field.set_invalid();
+            change++;
+        }
+        if (field.set_description) {
+            field.set_description();
+            if (
+                field.toggle_description
+                && (!field.df || !cstr(field.df.description).length)
+            ) field.toggle_description(false);
+            change++;
+        }
+        if (change) frm.refresh_field(key);
+        return this;
+    }
+    
+    // cache
+    set_cache(key, val) {
+        try {
+            sessionStorage.setItem('exp_' + key, JSON.stringify({___: val}));
+        } catch(_) {}
+        return this;
+    }
+    get_cache(key) {
+        try {
+            let val = sessionStorage.getItem('exp_' + key);
+            val = JSON.parse(val);
+            if (val.___ != null) val = val.___;
+            return val;
+        } catch(_) {}
+        return;
+    }
+    pop_cache(key) {
+        let val = this.get_cache(key);
+        this.del_cache(key);
+        return val;
+    }
+    del_cache(key) {
+        try {
+            sessionStorage.removeItem('exp_' + key);
+        } catch(_) {}
+        return this;
+    }
+    
+    table(cols) {
+        return new ExpensesTable(cols);
+    }
+    
+    // utility
+    $type(v) {
+        let t = v == null ? (v === void 0 ? 'Undefined' : 'Null')
+            : Object.prototype.toString.call(v).slice(8, -1);
+        return t === 'Number' && isNaN(v) ? 'NaN' : t;
+    }
+    $isStr(v) { return this.$type(v) === 'String'; }
+    $isVoid(v) { return this.$type(v) === 'Undefined'; }
+    $isFunc(v) { return typeof v === 'function' || /(Function|^Proxy)$/.test(this.$type(v)); }
+    $isArr(v) { return $.isArray(v); }
+    $isDataObj(v) { return $.isPlainObject(v); }
+    $isEmptyObj(v) { return $.isEmptyObject(v); }
+    $toArr(v, s, e) { return Array.prototype.slice.call(v, s, e); }
+    
+    
+    _alert(title, msg, args, def_title, indicator, fatal) {
+        if (this.$isArr(msg)) {
+            args = msg;
+            msg = null;
+        }
+        if (!msg) {
+            msg = title;
+            title = null;
+        }
+        if (msg && !this.$isStr(msg)) {
+            if (this.$isArr(msg))
+                try { msg = JSON.stringify(msg); } catch(_) { msg = null; }
+            else if (typeof msg === 'object')
+                try { msg = msg.message; } catch(_) { msg = null; }
+            else
+                try { msg = String(msg); } catch(_) { msg = null; }
+        }
+        if (!msg || !this.$isStr(msg)) msg = __('Invalid message');
+        else if (args) msg = __(msg, args);
+        else msg = __(msg);
+        if (!title || !this.$isStr(title)) title = def_title;
+        let data = {
+            title: '[Expenses]: ' + __(title),
+            indicator: indicator,
+            message: msg,
+        };
+        if (!fatal) frappe.msgprint(data);
+        else {
+            this.has_error = true;
+            frappe.throw(data);
+        }
+        return this;
+    }
+    error(title, msg, args) {
+        return this._alert(title, msg, args, 'Error', 'red');
+    }
+    info(title, msg, args) {
+        return this._alert(title, msg, args, 'Info', 'blue');
+    }
+    fatal(title, msg, args) {
+        return this._alert(title, msg, args, 'Error', 'red', true);
+    }
+    
+    _console(fn, args) {
+        args = this.$toArr(args);
+        let prefix = '[Expenses]';
+        if (!this.$isStr(args[0])) args.unshift(prefix);
+        else args[0] = prefix + ' ' + args[0];
+        console[fn].apply(null, args);
+        return this;
+    }
+    _log() {
+        return this._console('log', arguments);
+    }
+    _error() {
+        return this._console('error', arguments);
     }
 }
 
-frappe.Expenses = function() {
-    if (frappe.E instanceof Expenses) return frappe.E;
-    frappe.E = new Expenses();
-    frappe.E.extend('formDialog', function(title, indicator) {
-        return new FormDialog(title, indicator);
-    });
-    frappe.E.extend('tableArray', function() {
-        return new TableArray();
-    });
-    return frappe.E;
+
+class ExpensesTable {
+    constructor(n) {
+        this._c = {0: []};
+        
+        n = n || 1;
+        for (let i = 0; i < n; i++) this._c[i + 1] = [];
+    }
+    get length() { return this._c[0].length; }
+    idx(v, i) {
+        return this._c[i || 0].indexOf(v);
+    }
+    has(v, i) {
+        return this.idx(v, i) >= 0;
+    }
+    add() {
+        let i = this.idx(arguments[0]);
+        if (i >= 0) {
+            for (let k in this._c) {
+                if (k !== 0) this._c[k][i] = arguments[k];
+            }
+        } else {
+            for (let i = 0, l = arguments.length; i < l; i++) {
+                if (arguments[i] != null) this._c[i].push(arguments[i]);
+            }
+        }
+        return this;
+    }
+    del(v, i) {
+        i = this.idx(v, i);
+        if (i >= 0) {
+            for (let k in this._c) this._c[k].splice(i, 1);
+        }
+        return this;
+    }
+    col(i) {
+        return this._c[i];
+    }
+    row(v, i) {
+        i = this.idx(v, i);
+        if (i < 0) return null;
+        let r = [];
+        for (let k in this._c) r[k] = this._c[k][i];
+        return r;
+    }
+    clear() {
+        for (let k in this._c)
+            this._c[k].splice(0, this._c[k].length);
+    }
+}
+
+
+frappe.exp = function(opts) {
+    if (!frappe.exp._init) frappe.exp._init = new Expenses(opts);
+    else frappe.exp._init.set_options(opts);
+    return frappe.exp._init;
 };

@@ -1,5 +1,5 @@
 /*
-*  Expenses © 2023
+*  Expenses © 2024
 *  Author:  Ameen Ahmed
 *  Company: Level Up Marketing & Software Development Services
 *  Licence: Please refer to LICENSE file
@@ -8,99 +8,75 @@
 
 frappe.ui.form.on('Expenses Request', {
     setup: function(frm) {
-        frappe.Expenses();
-        frappe.E.form(frm);
-        frm.X = {
-            company: frm.doc.company,
-            expenses_ready: 0,
+        frappe.exp()
+            .on('ready change', function() {
+                this.setup_form(frm);
+            })
+            .on('exp_expenses_request_changed', function(ret) {
+                if (!ret) return;
+                if (
+                    cstr(ret.action) === 'change'
+                    && cstr(ret.request) === cstr(frm.doc.name)
+                ) {
+                    let message = __('The expenses request data has changed. Reload to update the form.');
+                    if (frm.is_dirty())
+                        message = message + '<br/><strong class="text-danger">'
+                            + __('Warning: All the unsaved changes will be discarded.')
+                        + '</strong>';
+                    
+                    frappe.warn(
+                        __('Expenses Request Changed'),
+                        message,
+                        function() { frm.reload_doc(); },
+                        __('Reload')
+                    );
+                } else if (
+                    cstr(ret.action) === 'trash'
+                    && cstr(ret.request) === cstr(frm.doc.name)
+                ) {
+                    window.setTimeout(function() {
+                        frappe.set_route('List', 'Expenses Request');
+                    }, 6000);
+                    frappe.throw({
+                        title: __('Expenses Request Removed'),
+                        message: __('The expenses request has been removed. You will be redirected automatically back to the List View.'),
+                    });
+                }
+            });
+        frm._request = {
+            is_ready: false,
+            is_moderator: false,
+            is_reviewer: false,
+            toolbar_ready: false,
+            company: null,
             data: {},
-            expenses_virtual_fields: [
+            details_dt: 'Expenses Request Details',
+            virtual_fields: [
                 'expense_item', 'total', 'is_advance', 'required_by'
             ],
             set_expense_data: function(cdn) {
-                let row = locals['Expenses Request Details'][cdn],
-                data = frm.X.data[row.expense];
-                frappe.E.each(
-                    frm.X.expenses_virtual_fields,
-                    function(k) { row[k] = data[k]; }
-                );
-                if (data._attachments) {
-                    frappe.E.getRowField('expenses', cdn, 'attachments').html(data.attachments);
-                }
-                frm.X.update_row_button(cdn);
-            },
-            update_expenses_data: function() {
-                var cdns = {};
-                let names = [],
-                is_changed = 0;
-                frappe.E.each(frm.doc.expenses, function(v) {
-                    if (v.total.length) return;
-                    is_changed = 1;
-                    if (frm.X.data[v.expense]) {
-                        frm.X.set_expense_data(v.name);
-                        return;
+                let row = locals[frm._request.details_dt][cdn],
+                data = frm._request.data[cstr(row.expense)],
+                changed = 0;
+                frm._request.virtual_fields.forEach(function(k) {
+                    if (cstr(row[k]) !== cstr(data[k])) {
+                        row[k] = cstr(data[k]);
+                        changed = 1;
                     }
-                    cdns[v.expense] = v.name;
-                    names.push(v.expense);
                 });
-                if (!names.length) {
-                    if (is_changed) frappe.E.refreshField('expenses');
-                    return;
-                }
-                frappe.E.call(
-                    'get_expenses_data',
-                    {expenses: names},
-                    function(ret) {
-                        frappe.E.each(ret, function(v) {
-                            v.total = format_currency(v.total, v.currency);
-                            v._is_advance = v.is_advance;
-                            v.is_advance = __(cint(v.is_advance) ? 'Yes' : 'No');
-                            
-                            if (v.attachments.length) {
-                                v._attachments = frappe.E.clone(v.attachments);
-                                let attachments = [];
-                                frappe.E.each(v.attachments, function(a) {
-                                    let name = a.file.split('/').pop();
-                                    attachments.push(`<tr>
-                                        <td scope="row" class="fit text-left">${name}</td>
-                                        <td class="text-justify">${a.description}</td>
-                                        <td class="fit">
-                                            <a class="btn btn-sm btn-info" target="_blank" href="${a.file}">
-                                                <span class="fa fa-link fa-fw"></span>
-                                            </a>
-                                        </td>
-                                    </tr>`);
-                                });
-                                v.attachments = `
-                                    <label class="control-label">${__('Attachments')}</label>
-                                    <table class="table table-bordered table-condensed expenses-attachments-table">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col" class="fit font-weight-bold text-left">${__('File')}</th>
-                                                <th scope="col" class="font-weight-bold">${__('Description')}</th>
-                                                <th scope="col" class="fit font-weight-bold">${__('Actions')}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${attachments.join("\n")}
-                                        </tbody>
-                                    </table>
-                                `;
-                            }
-                            
-                            frm.X.data[v.name] = v;
-                            frm.X.set_expense_data(cdns[v.name]);
-                        });
-                        frappe.E.refreshField('expenses');
+                if (data._attachments) {
+                    let field = frappe.exp().get_field(frm, 'expenses', cdn, 'attachments');
+                    if (!field.$wrapper.html().length) {
+                        field.html(data.attachments);
+                        changed = 1;
                     }
-                );
+                }
+                frm._request.update_row_button(cdn);
+                return changed;
             },
             update_row_button: function(cdn) {
-                let row = frappe.E.getRow('expenses', cdn);
-                if (
-                    row.open_form_button
-                    && row.open_form_button.children
-                ) {
+                let row = frappe.exp().get_row(frm, 'expenses', cdn);
+                if (row.open_form_button && row.open_form_button.children) {
                     let children = row.open_form_button.children();
                     $(children[0]).html(frappe.utils.icon('solid-info', 'xs'));
                     $(children[1]).html(' ' + __("Info") + ' ');
@@ -109,274 +85,377 @@ frappe.ui.form.on('Expenses Request', {
         };
     },
     onload: function(frm) {
-        if (frm.is_new()) {
-            let req = frappe.E.popCache('make-expenses-request');
+        frappe.exp().request(
+            'request_form_setup',
+            null,
+            function(ret) {
+                if (!this.$isDataObj(ret)) return;
+                frm._request.is_moderator = !!ret.is_moderator;
+                frm._request.is_reviewer = !!ret.is_reviewer;
+                if (frm._request.is_moderator) {
+                    frm.set_df_property('posting_date', 'bold', 1);
+                    frm.toggle_reqd('posting_date', 1);
+                    frm.toggle_enable('posting_date', 1);
+                } else if (!cstr(frm.doc.posting_date).length) {
+                    frm.set_value(
+                        'posting_date',
+                        moment().format(frappe.defaultDateFormat)
+                    );
+                }
+            }
+        );
+        frm._request.company = cstr(frm.doc.company);
+        if (!!frm.is_new()) {
+            let req = frappe.exp().pop_cache('create-expenses-request');
             if (
-                req && frappe.E.isPlainObject(req)
-                && req.company && frappe.E.isString(req.company)
-                && frappe.E.isArray(req.expenses) && req.expenses.length
+                frappe.exp().$isDataObj(req)
+                && frappe.exp().$isStr(req.company) && req.company.length
+                && frappe.exp().$isArr(req.expenses) && req.expenses.length
             ) {
-                frm.set_value('company', req.company);
-                frappe.E.each(req.expenses, function(v) {
-                    if (v && frappe.E.isString(v)) frm.add_child('expenses', {expense: v});
+                frm.set_value('company', cstr(req.company));
+                req.expenses.forEach(function(v) {
+                    if (cstr(v).length) frm.add_child('expenses', {expense: cstr(v)});
                 });
-                frm.X.update_expenses_data();
+                frm.trigger('update_expenses_data');
             }
             req = null;
-        }
-        if (frm.is_new() || frm.doc.status === 'Draft') {
-            frm.set_query('company', {filters: {is_group: 0}});
+            
+            let status = cstr(frm.doc.status);
+            if (!status.length || status === 'Draft')
+                frm.set_query('company', {filters: {is_group: 0}});
         }
     },
     refresh: function(frm) {
-        if (!frm.X.expenses_ready) {
-            frm.X.expenses_ready = 1;
-            let wrapper = frm.get_field('expenses').grid.wrapper;
-            if (frm.doc.status === 'Draft') {
-                wrapper.find('.grid-add-multiple-rows').addClass('hidden');
-                wrapper.find('.grid-download').addClass('hidden');
-                wrapper.find('.grid-upload').addClass('hidden');
-                wrapper
-                    .find('.grid-add-row')
-                    .off('click')
-                    .on('click', function() {
-                        frm.trigger('toggle_add_expenses');
-                    });
-            } else {
-                wrapper.find('.grid-footer').toggle(false);
-                wrapper.find('.grid-row-check').toggle(false);
-            }
-        }
+        frm.trigger('setup_toolbar');
+        if (frm._request.is_ready) return;
+        frm._request.is_ready = true;
+        let status = cstr(frm.doc.status),
+        wrapper = frm.get_field('expenses').grid.wrapper;
         
-        frm.trigger('toggle_make_entry_button');
-        frm.trigger('toggle_appeal_button');
+        if (!status.length || status === 'Draft') {
+            wrapper.find('.grid-add-multiple-rows').addClass('hide hidden');
+            wrapper.find('.grid-download').addClass('hide hidden');
+            wrapper.find('.grid-upload').addClass('hide hidden');
+            wrapper.find('.grid-add-row')
+                .off('click')
+                .on('click', function() {
+                    frm.trigger('toggle_add_expenses');
+                });
+        } else {
+            frm.trigger('destroy_add_expenses');
+            wrapper.find('.grid-add-multiple-rows').removeClass('hide hidden');
+            wrapper.find('.grid-download').removeClass('hide hidden');
+            wrapper.find('.grid-upload').removeClass('hide hidden');
+            wrapper.find('.grid-add-row').off('click');
+            wrapper.find('.grid-footer').toggle(false);
+            wrapper.find('.grid-row-check').toggle(false);
+        }
     },
     company: function(frm) {
-        let company = frm.doc.company;
-        if (company !== frm.X.company) {
-            frm.X.company = company;
-            if (frm.doc.expenses.length) frappe.E.clearTable('expenses');
+        let company = cstr(frm.doc.company);
+        if (company !== frm._request.company) {
+            frm._request.company = company;
+            if ((frm.doc.expenses || []).length) {
+                frm.set_value('expenses', []);
+                frm.refresh_field('expenses');
+            }
         }
     },
-    toggle_company_desc: function(frm) {
-        let desc = frm.doc.expenses.length
-            ? 'Changing the company will clear the expense table'
-            : '',
-        field = frm.get_field('company');
-        field.set_new_description(__(desc));
-        field.toggle_description(!!frm.doc.expenses.length);
+    posting_date: function(frm) {
+        let val = cstr(frm.doc.posting_date),
+        today = moment();
+        if (!val.length) val = null;
+        else val = moment(val, frappe.defaultDateFormat);
+        if (
+            !vall || (
+                !frm._request.is_moderator
+                && cint(val.diff(today, 'days')) < 0
+            )
+        )
+            frm.set_value(
+                'posting_date',
+                today.format(frappe.defaultDateFormat)
+            );
     },
     validate: function(frm) {
-        if (!frm.doc.expenses.length) {
-            frappe.E.error('The expenses table must have at least one expense', true);
+        if (!cstr(frm.doc.company).length) {
+            frappe.exp()
+                .focus(frm, 'company')
+                .error('A valid expense request company is required.');
+            return false;
+        }
+        if (!cstr(frm.doc.posting_date).length) {
+            frappe.exp()
+                .focus(frm, 'posting_date')
+                .error('A valid expense request posting date is required.');
+            return false;
+        }
+        if (!(frm.doc.expenses || []).length) {
+            frappe.exp()
+                .focus(frm, 'expenses')
+                .error('At least one valid expense is required.');
+            return false;
         }
     },
-    toggle_add_expenses: function(frm) {
-        if (frm.X.select_dialog) {
-            frm.X.select_dialog.dialog.show();
+    after_save: function(frm) {
+        frm._request.toolbar_ready = false;
+        frm.trigger('setup_toolbar');
+    },
+    toggle_company_desc: function(frm) {
+        let desc;
+        if ((frm.doc.expenses || []).length)
+            desc = 'Changing the company will clear the expense table.';
+        frappe.exp().field_desc(frm, 'company', desc);
+    },
+    update_expenses_data: function(frm) {
+        if (!(frm.doc.expenses || []).length) return;
+        let cdns = {},
+        names = [],
+        is_changed = 0;
+        frm.doc.expenses.forEach(function(v) {
+            if (cstr(v.total).length) return;
+            let nmae = cstr(v.name),
+            expense = cstr(v.expense);
+            if (frm._request.data[expense]) {
+                if (frm._request.set_expense_data(name))
+                    is_changed = 1;
+            } else {
+                cdns[expense] = name;
+                names.push(expense);
+            }
+        });
+        if (!names.length) {
+            if (is_changed) frm.refresh_field('expenses');
             return;
         }
-        frm.X.select_dialog = new frappe.ui.form.MultiSelectDialog({
+        frappe.exp().request(
+            'get_expenses_data',
+            {expenses: names},
+            function(ret) {
+                ret.forEach(function(v) {
+                    v.total = format_currency(flt(v.total), cstr(v.currency));
+                    v._is_advance = !!cint(v.is_advance);
+                    v.is_advance = __(cint(v.is_advance) ? 'Yes' : 'No');
+                    
+                    if ((v.attachments || []).length) {
+                        v._attachments = v.attachments.slice();
+                        var html = [];
+                        v.attachments.forEach(function(a, i) {
+                            let file = cstr(a.file),
+                            name = file.split('/').pop();
+                            file = frappe.utils.get_file_link(file);
+                            html[i] = '<tr>\
+                                <td scope="row" class="fit text-left">' + name + '</td>\
+                                <td class="text-justify">' + cstr(a.description) + '</td>\
+                                <td class="fit">\
+                                    <a class="btn btn-sm btn-info" target="_blank" href="' + file + '">\
+                                        <span class="fa fa-link fa-fw"></span>\
+                                    </a>\
+                                </td>\
+                            </tr>';
+                        });
+                        v.attachments = '\
+                            <label class="control-label">' + __('Attachments') + '</label>\
+                            <table class="table table-bordered table-condensed expenses-attachments-table">\
+                                <thead>\
+                                    <tr>\
+                                        <th scope="col" class="fit font-weight-bold text-left">' + __('File') + '</th>\
+                                        <th scope="col" class="font-weight-bold">' + __('Description') + '</th>\
+                                        <th scope="col" class="fit font-weight-bold">' + __('Actions') + '</th>\
+                                    </tr>\
+                                </thead>\
+                                <tbody>\
+                                    ' + html.join("\n") + '\
+                                </tbody>\
+                            </table>\
+                        ';
+                    }
+                    
+                    let name = cstr(v.name);
+                    frm._request.data[name] = v;
+                    frm._request.set_expense_data(cdns[name]);
+                });
+                frm.refresh_field('expenses');
+            }
+        );
+    },
+    toggle_add_expenses: function(frm) {
+        if (frm._request.select_dialog) {
+            frm._request.select_dialog.dialog.show();
+            return;
+        }
+        frm._request.select_dialog = new frappe.ui.form.MultiSelectDialog({
             doctype: 'Expense',
             target: frm,
             add_filters_group: 0,
-            date_field: 'required_by',
+            //date_field: 'required_by',
             columns: ['name', 'expense_item', 'description', 'total', 'is_advance', 'required_by'],
             get_query: function() {
-                let existing = [],
+                let len = (frm.doc.expenses || []).length,
+                existing = [],
                 filters = {
-                    date: frm.doc.posting_date,
-                    company: frm.doc.company
+                    date: cstr(frm.doc.posting_date),
+                    company: cstr(frm.doc.company)
                 };
-                frappe.E.each(frm.doc.expenses, function(r) {
-                    existing.push(r.expense);
-                });
+                if (len)
+                    frm.doc.expenses.forEach(function(r) {
+                        existing.push(cstr(r.expense));
+                    });
                 if (existing.length) filters.existing = existing;
                 return {
-                    query: frappe.E.path('search_company_expenses'),
+                    query: frappe.exp().path('search_company_expenses'),
                     filters: filters,
                 };
             },
             primary_action_label: __('Add'),
             action: function(vals) {
-                if (frappe.E.isArray(vals) && vals.length) {
-                    frappe.E.each(vals, function(v) {
-                        if (v && frappe.E.isString(v)) frm.add_child('expenses', {expense: v});
+                if (frappe.exp().$isArr(vals) && vals.length) {
+                    vals.forEach(function(v) {
+                        if (v && frappe.exp().$isStr(v))
+                            frm.add_child('expenses', {expense: v});
                     });
-                    frm.X.update_expenses_data();
+                    frm.trigger('update_expenses_data');
                     frm.trigger('toggle_company_desc');
                 }
             }
         });
-        frm.X.select_dialog.dialog.get_secondary_btn().addClass('hide');
+        frm._request.select_dialog.dialog.get_secondary_btn().addClass('hide');
+    },
+    destroy_add_expenses: function(frm) {
+        if (!frm._request.select_dialog) return;
+        let tmp = frm._request.select_dialog;
+        frm._request.select_dialog = null;
+        if (tmp.dialog && tmp.dialog.$wrapper) {
+            tmp.dialog.$wrapper.modal('destroy');
+            tmp.dialog.$wrapper.remove();
+        }
     },
     before_workflow_action: function(frm) {
-        if (!frm.selected_workflow_action || frm.doc.reviewer) return;
-        return new Promise(function(resolve, reject) {
-            var action = frm.selected_workflow_action;
-            frm.X.workflow = {action};
-            if (action !== 'Reject') {
-                resolve();
-                return;
-            }
-            frappe.prompt(
-                [
-                    {
-                        fieldname: 'comment',
-                        fieldtype: 'Small Text',
-                        label: 'Comment'
-                    },
-                ],
-                function(v) {
-                    frm.X.workflow.comment = v.comment;
-                    resolve();
-                },
-                __('Reject Request'),
-                __('Submit')
-            );
-        });
+        let action = cstr(frm.selected_workflow_action);
+        frm._request.workflow = {action: action};
+        if (action !== 'Reject' || cstr(frm.doc.reviewer).length) {
+            frm._request.is_ready = false;
+            frm._request.toolbar_ready = false;
+            return Promise.resolve();
+        }
+        
+        frm.trigger('process_rejection');
+        return Promise.reject();
     },
     after_workflow_action: function(frm) {
-        if (!frm.X.workflow) return;
-        let action = frm.X.workflow.action,
-        comment = frm.X.workflow.comment;
-        frm.X.workflow = null;
-        if (action === 'Reject' && comment) {
-            frappe.E.call(
-                'add_request_rejection_comment',
-                {
-                    name: frm.doc.name,
-                    comment: comment,
-                },
-                function(ret) {
-                    frm.reload_doc();
-                    if (!ret) {
-                        frappe.E.error('Unable to post the rejection comment.');
-                        return;
-                    }
-                    frappe.show_alert({
-                        indicator: 'green',
-                        message: __('{0} rejected successfully.', [frm.doctype])
-                    });
-                }
-            );
-            return;
-        }
+        if (!frm._request.workflow) return;
+        let action = {
+            submit: 'submitted',
+            cancel: 'cancelled',
+            approve: 'approved',
+            reject: 'rejected',
+        }[frm._request.workflow.action.toLowerCase()];
+        delete frm._request.workflow;
         frappe.show_alert({
             indicator: 'green',
             message: __(
-                '{0} {1} successfully.',
-                [{
-                    submit: 'submitted',
-                    cancel: 'cancelled',
-                    approve: 'approved',
-                    reject: 'rejected',
-                }[frm.doctype, action.toLowerCase()]]
+                'Expenses request has been {0} successfully.',
+                [action]
             )
         });
-        if (action === 'Approve') {
-            frm.trigger('toggle_make_entry_button');
-            return;
-        }
-        if (action === 'Reject') {
-            frm.trigger('toggle_appeal_button');
-            return;
-        }
     },
-    toggle_make_entry_button: function(frm) {
+    process_rejection: function(frm) {
+        frappe.prompt(
+            [{
+                fieldname: 'reason',
+                fieldtype: 'Small Text',
+                label: 'Reason'
+            }],
+            function(v) {
+                let reason = cstr(v.reason);
+                if (!reason.length) frm.trigger('continue_workflow');
+                else {
+                    frappe.exp().request(
+                        'add_request_rejection_reason',
+                        {
+                            name: cstr(frm.doc.name),
+                            reason: reason,
+                        },
+                        function(ret) {
+                            if (!ret)
+                                frappe.show_alert({
+                                    indicator: 'red',
+                                    message: __('Expenses request rejection failed.')
+                                });
+                            else
+                                frm.trigger('continue_workflow');
+                        }
+                    );
+                }
+            },
+            __('Rejection Reason'),
+            __('Submit')
+        );
+    },
+    continue_workflow: function(frm) {
+        frappe.xcall(
+            'frappe.model.workflow.apply_workflow',
+            {doc: frm.doc, action: frm._request.workflow.action}
+        ).then(function(doc) {
+            frm._request.is_ready = false;
+            frm._request.toolbar_ready = false;
+            frappe.model.sync(doc);
+            frm.refresh();
+            frm.selected_workflow_action = null;
+            frm.script_manager.trigger('after_workflow_action');
+        });
+    },
+    setup_toolbar: function(frm) {
+        if (
+            frm._request.toolbar_ready
+            || cint(frm.doc.docstatus) < 1
+        ) return;
+        frm._request.toolbar_ready = true;
+        let status = cstr(frm.doc.status);
+        if (status === 'Approved')
+            frm.trigger('toggle_create_entry_btn');
+        else if (status === 'Rejected')
+            frm.trigger('toggle_appeal_btn');
+    },
+    toggle_create_entry_btn: function(frm) {
         if (
             cint(frm.doc.docstatus) !== 1
-            || frm.doc.status !== 'Approved'
-            || (
-                frm.doc.owner !== frappe.session.user
-                && !frappe.perm.has_perm(frm.doctype, 1, 'write')
-            )
+            || !frm._request.is_reviewer
         ) return;
         
-        let btn = __('Make Entry');
+        let btn = __('Create Entry');
         if (frm.custom_buttons[btn]) return;
         
         frm.clear_custom_buttons();
         frm.add_custom_button(btn, function() {
-            frappe.E.setCache('make-expenses-entry', frm.doc.name);
+            frappe.exp().set_cache('create-expenses-entry', {
+                request: cstr(frm.doc.name),
+            });
             frappe.set_route('Form', 'Expenses Entry');
         });
         frm.change_custom_button_type(btn, null, 'success');
     },
-    toggle_appeal_button: function(frm) {
+    toggle_appeal_btn: function(frm) {
         if (
             cint(frm.doc.docstatus) !== 2
-            || frm.doc.status !== 'Rejected'
-            || frm.doc.owner !== frappe.session.user
+            || cstr(frm.doc.owner) !== frappe.session.user
         ) return;
         
         let btn = __('Appeal');
         if (frm.custom_buttons[btn]) return;
         
-        if (!frm.X.appeal) {
-            frm.X.appeal = frappe.E.formDialog(__('Appeal Request'), 'blue');
-            frm.X.appeal
-                .addField({
-                    fieldname: 'appeal_expenses',
-                    fieldtype: 'Table',
-                    label: __('Expenses'),
-                    read_only: 1,
-                    fields: [
-                        {
-                            fieldname: 'expense',
-                            fieldtype: 'Data',
-                            label: 'Expense',
-                            read_only: 1,
-                        },
-                        {
-                            fieldname: 'expense_item',
-                            fieldtype: 'Data',
-                            label: 'Expense Item',
-                            read_only: 1,
-                        },
-                        {
-                            fieldname: 'total',
-                            fieldtype: 'Data',
-                            label: 'Total',
-                            read_only: 1,
-                        }
-                    ],
-                })
-                .setPrimaryAction(
-                    __('Submit'),
-                    function() {
-                        this.hide();
-                        let args = this.getField('appeal_expenses').grid.get_selected_children();
-                        if (args && args.length) {
-                            let expenses = args.map(function(v) { return v.expense; });
-                            frappe.E.setCache('make-expenses-request', {
-                                company: frm.doc.company,
-                                expenses: expenses,
-                            });
-                        }
-                        frm.amend_doc();
-                    }
-                )
-                .setSecondaryAction(
-                    __('Cancel'),
-                    function() { this.hide(); }
-                )
-                .build();
-        }
         frm.clear_custom_buttons();
         frm.add_custom_button(btn, function() {
-            frm.X.appeal
-                .setValue(
-                    'appeal_expenses',
-                    frm.doc.expenses.map(function(v) {
-                        return {
-                            expense: v.expense,
-                            expense_item: v.expense_item,
-                            total: v.total,
-                        };
-                    })
-                )
-                .show();
+            let expenses = []
+            if ((frm.doc.expenses || []).length)
+                frm.doc.expenses.forEach(function(v, i) {
+                    expenses[i] = cstr(v.expense);
+                });
+            frappe.exp().set_cache('create-expenses-request', {
+                company: cstr(frm.doc.company),
+                expenses: expenses,
+            });
+            frm.amend_doc();
         });
         frm.change_custom_button_type(btn, null, 'info');
     },

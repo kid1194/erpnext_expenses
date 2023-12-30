@@ -1,4 +1,4 @@
-# Expenses © 2023
+# Expenses © 2024
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
@@ -6,14 +6,29 @@
 
 import re
 
+from pypika.enums import Order
+from pypika.terms import Criterion
+
 import frappe
 from frappe import _
 from frappe.utils import cstr
 from frappe.query_builder.functions import Locate
-from pypika.enums import Order
-from pypika.terms import Criterion
 
 
+## [Internal]
+_FIELD_TYPES_ = [
+    "Data",
+    "Text",
+    "Small Text",
+    "Long Text",
+    "Link",
+    "Select",
+    "Read Only",
+    "Text Editor"
+]
+
+
+## [Expense, Item, Type]
 def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     meta = frappe.get_meta(doctype)
     if search:
@@ -35,20 +50,7 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
                 doctype not in translated_search_doctypes and
                 (
                     f == "name" or
-                    (
-                        fmeta
-                        and fmeta.fieldtype
-                        in [
-                            "Data",
-                            "Text",
-                            "Small Text",
-                            "Long Text",
-                            "Link",
-                            "Select",
-                            "Read Only",
-                            "Text Editor"
-                        ]
-                    )
+                    (fmeta and fmeta.fieldtype in _FIELD_TYPES_)
                 )
             ):
                 search_filters.append(doc.field(f.strip()).like("%" + search + "%"))
@@ -66,6 +68,7 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     return qry
 
 
+## [Expense, Item, Type]
 def prepare_data(data, dt, column, search, as_dict):
     if search and dt in frappe.get_hooks("translated_search_doctypes"):
         data = [

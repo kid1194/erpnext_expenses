@@ -1,24 +1,43 @@
 {
  "actions": [],
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Expenses settings",
+ "description": "Settings for Expenses",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
+  "general_section",
+  "is_enabled",
+  "general_column",
   "update_section",
   "auto_check_for_update",
   "send_update_notification",
   "update_notification_sender",
   "update_notification_receivers",
   "update_column",
+  "check_for_update",
   "update_note",
-  "has_update",
+  "current_version",
   "latest_version",
   "latest_check",
-  "check_for_update"
+  "has_update"
  ],
  "fields": [
+  {
+   "fieldname": "general_section",
+   "fieldtype": "Section Break",
+   "label": "General Settings"
+  },
+  {
+   "fieldname": "is_enabled",
+   "fieldtype": "Check",
+   "label": "Is Enabled",
+   "default": "1"
+  },
+  {
+   "fieldname": "general_column",
+   "fieldtype": "Column Break"
+  },
   {
    "fieldname": "update_section",
    "fieldtype": "Section Break",
@@ -27,48 +46,55 @@
   {
    "fieldname": "auto_check_for_update",
    "fieldtype": "Check",
-   "label": "Auto Check",
-   "description": "Auto check for new version daily",
-   "default": "1"
+   "label": "Auto Check For Update",
+   "default": "1",
+   "read_only_depends_on": "eval:!doc.is_enabled"
   },
   {
    "fieldname": "send_update_notification",
    "fieldtype": "Check",
    "label": "Send Update Notification",
    "default": "1",
-   "read_only_depends_on": "eval:!doc.auto_check_for_update"
+   "read_only_depends_on": "eval:!doc.is_enabled || !doc.auto_check_for_update"
   },
   {
    "fieldname": "update_notification_sender",
    "fieldtype": "Link",
    "label": "Update Notification Sender",
    "options": "User",
-   "read_only_depends_on": "eval:!doc.send_update_notification",
-   "mandatory_depends_on": "eval:doc.send_update_notification",
+   "read_only_depends_on": "eval:!doc.is_enabled || !doc.send_update_notification",
+   "mandatory_depends_on": "eval:doc.is_enabled && doc.send_update_notification",
+   "ignore_user_permissions": 1,
    "only_select": 1
   },
   {
    "fieldname": "update_notification_receivers",
    "fieldtype": "Table MultiSelect",
    "label": "Update Notification Receivers",
-   "options": "Expenses Notification Receiver",
-   "read_only_depends_on": "eval:!doc.send_update_notification",
-   "mandatory_depends_on": "eval:doc.send_update_notification"
+   "options": "Expenses Update Receiver",
+   "read_only_depends_on": "eval:!doc.is_enabled || !doc.send_update_notification",
+   "mandatory_depends_on": "eval:doc.is_enabled && doc.send_update_notification"
   },
   {
    "fieldname": "update_column",
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "check_for_update",
+   "fieldtype": "Button",
+   "label": "Check For Update",
+   "read_only_depends_on": "eval:!doc.is_enabled"
+  },
+  {
    "fieldname": "update_note",
    "fieldtype": "HTML",
-   "label": "Update Note",
+   "label": "",
    "read_only": 1
   },
   {
-   "fieldname": "has_update",
-   "fieldtype": "Check",
-   "label": "Has Update",
+   "fieldname": "current_version",
+   "fieldtype": "Data",
+   "label": "Current Version",
    "read_only": 1,
    "hidden": 1
   },
@@ -76,19 +102,22 @@
    "fieldname": "latest_version",
    "fieldtype": "Data",
    "label": "Latest Version",
-   "read_only": 1
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "latest_check",
    "fieldtype": "Data",
    "label": "Latest Check",
-   "read_only": 1
+   "read_only": 1,
+   "hidden": 1
   },
   {
-   "fieldname": "check_for_update",
-   "fieldtype": "Button",
-   "label": "Check Now",
-   "description": "Check for new version manually"
+   "fieldname": "has_update",
+   "fieldtype": "Check",
+   "label": "Has Update",
+   "read_only": 1,
+   "hidden": 1
   }
  ],
  "icon": "fa fa-cog",

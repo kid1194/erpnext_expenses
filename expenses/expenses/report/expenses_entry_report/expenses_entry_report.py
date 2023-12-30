@@ -1,16 +1,16 @@
-# Expenses © 2023
+# Expenses © 2024
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
 import frappe
-from frappe import _
+from frappe import _, throw
 from frappe.utils import cint, flt
 
-from expenses.utils import (
-    error,
-    get_cached_value
+from expenses.libs import (
+    get_cached_value,
+    __ENTRY__
 )
 
 
@@ -19,7 +19,7 @@ def execute(filters=None):
         return [], []
 
     validate_filters(filters)
-    currency = currency = get_cached_value(
+    currency = get_cached_value(
         "Company",
         filters.get("company"),
         "default_currency"
@@ -35,24 +35,24 @@ def execute(filters=None):
 
 def validate_filters(filters, account_details):
     if not filters.get("company"):
-        error(_("{0} is mandatory").format(_("Company")))
+        throw(_("{0} is mandatory").format(_("Company")))
 
     if not filters.get("from_date") or not filters.get("to_date"):
-        error(_("{0} and {1} are mandatory").format(
+        throw(_("{0} and {1} are mandatory").format(
             frappe.bold(_("From Date")), frappe.bold(_("To Date"))
         ))
 
     if filters.from_date > filters.to_date:
-        error(_("From Date must be before To Date"))
+        throw(_("From Date must be before To Date"))
 
 
 def get_columns(currency):
     return [
         {
-            "label": _("Expenses Entry"),
+            "label": _(__ENTRY__),
             "fieldname": "expenses_entry",
             "fieldtype": "Link",
-            "options": "Expenses Entry",
+            "options": __ENTRY__,
         },
         {
             "label": _("Mode of Payment"),
@@ -91,7 +91,7 @@ def get_columns(currency):
 
 
 def get_result(filters, currency):
-    doc = frappe.qb.DocType("Expense Entry")
+    doc = frappe.qb.DocType(__ENTRY__)
     qry = (
         frappe.qb.from_(doc)
         .select(

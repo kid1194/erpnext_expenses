@@ -1,11 +1,11 @@
-# Expenses © 2023
+# Expenses © 2024
 # Author:  Ameen Ahmed
 # Company: Level Up Marketing & Software Development Services
 # Licence: Please refer to LICENSE file
 
 
 from setuptools import setup, find_packages
-from expenses import __version__ as version
+from expenses import __version__
 
 
 with open('requirements.txt') as f:
@@ -14,8 +14,8 @@ with open('requirements.txt') as f:
 
 setup(
     name='expenses',
-    version=version,
-    description='An expenses management module for ERPNext.',
+    version=__version__,
+    description='Expenses management for ERPNext',
     author='Ameen Ahmed (Level Up)',
     author_email='kid1194@gmail.com',
     packages=find_packages(),

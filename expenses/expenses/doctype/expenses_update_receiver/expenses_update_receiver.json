@@ -5,7 +5,7 @@
  "editable_grid": 1,
  "autoname": "hash",
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Expenses notification receiver",
+ "description": "Update receiver for Expenses",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
@@ -30,11 +30,8 @@
  "modified": "2023-04-04 04:04:04.119400",
  "modified_by": "Administrator",
  "module": "Expenses",
- "name": "Expenses Notification Receiver",
+ "name": "Expenses Update Receiver",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

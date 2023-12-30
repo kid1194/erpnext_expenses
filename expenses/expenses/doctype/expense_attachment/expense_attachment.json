@@ -4,7 +4,7 @@
  "allow_import": 1,
  "editable_grid": 1,
  "autoname": "hash",
- "creation": "2023-04-04 04:04:04.119400",
+ "creation": "2024-04-04 04:04:04.119400",
  "description": "Expense attachment",
  "doctype": "DocType",
  "document_type": "Document",
@@ -28,8 +28,7 @@
   },
   {
    "fieldname": "main_column",
-   "fieldtype": "Column Break",
-   "width": "50%"
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "description",
@@ -51,14 +50,11 @@
  ],
  "istable": 1,
  "links": [],
- "modified": "2023-04-04 04:04:04.119400",
+ "modified": "2024-04-04 04:04:04.119400",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense Attachment",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }
