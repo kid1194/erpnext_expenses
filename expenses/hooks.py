@@ -47,7 +47,7 @@ fixtures = [
 
 scheduler_events = {
     "daily": [
-        "expenses.libs.update.auto_check"
+        "expenses.libs.update.auto_check_for_update"
     ]
 }
 

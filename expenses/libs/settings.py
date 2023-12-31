@@ -7,7 +7,7 @@
 import frappe
 from frappe.utils import cint
 
-from .cache import get_cached_doc,
+from .cache import get_cached_doc
 
 
 ## [Install, Update, Internal]
