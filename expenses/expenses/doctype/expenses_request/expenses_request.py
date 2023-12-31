@@ -13,7 +13,7 @@ from frappe.utils import (
 from frappe.model.document import Document
 from frappe.model.docstatus import DocStatus
 
-from expenses.utils import (
+from expenses.libs import (
     clear_doc_cache,
     RequestStatus,
     is_company_expenses,

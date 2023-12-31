@@ -12,7 +12,7 @@ from expenses import (
     __name__,
     __version__
 )
-from expenses.utils import (
+from expenses.libs import (
     settings,
     __TYPE__,
     __ITEM__,
