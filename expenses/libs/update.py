@@ -36,15 +36,16 @@ from .common import (
 from .filter import users_filter
 from .settings import (
     __SETTINGS__,
-    settings,
-    is_enabled
+    settings
 )
 
 
 ## [Hooks]
 def auto_check_for_update():
-    if __production__ and is_enabled():
-        check_for_update()
+    if __production__:
+        doc = settings()
+        if cint(doc.is_enabled) and cint(doc.auto_check_for_update):
+            check_for_update()
 
 
 # [Settings Form]
