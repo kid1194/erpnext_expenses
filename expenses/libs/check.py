@@ -92,7 +92,7 @@ def _exists(
     elif enabled == False:
         params[status_col] = ["!=", enabled_val]
     
-    return frappe.db.exists(params)
+    return frappe.db.exists(params) != None
 
 
 ## [Internal]

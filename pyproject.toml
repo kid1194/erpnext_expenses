@@ -14,8 +14,8 @@ requires-python = ">=3.6"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-    "frappe>=14.0.0",
-    "erpnext>=14.0.0"
+    "frappe>=13.0.0",
+    "erpnext>=13.0.0"
 ]
 
 [project.urls]

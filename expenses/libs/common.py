@@ -13,6 +13,7 @@ from expenses import (
     __name__,
     __production__
 )
+from expenses.version import __frappe_v13__
 
 from .logger import get_logger
 
@@ -33,7 +34,10 @@ def error(text, log=True, throw=True):
             text = _("Unable to log or throw a non-string error.")
     
     if log:
-        frappe.log_error(__module__, text)
+        if __frappe_v13__:
+            frappe.log_error(text, __module__)
+        else:
+            frappe.log_error(__module__, text)
     
     if throw:
         frappe.throw(text, title=__module__)
