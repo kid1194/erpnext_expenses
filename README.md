@@ -7,10 +7,11 @@ An expenses management module for ERPNext.
 ---
 
 ### Contributors
-**The list of people who deserves more than a simple thank you.**
-- [Monolith Online](https://github.com/monolithon) ❤❤❤ (Testing & Debugging)
-- [Andrew Rogers](https://github.com/agrogers) 👍 (Testing & Debugging)
-- [washaqq](https://github.com/washaqq) 👍 (Testing & Debugging)
+**The list of people who deserves more than a simple "Thank You".**
+- [Monolith Online](https://github.com/monolithon) [==Test==, ==Debug==] ♥
+- [Andrew Rogers](https://github.com/agrogers) [==Test==, ==Debug==] 👍
+- [washaqq](https://github.com/washaqq) [==Test==, ==Debug==] 👍
+- [codi](https://github.com/hassan-youssef) [==Debug==] 👍
 
 ---
 
@@ -27,8 +28,8 @@ An expenses management module for ERPNext.
 ---
 
 ### Requirements
-- Frappe >= v14.0.0
-- ERPNext >= v14.0.0
+- Frappe >= v13.0.0
+- ERPNext >= v13.0.0
 
 ---
 

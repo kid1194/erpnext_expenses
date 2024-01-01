@@ -96,8 +96,8 @@ def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
     doc = frappe.qb.DocType(__ITEM__)
     qry = (frappe.qb.from_(doc)
         .select(doc.name)
-        .where(doc.disabled == 0))
-        .where(doc.expense_type.isin(get_types_filter_query()))
+        .where(doc.disabled == 0)
+        .where(doc.expense_type.isin(get_types_filter_query())))
     
     qry = filter_search(doc, qry, __ITEM__, txt, doc.name, "name")
     
