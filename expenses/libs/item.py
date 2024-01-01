@@ -66,7 +66,7 @@ def get_item_company_account(item: str, company: str):
         "max_qty": 0.0
     }
     if (data := get_type_company_account_data(cstr(expense_type), company)):
-        if (item_data := get_item_company_account_data(item, company)):
+        if (item_data := get_item_company_account_data(__ITEM__, item, company)):
             data.update(item_data)
         else:
             data.update(default)
