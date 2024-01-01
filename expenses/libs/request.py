@@ -10,6 +10,7 @@ from frappe.utils import has_common
 from .cache import get_cached_doc
 from .check import get_count
 from .common import parse_json
+from .doctypes import __REQUEST__
 from .expense import (
     get_expenses_for_company,
     set_expenses_restored,
@@ -18,14 +19,6 @@ from .expense import (
     set_expenses_rejected,
     get_expenses
 )
-
-
-## [Install, Internal]
-__REQUEST__ = "Expenses Request"
-
-
-## [Internal]
-__REQUEST_DETAILS__ = "Expenses Request Details"
 
 
 # [Request]
@@ -45,32 +38,6 @@ __REQUEST_MODERATOR_ROLE__ = "Expenses Request Moderator"
 
 ## [Internal]
 __REQUEST_REVIEWER_ROLE__ = "Expenses Request Reviewer"
-_REQUEST_SUPER_ROLES_ = [
-    "Expenses Reviewer",
-    "Accounts Manager",
-    "System Manager",
-    "Administrator"
-]
-
-
-## [Expense]
-def get_expense_requests(expense: str):
-    doc = frappe.qb.DocType(__REQUEST__)
-    ddoc = frappe.qb.DocType(__REQUEST_DETAILS__)
-    data = (
-        frappe.qb.from_(ddoc)
-        .select(doc.name)
-        .left_join(doc)
-        .on(doc.name == ddoc.parent)
-        .where(ddoc.expense == expense)
-        .where(ddoc.parenttype == __REQUEST__)
-        .where(ddoc.parentfield == "expenses")
-    ).run(as_dict=True)
-    
-    if not data or not isinstance(data, list):
-        return None
-    
-    return data
 
 
 # [Request]
@@ -112,16 +79,18 @@ def reject_expenses(expenses: list):
 def request_form_setup():
     return {
         "is_moderator": is_request_moderator(),
-        "is_reviewer": is_request_reviewer(),
+        "is_reviewer": is_request_reviewer()
     }
 
 
-# [Request, Internal]
+# [Request]
+## [Internal]
 def is_request_moderator():
     return 1 if __REQUEST_MODERATOR_ROLE__ in frappe.get_roles() else 0
 
 
-# [Request, Internal]
+# [Request]
+## [Internal]
 def is_request_reviewer():
     return 1 if __REQUEST_REVIEWER_ROLE__ in frappe.get_roles() else 0
 

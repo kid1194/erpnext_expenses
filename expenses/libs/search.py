@@ -16,7 +16,7 @@ from frappe.query_builder.functions import Locate
 
 
 ## [Internal]
-_FIELD_TYPES_ = [
+__FIELD_TYPES__ = [
     "Data",
     "Text",
     "Small Text",
@@ -50,7 +50,7 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
                 doctype not in translated_search_doctypes and
                 (
                     f == "name" or
-                    (fmeta and fmeta.fieldtype in _FIELD_TYPES_)
+                    (fmeta and fmeta.fieldtype in __FIELD_TYPES__)
                 )
             ):
                 search_filters.append(doc.field(f.strip()).like("%" + search + "%"))

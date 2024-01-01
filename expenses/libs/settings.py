@@ -8,10 +8,7 @@ import frappe
 from frappe.utils import cint
 
 from .cache import get_cached_doc
-
-
-## [Install, Update, Internal]
-__SETTINGS__ = "Expenses Settings"
+from .doctypes import __SETTINGS__
 
 
 ## [Install, Update, Internal]

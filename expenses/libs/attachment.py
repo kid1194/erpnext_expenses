@@ -8,14 +8,11 @@ import frappe
 
 from .background import enqueue_job
 from .common import parse_json
+from .doctypes import __EXPENSE_ATTACH__
 
 
 ## [Internal]
-_EXPENSE_ATTACH_ = "Expense Attachment"
-
-
-## [Internal]
-_FILE_ = "File"
+__FILE__ = "File"
 
 
 # [Entry, Entry Form, Expense, Expense Form]
@@ -36,7 +33,7 @@ def delete_attach_files(doctype, name, files):
         return 0
     
     if (file_names := frappe.get_all(
-        _FILE_,
+        __FILE__,
         fields=["name"],
         filters=[
             ["file_url", "in", files],
@@ -57,18 +54,18 @@ def delete_attach_files(doctype, name, files):
 ## [Internal]
 def files_delete(files: list):
     for file in files:
-        frappe.get_doc(_FILE_, file).delete(ignore_permissions=True)
+        frappe.get_doc(__FILE__, file).delete(ignore_permissions=True)
 
 
 ## [Expense]
 def get_files_by_parents(parents: list, parent_type: str, parent_field: str):
     data = frappe.get_all(
-        _EXPENSE_ATTACH_,
+        __EXPENSE_ATTACH__,
         fields=["parent", "file", "description"],
         filters=[
-            [_EXPENSE_ATTACH_, "parent", "in", parents],
-            [_EXPENSE_ATTACH_, "parenttype", "=", parent_type],
-            [_EXPENSE_ATTACH_, "parentfield", "=", parent_field]
+            [__EXPENSE_ATTACH__, "parent", "in", parents],
+            [__EXPENSE_ATTACH__, "parenttype", "=", parent_type],
+            [__EXPENSE_ATTACH__, "parentfield", "=", parent_field]
         ]
     )
     
@@ -83,7 +80,7 @@ def get_files_by_parents(parents: list, parent_type: str, parent_field: str):
         
         groups[k].append({
             "file": v["file"],
-            "description": v["description"],
+            "description": v["description"]
         })
     
     return groups

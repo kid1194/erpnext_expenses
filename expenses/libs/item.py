@@ -13,6 +13,11 @@ from .cache import (
     get_cached_value
 )
 from .account import get_item_company_account_data
+from .doctypes import (
+    __ACCOUNT__,
+    __COMPANY__,
+    __ITEM__
+)
 from .search import (
     filter_search,
     prepare_data
@@ -22,10 +27,6 @@ from .type import (
     get_type_company_account_data,
     get_types_filter_query
 )
-
-
-## [Account, Check, Install, Internal]
-__ITEM__ = "Expense Item"
 
 
 # [Item Form]
@@ -66,7 +67,7 @@ def get_item_company_account(item: str, company: str):
         "max_qty": 0.0
     }
     if (data := get_type_company_account_data(cstr(expense_type), company)):
-        if (item_data := get_item_company_account_data(__ITEM__, item, company)):
+        if (item_data := get_item_company_account_data(item, company)):
             data.update(item_data)
         else:
             data.update(default)
@@ -76,8 +77,8 @@ def get_item_company_account(item: str, company: str):
         data = frappe._dict({"account": "", "currency": ""})
         data.update(default)
         
-        if (acc := get_cached_value("Company", company, "default_expense_account")):
-            if (cur := get_cached_value("Account", cstr(acc), "account_currency")):
+        if (acc := get_cached_value(__COMPANY__, company, "default_expense_account")):
+            if (cur := get_cached_value(__ACCOUNT__, cstr(acc), "account_currency")):
                 data.update({
                     "account": cstr(acc),
                     "currency": cstr(cur)
@@ -94,10 +95,12 @@ def get_item_company_account(item: str, company: str):
 @frappe.whitelist()
 def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     doc = frappe.qb.DocType(__ITEM__)
-    qry = (frappe.qb.from_(doc)
+    qry = (
+        frappe.qb.from_(doc)
         .select(doc.name)
         .where(doc.disabled == 0)
-        .where(doc.expense_type.isin(get_types_filter_query())))
+        .where(doc.expense_type.isin(get_types_filter_query()))
+    )
     
     qry = filter_search(doc, qry, __ITEM__, txt, doc.name, "name")
     

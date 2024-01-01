@@ -38,7 +38,7 @@ def emit_entry_changed(data=None, after_commit=True):
 
 
 ## [Internal]
-def emit_event(event: str, data, after_commit: bool=True, expiry: int=None):
+def emit_event(event: str, data, after_commit: bool=True):
     frappe.publish_realtime(
         event=event,
         message=data,

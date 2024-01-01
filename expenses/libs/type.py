@@ -21,15 +21,16 @@ from .cache import (
     set_cache,
     get_cached_doc
 )
+from .check import get_count
 from .common import parse_json
+from .doctypes import (
+    __COMPANY__,
+    __TYPE__
+)
 from .search import (
     filter_search,
     prepare_data
 )
-
-
-## [Account, Check, Install, Internal]
-__TYPE__ = "Expense Type"
 
 
 # [Type Form]
@@ -38,6 +39,17 @@ def type_form_setup():
     return {
         "has_accounts": get_types_with_accounts(__TYPE__)
     }
+
+
+# [Type]
+def type_has_descendants(lft, rgt):
+    return get_count(
+        __TYPE__,
+        {
+            "lft": [">", lft],
+            "rgt": ["<", rgt],
+        }
+    ) > 0
 
 
 # [Type]
@@ -56,20 +68,24 @@ def disable_type_descendants(lft, rgt):
 @frappe.whitelist()
 def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     doc = frappe.qb.DocType(__TYPE__)
-    qry = (frappe.qb.from_(doc)
+    qry = (
+        frappe.qb.from_(doc)
         .select(doc.name)
-        .where(doc.disabled == 0))
+        .where(doc.disabled == 0)
+    )
     
     qry = filter_search(doc, qry, __TYPE__, txt, doc.name, "name")
     
     pdoc = frappe.qb.DocType(__TYPE__).as_("parent")
-    parent_qry = (frappe.qb.from_(pdoc)
+    parent_qry = (
+        frappe.qb.from_(pdoc)
         .select(pdoc.name)
         .where(pdoc.disabled == 0)
         .where(pdoc.is_group == 1)
         .where(pdoc.lft.lt(doc.lft))
         .where(pdoc.rgt.gt(doc.rgt))
-        .orderby(doc.lft, order=Order.desc))
+        .orderby(doc.lft, order=Order.desc)
+    )
     
     qry = qry.where(Criterion.any([
         doc.parent_type.isnull(),
@@ -89,9 +105,9 @@ def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
                 qry = qry.where(doc.name == name[1])
             elif name[0] == "!=" and isinstance(name[1], str):
                 qry = qry.where(doc.name != name[1])
-            elif name[0] == "in"and isinstance(name[1], list):
+            elif name[0] == "in" and isinstance(name[1], list):
                 qry = qry.where(doc.name.isin(name[1]))
-            elif name[0] == "not in"and isinstance(name[1], list):
+            elif name[0] == "not in" and isinstance(name[1], list):
                 qry = qry.where(doc.name.notin(name[1]))
     
     if "is_group" in filters:
@@ -109,10 +125,10 @@ def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
 @frappe.whitelist()
 def get_all_companies_accounts():
     return frappe.get_list(
-        "Company",
+        __COMPANY__,
         fields=["name", "default_expense_account"],
         filters=[
-            ["is_group", "=", 0]
+            [__COMPANY__, "is_group", "=", 0]
         ]
     )
 
@@ -196,7 +212,9 @@ def get_type_company_account(name: str, company: str):
 ## [Item]
 def get_types_filter_query():
     doc = frappe.qb.DocType(__TYPE__)
-    return (frappe.qb.from_(doc)
+    return (
+        frappe.qb.from_(doc)
         .select(doc.name)
         .where(doc.disabled == 0)
-        .where(doc.is_group == 0))
+        .where(doc.is_group == 0)
+    )

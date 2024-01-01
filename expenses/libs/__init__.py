@@ -10,6 +10,7 @@ from .background import *
 from .cache import *
 from .check import *
 from .common import *
+from .doctypes import *
 from .entry import *
 from .expense import *
 from .item import *

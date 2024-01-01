@@ -21,11 +21,8 @@ from .common import (
     log_error,
     error
 )
+from .doctypes import _JOURNAL_
 from .entry import get_entry_data
-
-
-## [Internal]
-_JOURNAL_ = "Journal Entry"
 
 
 # [Entry]
@@ -96,7 +93,7 @@ def make_journal_entry(entry: str):
             "debit_in_account_currency": flt(v.cost_in_account_currency),
             "debt": flt(v.cost),
             "is_advance": cint(v.is_advance),
-            "user_remark": cstr(v.description),
+            "user_remark": cstr(v.description)
         })
         
     if doc.payment_target == "Cash":
@@ -108,7 +105,7 @@ def make_journal_entry(entry: str):
         "account_currency": doc.payment_currency,
         "exchange_rate": flt(doc.exchange_rate),
         "credit_in_account_currency": flt(doc.total_in_payment_currency),
-        "credit": flt(doc.total),
+        "credit": flt(doc.total)
     })
     
     try:
@@ -125,7 +122,7 @@ def make_journal_entry(entry: str):
                 "cheque_no": cstr(doc.payment_reference),
                 "cheque_date": cstr(doc.clearance_date),
                 "reference_date": cstr(doc.clearance_date),
-                "multi_currency": multi_currency,
+                "multi_currency": multi_currency
             })
             .insert(ignore_permissions=True, ignore_mandatory=True)
             .submit())

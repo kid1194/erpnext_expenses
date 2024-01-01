@@ -34,6 +34,7 @@ class ExpensesSettings(Document):
     def validate(self):
         if (
             cint(self.is_enabled) and
+            cint(self.auto_check_for_update) and
             cint(self.send_update_notification)
         ):
             self._check_sender()
@@ -46,7 +47,7 @@ class ExpensesSettings(Document):
     
     def after_save(self):
         if self.has_value_changed("is_enabled"):
-            emit_app_status_changed({"is_enabled": cint(self.is_enabled) > 0})
+            emit_app_status_changed({"is_enabled": cint(self.is_enabled)})
     
     
     def _check_sender(self):

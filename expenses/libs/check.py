@@ -6,21 +6,25 @@
 
 import frappe
 
-from .expense import __EXPENSE__
+from .doctypes import (
+    __USER__,
+    __ACCOUNT__,
+    __EXPENSE__,
+    __ITEM__,
+    __TYPE__
+)
 from .filter import all_filter
-from .item import __ITEM__
-from .type import __TYPE__
 
 
 # [Settings]
 def users_exists(names: list, attrs: dict=None, enabled: bool=None):
-    return _all_exists("User", "name", names, attrs, enabled, "enabled", 1)
+    return _all_exists(__USER__, "name", names, attrs, enabled, "enabled", 1)
 
 
 # [Settings]
 ## [Update]
 def user_exists(name: str, attrs: dict=None, enabled: bool=None):
-    return _exists("User", name, attrs, enabled, "enabled", 1)
+    return _exists(__USER__, name, attrs, enabled, "enabled", 1)
 
 
 # [Item, Type]
@@ -40,7 +44,7 @@ def items_of_type_exists(expense_type: str):
 
 # [Entry, Item, Type]
 def account_exists(name: str, attrs: dict=None, enabled: bool=None):
-    return _exists("Account", name, attrs, enabled)
+    return _exists(__ACCOUNT__, name, attrs, enabled)
 
 
 # [Item]
@@ -49,7 +53,7 @@ def has_item_expenses(expense_item: str):
 
 
 # [Item, Type]
-## [Request, Internal]
+## [Request, Type, Internal]
 def get_count(dt: str, filters: dict):
     return frappe.doc.count(dt, filters)
 
@@ -81,7 +85,7 @@ def _exists(
 ):
     params = {"doctype": dt}
     
-    if name::
+    if name:
         params["name"] = name
     
     if attrs:

@@ -17,6 +17,7 @@ from expenses.libs import (
     account_exists,
     type_children_exists,
     items_of_type_exists,
+    type_has_descendants,
     disable_type_descendants,
     emit_type_changed
 )
@@ -76,15 +77,24 @@ class ExpenseType(NestedSet):
     def on_update(self):
         if self._disable_descendants:
             self._disable_descendants = False
-            lft = cint(self.lft)
-            rgt = cint(self.rgt)
-            if (doc := self._get_old_doc()):
-                if cint(doc.lft) != lft:
-                    lft = cint(doc.lft)
-                if cint(doc.rgt) != rgt:
-                    rgt = cint(doc.rgt)
             
-            disable_type_descendants(lft, rgt)
+            lft = cint(self.lft)
+            old_lft = lft
+            rgt = cint(self.rgt)
+            old_rgt = rgt
+            
+            if (doc := self._get_old_doc()):
+                old_lft = cint(doc.lft)
+                old_rgt = cint(doc.rgt)
+            
+            if type_has_descendants(lft, rgt):
+                disable_type_descendants(lft, rgt)
+            
+            elif (
+                (lft != old_lft or rgt != old_rgt) and
+                type_has_descendants(old_lft, old_rgt)
+            ):
+                disable_type_descendants(old_lft, old_rgt)
         
         if not frappe.local.flags.ignore_update_nsm:
             super(ExpenseType, self).on_update()
@@ -129,9 +139,9 @@ class ExpenseType(NestedSet):
             return {"error": _("A valid expense parent type is required.")}
         
         if is_group and type_children_exists(self.name):
-            return {"error": _(
-                "An expense type group with existing child types cannot be converted to a child."
-            )}
+            return {
+                "error": _("An expense type group with existing child types cannot be converted to a child.")
+            }
         
         if parent_type:
             if (error := self._validate_parent(parent_type, True)):
@@ -151,9 +161,9 @@ class ExpenseType(NestedSet):
             return 1
         
         if not is_group and items_of_type_exists(self.name):
-            return {"error": _(
-                "An expense type with existing expense items cannot be converted to a group"
-            )}
+            return {
+                "error": _("An expense type with existing expense items cannot be converted to a group")
+            }
         
         self.is_group = 1
         self.save()

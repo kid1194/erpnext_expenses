@@ -15,6 +15,8 @@ from frappe.utils import (
 )
 
 from expenses.libs import (
+    __ACCOUNT__,
+    __COMPANY__,
     clear_doc_cache,
     get_cached_value,
     get_mode_of_payment_data,
@@ -98,7 +100,7 @@ class ExpensesEntry(Document):
                             continue
                         
                         if not v.account_currency:
-                            v.account_currency = get_cached_value("Account", v.account, "account_currency")
+                            v.account_currency = get_cached_value(__ACCOUNT__, v.account, "account_currency")
                         
                         if not flt(v.exchange_rate):
                             if not company_currency:
@@ -300,7 +302,7 @@ class ExpensesEntry(Document):
     
     
     def _get_company_currency(self):
-        return get_cached_value("Company", self.company, "default_currency")
+        return get_cached_value(__COMPANY__, self.company, "default_currency")
     
     
     def _check_change(self):

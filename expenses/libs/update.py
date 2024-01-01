@@ -33,11 +33,9 @@ from .common import (
     log_error,
     parse_json
 )
+from .doctypes import __SETTINGS__
 from .filter import users_filter
-from .settings import (
-    __SETTINGS__,
-    settings
-)
+from .settings import settings
 
 
 ## [Hooks]
@@ -146,7 +144,7 @@ def enqueue_send_notification(version, sender, receivers, message):
 
 ## [Internal]
 def send_notification(version, sender, receivers, message):
-    receivers = users_filter(receivers, enabled=True);
+    receivers = users_filter(receivers, enabled=True)
     if not receivers:
         return 0
     
@@ -162,6 +160,6 @@ def send_notification(version, sender, receivers, message):
                     "type": "Alert",
                     "email_content": "<p><h2>{0} {1}</h2></p><p>{2}</p>".format(
                         _("Version"), version, _(message)
-                    ),
+                    )
                 })
                 .insert(ignore_permissions=True, ignore_mandatory=True))

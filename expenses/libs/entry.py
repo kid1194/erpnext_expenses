@@ -19,15 +19,13 @@ from .cache import (
 )
 from .check import can_use_expense_claim
 from .common import error
+from .doctypes import (
+    __ACCOUNT__,
+    __COMPANY__,
+    __ENTRY__,
+    __ENTRY_DETAILS__
+)
 from .request import get_request
-
-
-## [Install, Internal]
-__ENTRY__ = "Expenses Entry"
-
-
-## [Internal]
-__ENTRY_DETAILS__ = "Expenses Entry Details"
 
 
 ## [Internal]
@@ -63,7 +61,7 @@ def get_mode_of_payment_data(mode_of_payment, company):
     mop_type = get_cached_value("Mode of Payment", mode_of_payment, "type")
     
     doc = frappe.qb.DocType("Mode of Payment Account")
-    adoc = frappe.qb.DocType("Account")
+    adoc = frappe.qb.DocType(__ACCOUNT__)
     data = (
         frappe.qb.from_(doc)
         .select(
@@ -89,15 +87,15 @@ def get_mode_of_payment_data(mode_of_payment, company):
         }
         
         if mop_type == "Bank":
-            data["account"] = get_cached_value("Company", company, "default_bank_account")
+            data["account"] = get_cached_value(__COMPANY__, company, "default_bank_account")
         elif mop_type == "Cash":
-            data["account"] = get_cached_value("Company", company, "default_cash_account")
+            data["account"] = get_cached_value(__COMPANY__, company, "default_cash_account")
         
         if data["account"]:
-            data["currency"] = get_cached_value("Account", data["account"], "account_currency")
+            data["currency"] = get_cached_value(__ACCOUNT__, data["account"], "account_currency")
     
     data["type"] = mop_type
-    data["company_currency"] = get_cached_value("Company", company, "default_currency")
+    data["company_currency"] = get_cached_value(__COMPANY__, company, "default_currency")
     
     return data
 

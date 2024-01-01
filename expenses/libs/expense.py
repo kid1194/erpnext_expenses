@@ -19,17 +19,14 @@ from .check import (
     expense_claim_exists,
     expense_exists
 )
+from .doctypes import __EXPENSE__
 from .entry import get_expense_entries
 from .item import get_item_company_account
-from .request import get_expense_requests
+from .request_expense import get_expense_requests
 from .search import (
     filter_search,
     prepare_data
 )
-
-
-## [Check, Install, Internal]
-__EXPENSE__ = "Expense"
 
 
 # [Expense]
@@ -183,7 +180,7 @@ def get_expenses(names: list):
         .where(Criterion.any([
             doc.status == ExpenseStatus.Pending,
             doc.status == ExpenseStatus.Requested
-        ])
+        ]))
         #.where(doc.owner == frappe.session.user)
         .where(doc.docstatus == 1)
     ).run(as_dict=True)
@@ -209,7 +206,8 @@ def search_expenses_by_company(
     date: str=None, as_dict=False
 ):
     doc = frappe.qb.DocType(__EXPENSE__)
-    qry = (frappe.qb.from_(doc)
+    qry = (
+        frappe.qb.from_(doc)
         .select(
             doc.name,
             doc.expense_item,
@@ -221,7 +219,8 @@ def search_expenses_by_company(
         .where(doc.company == company)
         .where(doc.status == ExpenseStatus.Pending)
         .where(doc.owner == frappe.session.user)
-        .where(doc.docstatus == 1))
+        .where(doc.docstatus == 1)
+    )
     
     qry = filter_search(doc, qry, __EXPENSE__, search, doc.name, "name")
     
