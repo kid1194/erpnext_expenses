@@ -8,10 +8,10 @@ An expenses management module for ERPNext.
 
 ### Contributors
 **The list of people who deserves more than a simple "Thank You".**
-- [Monolith Online](https://github.com/monolithon) {Test} {Debug} ♥
-- [Andrew Rogers](https://github.com/agrogers) {Test} {Debug} 👍
-- [washaqq](https://github.com/washaqq) {Test} {Debug} 👍
-- [codi](https://github.com/hassan-youssef) {Debug} 👍
+- [Monolith Online](https://github.com/monolithon) {Test, Debug} ♥
+- [Andrew Rogers](https://github.com/agrogers) {Test, Debug} 👍
+- [washaqq](https://github.com/washaqq) {Test, Debug} 👍
+- [codi](https://github.com/hassan-youssef) {Debug} 😎
 
 ---
 

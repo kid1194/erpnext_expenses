@@ -20,9 +20,9 @@ from .check import (
     expense_exists
 )
 from .doctypes import __EXPENSE__
-from .entry import get_expense_entries
+from .entry_details import get_expense_entries
 from .item import get_item_company_account
-from .request_expense import get_expense_requests
+from .request_details import get_expense_requests
 from .search import (
     filter_search,
     prepare_data

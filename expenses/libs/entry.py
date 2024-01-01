@@ -22,31 +22,13 @@ from .common import error
 from .doctypes import (
     __ACCOUNT__,
     __COMPANY__,
-    __ENTRY__,
-    __ENTRY_DETAILS__
+    __ENTRY__
 )
 from .request import get_request
 
 
 ## [Internal]
 __ENTRY_MODERATOR_ROLE__ = "Expenses Entry Moderator"
-
-
-## [Expense]
-def get_expense_entries(expense: str):
-    doc = frappe.qb.DocType(__ENTRY_DETAILS__)
-    data = (
-        frappe.qb.from_(doc)
-        .select(doc.parent)
-        .where(doc.expense_ref == expense)
-        .where(doc.parenttype == __ENTRY__)
-        .where(doc.parentfield == "expenses")
-    ).run(as_dict=True)
-    
-    if not data or not isinstance(data, list):
-        return None
-    
-    return data
 
 
 # [Entry, Entry Form]
