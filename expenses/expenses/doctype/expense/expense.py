@@ -43,7 +43,7 @@ class Expense(Document):
                 
                 change = 0
                 for k in ["cost", "qty"]:
-                    if temp[k] && flt(self.get(k)) != temp[k]:
+                    if temp[k] and flt(self.get(k)) != temp[k]:
                         self.set(k, temp[k])
                         change += 1
                     
