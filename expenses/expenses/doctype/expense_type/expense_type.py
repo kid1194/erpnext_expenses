@@ -17,6 +17,7 @@ from expenses.libs import (
     account_exists,
     type_children_exists,
     items_of_type_exists,
+    get_type_lft_rgt,
     type_has_descendants,
     disable_type_descendants,
     emit_type_changed
@@ -26,6 +27,7 @@ from expenses.libs import (
 class ExpenseType(NestedSet):
     nsm_parent_field = "parent_type"
     _disable_descendants = False
+    _old_data = None
     _emit_change = False
     
     
@@ -65,6 +67,7 @@ class ExpenseType(NestedSet):
                 type_children_exists(name)
             ):
                 self._disable_descendants = True
+                self._old_data = get_type_lft_rgt(self.name)
                 self._emit_change = True
             
             if not self._emit_change:
@@ -76,25 +79,19 @@ class ExpenseType(NestedSet):
     
     def on_update(self):
         if self._disable_descendants:
+            old = self._old_data
             self._disable_descendants = False
+            self._old_data = None
             
-            lft = cint(self.lft)
-            old_lft = lft
-            rgt = cint(self.rgt)
-            old_rgt = rgt
-            
-            if (doc := self._get_old_doc()):
-                old_lft = cint(doc.lft)
-                old_rgt = cint(doc.rgt)
-            
-            if type_has_descendants(lft, rgt):
-                disable_type_descendants(lft, rgt)
-            
-            elif (
-                (lft != old_lft or rgt != old_rgt) and
-                type_has_descendants(old_lft, old_rgt)
-            ):
-                disable_type_descendants(old_lft, old_rgt)
+            if (cur := get_type_lft_rgt(self.name)):
+                if type_has_descendants(cur.lft, cur.rgt):
+                    disable_type_descendants(cur.lft, cur.rgt)
+                elif (
+                    old and
+                    (cur.lft != old.lft or cur.rgt != old.rgt) and
+                    type_has_descendants(old.lft, old.rgt)
+                ):
+                    disable_type_descendants(old.lft, old.rgt)
         
         if not frappe.local.flags.ignore_update_nsm:
             super(ExpenseType, self).on_update()

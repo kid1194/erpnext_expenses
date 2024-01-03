@@ -11,7 +11,7 @@ from .install import _DOCTYPES_
 
 
 ## [Hooks]
-def before_uninstall():
+def after_uninstall():
     _remove_roles()
     _remove_link_from_workspace()
     frappe.clear_cache()

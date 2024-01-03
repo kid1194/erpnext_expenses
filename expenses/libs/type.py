@@ -8,8 +8,9 @@ from pypika.terms import Criterion
 from pypika.enums import Order
 
 import frappe
-from frappe import _
+from frappe import _, _dict
 from frappe.utils import cint
+from frappe.utils.nestedset import get_descendants_of
 
 from .account import (
     get_types_with_accounts,
@@ -39,6 +40,17 @@ def type_form_setup():
     return {
         "has_accounts": get_types_with_accounts(__TYPE__)
     }
+
+
+# [Type]
+def get_type_lft_rgt(name: str):
+    data = frappe.db.get_value(__TYPE__, name, ["lft", "rgt"], as_dict=True)
+    if data:
+        data = _dict(data)
+        data.lft = cint(data.lft)
+        data.rgt = cint(data.rgt)
+    
+    return data
 
 
 # [Type]
