@@ -55,7 +55,7 @@ def has_item_expenses(expense_item: str):
 # [Item, Type]
 ## [Request, Type, Internal]
 def get_count(dt: str, filters: dict):
-    return frappe.doc.count(dt, filters)
+    return frappe.db.count(dt, filters)
 
 
 ## [Entry, Expense]

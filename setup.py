@@ -5,7 +5,7 @@
 
 
 from setuptools import setup, find_packages
-from expenses import __version__
+from expenses import __VERSION__
 
 
 with open('requirements.txt') as f:
@@ -14,7 +14,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='expenses',
-    version=__version__,
+    version=__VERSION__,
     description='Expenses management for ERPNext',
     author='Ameen Ahmed (Level Up)',
     author_email='kid1194@gmail.com',

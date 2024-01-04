@@ -34,7 +34,6 @@ class ExpensesSettings(Document):
     def validate(self):
         if (
             cint(self.is_enabled) and
-            cint(self.auto_check_for_update) and
             cint(self.send_update_notification)
         ):
             self._check_sender()

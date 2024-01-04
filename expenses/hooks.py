@@ -33,7 +33,8 @@ doctype_list_js = {
 }
 
 
-after_install = "expenses.setup.install.after_install"
+before_install = "expenses.setup.install.before_install"
+after_sync = "expenses.setup.install.after_sync"
 after_uninstall = "expenses.setup.uninstall.after_uninstall"
 
 

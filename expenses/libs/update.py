@@ -19,9 +19,9 @@ from frappe.desk.doctype.notification_settings.notification_settings import (
 )
 
 from expenses import (
-    __name__,
-    __version__,
-    __production__
+    __MODULE__,
+    __VERSION__,
+    __PRODUCTION__
 )
 
 from .background import (
@@ -31,6 +31,7 @@ from .background import (
 from .check import user_exists
 from .common import (
     log_error,
+    log_info,
     parse_json
 )
 from .doctypes import __SETTINGS__
@@ -40,16 +41,26 @@ from .settings import settings
 
 ## [Hooks]
 def auto_check_for_update():
-    if __production__:
+    if __PRODUCTION__:
         doc = settings()
         if cint(doc.is_enabled) and cint(doc.auto_check_for_update):
-            check_for_update()
+            process_check_for_update(doc)
 
 
 # [Settings Form]
-## [Internal]
 @frappe.whitelist()
 def check_for_update():
+    if __PRODUCTION__:
+        return 0
+    doc = settings()
+    if not cint(doc.is_enabled):
+        return 0
+    
+    return process_check_for_update(doc)
+
+
+## [Internal]
+def process_check_for_update(doc):
     try:
         http = get_request_session()
         request = http.request(
@@ -57,31 +68,33 @@ def check_for_update():
             "https://api.github.com/repos/kid1194/erpnext_expenses/releases/latest"
         )
         status_code = request.status_code
-        data = request.json()
+        result = request.json()
     except Exception as exc:
         log_error(exc)
         return 0
     
     if status_code != 200 and status_code != 201:
+        log_response("Invalid response status", status_code, result)
         return 0
     
-    data = parse_json(data)
+    data = parse_json(result)
     
     if (
         not data or not isinstance(data, dict) or
         not getattr(data, "tag_name", "") or
         not getattr(data, "body", "")
     ):
+        log_response("Invalid response data", status_code, result)
         return 0
     
     latest_version = re.findall(r"(\d+(?:\.\d+)+)", str(data.get("tag_name")))
     if not latest_version:
+        log_response("Invalid response update version", status_code, result)
         return 0
     
     latest_version = latest_version.pop()
-    has_update = compare_versions(latest_version, __version__) > 0
+    has_update = compare_versions(latest_version, __VERSION__) > 0
     
-    doc = settings()
     doc.latest_check = now()
     
     if has_update:
@@ -90,19 +103,31 @@ def check_for_update():
     
     doc.save(ignore_permissions=True)
     
-    if (
-        has_update and
-        cint(doc.send_update_notification) and
-        user_exists(doc.update_notification_sender, enabled=True)
-    ):
-        enqueue_send_notification(
-            latest_version,
-            doc.update_notification_sender,
-            [v.user for v in doc.update_notification_receivers],
-            markdown(response.get("body"))
-        )
+    if has_update and cint(doc.send_update_notification):
+        job_name = f"exp-send-notification-{latest_version}"
+        if not is_job_running(job_name):
+            enqueue_job(
+                "expenses.libs.update.send_notification",
+                job_name,
+                version=latest_version,
+                sender=doc.update_notification_sender,
+                receivers=[v.user for v in doc.update_notification_receivers],
+                message=markdown(data.get("body"))
+            )
     
     return 1
+
+
+# [Internal]
+def log_response(message, status, result):
+    log_info({
+        "action": "check for update",
+        "message": message,
+        "response": {
+            "status": status,
+            "result": result
+        }
+    })
 
 
 ## [Internal]
@@ -129,21 +154,10 @@ def compare_versions(verA, verB):
 
 
 ## [Internal]
-def enqueue_send_notification(version, sender, receivers, message):
-    job_name = f"exp-send-notification-{version}"
-    if not is_job_running(job_name):
-        enqueue_job(
-            "expenses.libs.update.send_notification",
-            job_name,
-            version=version,
-            sender=sender,
-            receivers=receivers,
-            message=message
-        )
-
-
-## [Internal]
 def send_notification(version, sender, receivers, message):
+    if not user_exists(sender, enabled=True):
+        return 0
+    
     receivers = users_filter(receivers, enabled=True)
     if not receivers:
         return 0
@@ -156,7 +170,7 @@ def send_notification(version, sender, receivers, message):
                     "document_name": __SETTINGS__,
                     "from_user": sender,
                     "for_user": receiver,
-                    "subject": "{0}: {1}".format(__name__, _("New Version Available")),
+                    "subject": "{0}: {1}".format(__MODULE__, _("New Version Available")),
                     "type": "Alert",
                     "email_content": "<p><h2>{0} {1}</h2></p><p>{2}</p>".format(
                         _("Version"), version, _(message)
