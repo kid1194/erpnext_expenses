@@ -8,7 +8,10 @@ import frappe
 from frappe.utils import now
 from frappe.utils.user import get_system_managers
 
-from expenses import __VERSION__
+from expenses import (
+    __VERSION__,
+    __PRODUCTION__
+)
 
 from expenses.libs.settings import settings
 
@@ -20,7 +23,8 @@ from .uninstall import (
 
 ## [Hooks]
 def before_install():
-    after_uninstall()
+    if not __PRODUCTION__:
+        after_uninstall()
 
 
 ## [Hooks]
