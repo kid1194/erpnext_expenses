@@ -239,7 +239,7 @@ def search_expenses_by_company(
 
 ## [Internal]
 def enqueue_expenses_status_change(names: list, status: str):
-    key = uuid_key(names, status)
+    key = uuid_key([names, status])
     job_name = f"exp-set-expenses-status-{key}"
     if not is_job_running(job_name):
         enqueue_job(

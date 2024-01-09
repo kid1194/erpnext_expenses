@@ -16,7 +16,7 @@ from .common import to_json
 
 
 ## [Expense]
-def uuid_key(*args):
+def uuid_key(args):
     return cstr(uuid.UUID(hashlib.sha256(
         to_json(args, "").encode("utf-8")
     ).hexdigest()[::2]))
