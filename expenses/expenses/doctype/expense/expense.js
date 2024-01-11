@@ -331,7 +331,7 @@ frappe.ui.form.on('Expense', {
         }
     },
     after_save: function(frm) {
-        if (frm._expense.is_draft && frm._expense.del_files.length) {
+        if (frm._expense.is_draft && frm._expense.del_files.length)
             frappe.exp().request(
                 'delete_attach_files',
                 {
@@ -346,7 +346,7 @@ frappe.ui.form.on('Expense', {
         frm._expense.is_toolbar_ready = true;
         let btn = __('Create Request');
         if (frm.custom_buttons[btn]) return;
-        frm.add_custom_button(btn, function () {
+        frm.add_custom_button(btn, function() {
             frappe.exp().set_cache('create-expenses-request', {
                 company: cstr(frm.doc.company),
                 expenses: [cstr(frm.doc.name)],
@@ -378,5 +378,5 @@ frappe.ui.form.on('Expense Attachment', {
             frm._expense.del_files.del(cstr(row.name || cdn));
             frm._expense.del_files.del(file, 1);
         }
-    },
+    }
 });
