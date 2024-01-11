@@ -11,7 +11,7 @@ An expenses management module for ERPNext.
 - [![Monolith Online](https://img.shields.io/badge/Monolith_Online-Debug_%7C_Test-red?style=plastic)](https://github.com/monolithon)
 - [![Andrew Rogers](https://img.shields.io/badge/Andrew_Rogers-Debug_%7C_Test-blue?style=plastic)](https://github.com/agrogers)
 - [![Washaqq](https://img.shields.io/badge/Washaqq-Debug_%7C_Test-orange?style=plastic)](https://github.com/washaqq)
-- [![Codi](https://img.shields.io/badge/Codi-Debug-green?style=plastic)](https://github.com/hassan-youssef)
+- [![Codi](https://img.shields.io/badge/Codi-Debug_%7C_Test-green?style=plastic)](https://github.com/hassan-youssef)
 
 ---
 
