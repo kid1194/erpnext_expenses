@@ -38,7 +38,8 @@ def _settings_setup():
     try:
         doc = settings()
         
-        if (managers := get_system_managers(only_name=True)):
+        managers = get_system_managers(only_name=True)
+        if managers:
             doc.auto_check_for_update = 1
             doc.send_update_notification = 1
             
