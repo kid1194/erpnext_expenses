@@ -7,13 +7,12 @@
 import frappe
 from frappe.utils import cint
 
-from .cache import get_cached_doc
-from .doctypes import __SETTINGS__
-
 
 ## [Install, Update, Internal]
 def settings(for_update=False):
-    return get_cached_doc(__SETTINGS__, None, for_update)
+    from .cache import get_cached_doc
+    
+    return get_cached_doc("Expenses Settings", None, for_update)
 
 
 # [JS]

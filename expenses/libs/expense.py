@@ -4,29 +4,7 @@
 # Licence: Please refer to LICENSE file
 
 
-from pypika.terms import Criterion
-
 import frappe
-
-from .attachment import get_files_by_parents
-from .background import (
-    uuid_key,
-    is_job_running,
-    enqueue_job
-)
-from .check import (
-    can_use_expense_claim,
-    expense_claim_exists,
-    expense_exists
-)
-from .doctypes import __EXPENSE__
-from .entry_details import get_expense_entries
-from .item import get_item_company_account
-from .request_details import get_expense_requests
-from .search import (
-    filter_search,
-    prepare_data
-)
 
 
 # [Expense]
@@ -48,6 +26,8 @@ __EXPENSE_MODERATOR_ROLE__ = "Expense Moderator"
 # [Expense, Expense Form]
 @frappe.whitelist(methods=["POST"])
 def item_expense_data(item, company):
+    from .item import get_item_company_account
+    
     if (
         not item or not isinstance(item, str) or
         not company or not isinstance(company, str)
@@ -75,11 +55,15 @@ def is_expense_moderator():
 # [Expense]
 ## [Internal]
 def has_expense_claim():
+    from .check import can_use_expense_claim
+    
     return 1 if can_use_expense_claim() else 0
 
 
 # [Entry, Expense]
 def is_valid_claim(expense_claim: str, paid_by: str, company: str):
+    from .check import expense_claim_exists
+    
     return expense_claim_exists(
         expense_claim,
         {
@@ -94,6 +78,8 @@ def is_valid_claim(expense_claim: str, paid_by: str, company: str):
 
 # [Expense]
 def expense_requests_exists(name: str):
+    from .request_details import get_expense_requests
+    
     data = get_expense_requests(name)
     if not data:
         return False
@@ -103,6 +89,8 @@ def expense_requests_exists(name: str):
 
 # [Expense]
 def expense_entries_exists(name: str):
+    from .entry_details import get_expense_entries
+    
     data = get_expense_entries(name)
     if not data:
         return False
@@ -113,7 +101,7 @@ def expense_entries_exists(name: str):
 ## [Request]
 def get_expenses_for_company(names: list, company: str):
     return frappe.get_all(
-        __EXPENSE__,
+        "Expense",
         fields=["name"],
         filters={
             "name": ["in", names],
@@ -158,7 +146,12 @@ def set_expenses_rejected(names: list):
 
 ## [Request]
 def get_expenses(names: list):
-    doc = frappe.qb.DocType(__EXPENSE__)
+    from pypika.terms import Criterion
+    
+    from .attachment import get_files_by_parents
+    
+    dt = "Expense"
+    doc = frappe.qb.DocType(dt)
     data = (
         frappe.qb.from_(doc)
         .select(
@@ -190,8 +183,7 @@ def get_expenses(names: list):
     
     if (attachments := get_files_by_parents(
         [v["name"] for v in data],
-        __EXPENSE__,
-        "attachments"
+        dt, "attachments"
     )):
         for i in range(len(data)):
             if data[i]["name"] in attachments:
@@ -205,7 +197,13 @@ def search_expenses_by_company(
     company: str, search: str=None, existing: list=None,
     date: str=None, as_dict=False
 ):
-    doc = frappe.qb.DocType(__EXPENSE__)
+    from .search import (
+        filter_search,
+        prepare_data
+    )
+    
+    dt = "Expense"
+    doc = frappe.qb.DocType(dt)
     qry = (
         frappe.qb.from_(doc)
         .select(
@@ -222,7 +220,7 @@ def search_expenses_by_company(
         .where(doc.docstatus == 1)
     )
     
-    qry = filter_search(doc, qry, __EXPENSE__, search, doc.name, "name")
+    qry = filter_search(doc, qry, dt, search, doc.name, "name")
     
     if existing:
         qry = qry.where(doc.name.notin(existing))
@@ -232,13 +230,19 @@ def search_expenses_by_company(
     
     data = qry.run(as_dict=as_dict)
     
-    data = prepare_data(data, __EXPENSE__, "name", search, as_dict)
+    data = prepare_data(data, dt, "name", search, as_dict)
     
     return data
 
 
 ## [Internal]
 def enqueue_expenses_status_change(names: list, status: str):
+    from .background import (
+        uuid_key,
+        is_job_running,
+        enqueue_job
+    )
+    
     key = uuid_key([names, status])
     job_name = f"exp-set-expenses-status-{key}"
     if not is_job_running(job_name):
@@ -252,6 +256,8 @@ def enqueue_expenses_status_change(names: list, status: str):
 
 ## [Internal]
 def set_expenses_status(names: list, status: str):
+    from .check import expense_exists
+    
     if status == ExpenseStatus.Requested:
         action = 1
     elif status == ExpenseStatus.Approved:
@@ -268,7 +274,7 @@ def set_expenses_status(names: list, status: str):
     
     for name in names:
         if expense_exists(name):
-            doc = frappe.get_doc(__EXPENSE__, name)
+            doc = frappe.get_doc("Expense", name)
             if action == 1:
                 doc.request()
             elif action == 2:

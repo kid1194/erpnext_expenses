@@ -12,11 +12,11 @@ from frappe.utils import cstr
 
 from expenses.version import __frappe_v15__
 
-from .common import to_json
-
 
 ## [Expense]
 def uuid_key(args):
+    from .common import to_json
+    
     return cstr(uuid.UUID(hashlib.sha256(
         to_json(args, "").encode("utf-8")
     ).hexdigest()[::2]))

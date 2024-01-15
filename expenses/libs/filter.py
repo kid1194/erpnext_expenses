@@ -6,12 +6,10 @@
 
 import frappe
 
-from .doctypes import __USER__
-
 
 ## [Update]
 def users_filter(names: list, attrs: dict=None, enabled: bool=None):
-    return all_filter(__USER__, "name", names, attrs, enabled, "enabled", 1)
+    return all_filter("User", "name", names, attrs, enabled, "enabled", 1)
 
 
 ## [Check, Internal]

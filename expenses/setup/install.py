@@ -16,7 +16,7 @@ from expenses import (
 from expenses.libs.settings import settings
 
 from .uninstall import (
-    __DOCTYPES__,
+    __DOCTYPES__ as doctypes,
     after_uninstall
 )
 
@@ -86,7 +86,7 @@ def _workspace_setup():
             return 0
         
         doc = frappe.get_doc(dt, name)
-        for doctype in __DOCTYPES__:
+        for doctype in doctypes:
             doc.append("links", {
                 "dependencies": "",
                 "hidden": 0,

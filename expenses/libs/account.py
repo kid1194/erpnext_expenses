@@ -9,19 +9,6 @@ from pypika.enums import Order
 import frappe
 from frappe.utils import flt
 
-from .cache import (
-    get_cached_value,
-    get_cache,
-    set_cache
-)
-from .doctypes import (
-    __ACCOUNT__,
-    __ITEM__,
-    __TYPE__,
-    __TYPE_ACCOUNT__,
-    __ITEM_ACCOUNT__
-)
-
 
 ## [Internal]
 __FIELD__ = "expense_accounts"
@@ -29,13 +16,19 @@ __FIELD__ = "expense_accounts"
 
 ## [Type]
 def get_types_with_accounts():
+    from .cache import (
+        get_cache,
+        set_cache
+    )
+    
+    dt = "Expense Type"
     key = "types-with-expense-accounts"
-    data = get_cache(__TYPE__, key)
+    data = get_cache(dt, key)
     if data and isinstance(data, list):
         return data
     
-    doc = frappe.qb.DocType(__TYPE_ACCOUNT__)
-    pdoc = frappe.qb.DocType(__TYPE__)
+    doc = frappe.qb.DocType("Expense Type Account")
+    pdoc = frappe.qb.DocType(dt)
     
     data = (
         frappe.qb.from_(doc)
@@ -43,7 +36,7 @@ def get_types_with_accounts():
         .distinct()
         .left_join(pdoc)
         .on(pdoc.name == doc.parent)
-        .where(doc.parenttype == __TYPE__)
+        .where(doc.parenttype == dt)
         .where(doc.parentfield == __FIELD__)
         .where(pdoc.disabled == 0)
     ).run(as_dict=True)
@@ -52,24 +45,31 @@ def get_types_with_accounts():
         return None
     
     data = [v["parent"] for v in data]
-    set_cache(__TYPE__, key, data)
+    set_cache(dt, key, data)
     
     return data
 
 
 ## [Type]
 def get_type_accounts(type_name: str):
+    from .cache import (
+        get_cached_value,
+        get_cache,
+        set_cache
+    )
+    
+    dt = "Expense Type"
     key = f"{type_name}-expense-accounts"
-    data = get_cache(__TYPE__, key)
+    data = get_cache(dt, key)
     if data and isinstance(data, list):
         return data
     
-    type_data = get_cached_value(__TYPE__, type_name, ["lft", "rgt"])
+    type_data = get_cached_value(dt, type_name, ["lft", "rgt"])
     
-    doc = frappe.qb.DocType(__TYPE_ACCOUNT__)
-    pdoc = frappe.qb.DocType(__TYPE__)
-    jdoc = frappe.qb.DocType(__TYPE__)
-    adoc = frappe.qb.DocType(__ACCOUNT__)
+    doc = frappe.qb.DocType("Expense Type Account")
+    pdoc = frappe.qb.DocType(dt)
+    jdoc = frappe.qb.DocType(dt)
+    adoc = frappe.qb.DocType("Account")
     
     pqry = (frappe.qb.from_(pdoc)
         .select(pdoc.name)
@@ -89,7 +89,7 @@ def get_type_accounts(type_name: str):
         .inner_join(adoc)
         .on(adoc.name == doc.account)
         .where(doc.parent.isin(pqry))
-        .where(doc.parenttype == __TYPE__)
+        .where(doc.parenttype == dt)
         .where(doc.parentfield == __FIELD__)
         .orderby(jdoc.lft, order=Order.desc)
     ).run(as_dict=True)
@@ -105,7 +105,7 @@ def get_type_accounts(type_name: str):
             ret.append(v)
             comps.append(v["company"])
     
-    set_cache(__TYPE__, key, ret)
+    set_cache(dt, key, ret)
     
     return ret
 
@@ -120,9 +120,10 @@ def get_type_company_account_data(parent: str, company: str):
     ):
         return None
     
-    lft, rgt = frappe.db.get_value(__TYPE__, parent, ["lft", "rgt"])
+    dt = "Expense Type"
+    lft, rgt = frappe.db.get_value(dt, parent, ["lft", "rgt"])
     
-    pdoc = frappe.qb.DocType(__TYPE__)
+    pdoc = frappe.qb.DocType(dt)
     parent_qry = (frappe.qb.from_(pdoc)
         .select(pdoc.name)
         .where(pdoc.disabled == 0)
@@ -130,8 +131,8 @@ def get_type_company_account_data(parent: str, company: str):
         .where(pdoc.rgt.gte(rgt))
         .orderby(pdoc.lft, order=Order.desc))
     
-    doc = frappe.qb.DocType(__TYPE_ACCOUNT__)
-    adoc = frappe.qb.DocType(__ACCOUNT__)
+    doc = frappe.qb.DocType("Expense Type Account")
+    adoc = frappe.qb.DocType("Account")
     data = (
         frappe.qb.from_(doc)
         .select(
@@ -144,7 +145,7 @@ def get_type_company_account_data(parent: str, company: str):
         .on(adoc.name == doc.account)
         .where(doc.parent.isin(parent_qry))
         .where(doc.company == company)
-        .where(doc.parenttype == __TYPE__)
+        .where(doc.parenttype == dt)
         .where(doc.parentfield == __FIELD__)
         .orderby(pdoc.lft, order=Order.desc)
         .limit(1)
@@ -167,8 +168,8 @@ def get_item_company_account_data(parent, company: str):
     ):
         return None
     
-    doc = frappe.qb.DocType(__ITEM_ACCOUNT__)
-    adoc = frappe.qb.DocType(__ACCOUNT__)
+    doc = frappe.qb.DocType("Expense Item Account")
+    adoc = frappe.qb.DocType("Account")
     data = (
         frappe.qb.from_(doc)
         .select(
@@ -184,7 +185,7 @@ def get_item_company_account_data(parent, company: str):
         .inner_join(adoc)
         .on(adoc.name == doc.account)
         .where(doc.company == company)
-        .where(doc.parenttype == __ITEM__)
+        .where(doc.parenttype == "Expense Item")
         .where(doc.parentfield == __FIELD__)
         .limit(1)
     )

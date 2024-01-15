@@ -28,14 +28,11 @@ from .background import (
     is_job_running,
     enqueue_job
 )
-from .check import user_exists
 from .common import (
     log_error,
     log_info,
     parse_json
 )
-from .doctypes import __SETTINGS__
-from .filter import users_filter
 from .settings import settings
 
 
@@ -155,6 +152,9 @@ def compare_versions(verA, verB):
 
 ## [Internal]
 def send_notification(version, sender, receivers, message):
+    from .check import user_exists
+    from .filter import users_filter
+    
     if not user_exists(sender, enabled=True):
         return 0
     
@@ -162,18 +162,19 @@ def send_notification(version, sender, receivers, message):
     if not receivers:
         return 0
     
+    doc = {
+        "document_type": "Expenses Settings",
+        "document_name": "Expenses Settings",
+        "from_user": sender,
+        "subject": "{0}: {1}".format(__MODULE__, _("New Version Available")),
+        "type": "Alert",
+        "email_content": "<p><h2>{0} {1}</h2></p><p>{2}</p>".format(
+            _("Version"), version, _(message)
+        )
+    }
     for receiver in receivers:
         if is_notifications_enabled(receiver):
+            doc["for_user"] = receiver
             (frappe.new_doc("Notification Log")
-                .update({
-                    "document_type": __SETTINGS__,
-                    "document_name": __SETTINGS__,
-                    "from_user": sender,
-                    "for_user": receiver,
-                    "subject": "{0}: {1}".format(__MODULE__, _("New Version Available")),
-                    "type": "Alert",
-                    "email_content": "<p><h2>{0} {1}</h2></p><p>{2}</p>".format(
-                        _("Version"), version, _(message)
-                    )
-                })
+                .update(doc)
                 .insert(ignore_permissions=True, ignore_mandatory=True))

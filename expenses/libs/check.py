@@ -6,50 +6,41 @@
 
 import frappe
 
-from .doctypes import (
-    __USER__,
-    __ACCOUNT__,
-    __EXPENSE__,
-    __ITEM__,
-    __TYPE__
-)
-from .filter import all_filter
-
 
 # [Settings]
 def users_exists(names: list, attrs: dict=None, enabled: bool=None):
-    return _all_exists(__USER__, "name", names, attrs, enabled, "enabled", 1)
+    return _all_exists("User", "name", names, attrs, enabled, "enabled", 1)
 
 
 # [Settings]
 ## [Update]
 def user_exists(name: str, attrs: dict=None, enabled: bool=None):
-    return _exists(__USER__, name, attrs, enabled, "enabled", 1)
+    return _exists("User", name, attrs, enabled, "enabled", 1)
 
 
 # [Item, Type]
 def type_exists(name: str, attrs: dict=None, enabled: bool=None):
-    return _exists(__TYPE__, name, attrs, enabled)
+    return _exists("Expense Type", name, attrs, enabled)
 
 
 # [Type]
 def type_children_exists(parent: str):
-    return _has(__TYPE__, {"parent_type": parent})
+    return _has("Expense Type", {"parent_type": parent})
 
 
 # [Type]
 def items_of_type_exists(expense_type: str):
-    return _has(__ITEM__, {"expense_type": expense_type})
+    return _has("Expense Item", {"expense_type": expense_type})
 
 
 # [Entry, Item, Type]
 def account_exists(name: str, attrs: dict=None, enabled: bool=None):
-    return _exists(__ACCOUNT__, name, attrs, enabled)
+    return _exists("Account", name, attrs, enabled)
 
 
 # [Item]
 def has_item_expenses(expense_item: str):
-    return _has(__EXPENSE__, {"expense_item": expense_item})
+    return _has("Expense", {"expense_item": expense_item})
 
 
 # [Item, Type]
@@ -70,7 +61,7 @@ def expense_claim_exists(name: str, attrs: dict=None):
 
 ## [Expense]
 def expense_exists(name: str, attrs: dict=None):
-    return _exists(__EXPENSE__, name, attrs)
+    return _exists("Expense", name, attrs)
 
 
 ## [Internal]
@@ -104,6 +95,8 @@ def _all_exists(
     dt: str, field: str, names: list, attrs: dict=None,
     enabled: bool=None, status_col: str="disabled", enabled_val: int=0
 ):
+    from .filter import all_filter
+    
     data = all_filter(dt, field, names, attrs, enabled, status_col, enabled_val)
     
     if not data or len(data) != len(names):

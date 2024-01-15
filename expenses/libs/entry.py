@@ -13,18 +13,10 @@ from frappe.utils import (
     add_days
 )
 
-from .cache import (
-    get_cached_value,
-    get_cached_doc
+from .common import (
+    error,
+    log_error
 )
-from .check import can_use_expense_claim
-from .common import error
-from .doctypes import (
-    __ACCOUNT__,
-    __COMPANY__,
-    __ENTRY__
-)
-from .request import get_request
 
 
 ## [Internal]
@@ -34,6 +26,8 @@ __ENTRY_MODERATOR_ROLE__ = "Expenses Entry Moderator"
 # [Entry, Entry Form]
 @frappe.whitelist(methods=["POST"])
 def get_mode_of_payment_data(mode_of_payment, company):
+    from .cache import get_cached_value
+    
     if (
         not mode_of_payment or not isinstance(mode_of_payment, str) or
         not company or not isinstance(company, str)
@@ -43,7 +37,7 @@ def get_mode_of_payment_data(mode_of_payment, company):
     mop_type = get_cached_value("Mode of Payment", mode_of_payment, "type")
     
     doc = frappe.qb.DocType("Mode of Payment Account")
-    adoc = frappe.qb.DocType(__ACCOUNT__)
+    adoc = frappe.qb.DocType("Account")
     data = (
         frappe.qb.from_(doc)
         .select(
@@ -69,15 +63,15 @@ def get_mode_of_payment_data(mode_of_payment, company):
         }
         
         if mop_type == "Bank":
-            data["account"] = get_cached_value(__COMPANY__, company, "default_bank_account")
+            data["account"] = get_cached_value("Company", company, "default_bank_account")
         elif mop_type == "Cash":
-            data["account"] = get_cached_value(__COMPANY__, company, "default_cash_account")
+            data["account"] = get_cached_value("Company", company, "default_cash_account")
         
         if data["account"]:
-            data["currency"] = get_cached_value(__ACCOUNT__, data["account"], "account_currency")
+            data["currency"] = get_cached_value("Account", data["account"], "account_currency")
     
     data["type"] = mop_type
-    data["company_currency"] = get_cached_value(__COMPANY__, company, "default_currency")
+    data["company_currency"] = get_cached_value("Company", company, "default_currency")
     
     return data
 
@@ -91,6 +85,8 @@ def is_entry_moderator():
 # [Entry, Entry Form]
 @frappe.whitelist()
 def entry_form_setup():
+    from .check import can_use_expense_claim
+    
     return {
         "is_moderator": is_entry_moderator(),
         "has_expense_claim": can_use_expense_claim()
@@ -106,6 +102,8 @@ def get_current_exchange_rate(from_currency, to_currency, date=None):
 # [Entry Form]
 @frappe.whitelist(methods=["POST"])
 def get_request_data(name):
+    from .request import get_request
+    
     if not name or not isinstance(name, str):
         return 0
     
@@ -226,4 +224,6 @@ def get_exchange_rate_value(from_currency, to_currency: str, date=None, args=Non
 
 ## [Journal]
 def get_entry_data(name: str):
-    return get_cached_doc(__ENTRY__, name)
+    from .cache import get_cached_doc
+    
+    return get_cached_doc("Expenses Entry", name)

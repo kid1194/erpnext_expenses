@@ -6,10 +6,6 @@
 
 import frappe
 
-from .background import enqueue_job
-from .common import parse_json
-from .doctypes import __EXPENSE_ATTACH__
-
 
 ## [Internal]
 __FILE__ = "File"
@@ -18,6 +14,9 @@ __FILE__ = "File"
 # [Entry, Entry Form, Expense, Expense Form]
 @frappe.whitelist(methods=["POST"])
 def delete_attach_files(doctype, name, files):
+    from .background import enqueue_job
+    from .common import parse_json
+    
     if (
         not doctype or not isinstance(doctype, str) or
         not name or not isinstance(name, str) or
@@ -59,13 +58,14 @@ def files_delete(files: list):
 
 ## [Expense]
 def get_files_by_parents(parents: list, parent_type: str, parent_field: str):
+    dt = "Expense Attachment"
     data = frappe.get_all(
-        __EXPENSE_ATTACH__,
+        dt,
         fields=["parent", "file", "description"],
         filters=[
-            [__EXPENSE_ATTACH__, "parent", "in", parents],
-            [__EXPENSE_ATTACH__, "parenttype", "=", parent_type],
-            [__EXPENSE_ATTACH__, "parentfield", "=", parent_field]
+            [dt, "parent", "in", parents],
+            [dt, "parenttype", "=", parent_type],
+            [dt, "parentfield", "=", parent_field]
         ]
     )
     

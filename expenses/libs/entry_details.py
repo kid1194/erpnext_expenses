@@ -6,20 +6,15 @@
 
 import frappe
 
-from .doctypes import (
-    __ENTRY__,
-    __ENTRY_DETAILS__
-)
-
 
 ## [Expense]
 def get_expense_entries(expense: str):
-    doc = frappe.qb.DocType(__ENTRY_DETAILS__)
+    doc = frappe.qb.DocType("Expenses Entry Details")
     data = (
         frappe.qb.from_(doc)
         .select(doc.parent)
         .where(doc.expense_ref == expense)
-        .where(doc.parenttype == __ENTRY__)
+        .where(doc.parenttype == "Expenses Entry")
         .where(doc.parentfield == "expenses")
     ).run(as_dict=True)
     

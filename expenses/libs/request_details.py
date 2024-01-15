@@ -6,23 +6,19 @@
 
 import frappe
 
-from .doctypes import (
-    __REQUEST__,
-    __REQUEST_DETAILS__
-)
-
 
 ## [Expense]
 def get_expense_requests(expense: str):
-    doc = frappe.qb.DocType(__REQUEST__)
-    ddoc = frappe.qb.DocType(__REQUEST_DETAILS__)
+    dt = "Expenses Request"
+    doc = frappe.qb.DocType(dt)
+    ddoc = frappe.qb.DocType(f"{dt} Details")
     data = (
         frappe.qb.from_(ddoc)
         .select(doc.name)
         .left_join(doc)
         .on(doc.name == ddoc.parent)
         .where(ddoc.expense == expense)
-        .where(ddoc.parenttype == __REQUEST__)
+        .where(ddoc.parenttype == dt)
         .where(ddoc.parentfield == "expenses")
     ).run(as_dict=True)
     

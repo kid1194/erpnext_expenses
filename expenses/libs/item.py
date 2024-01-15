@@ -7,31 +7,12 @@
 import frappe
 from frappe.utils import cstr
 
-from .cache import (
-    get_cache,
-    set_cache,
-    get_cached_value
-)
-from .account import get_item_company_account_data
-from .doctypes import (
-    __ACCOUNT__,
-    __COMPANY__,
-    __ITEM__
-)
-from .search import (
-    filter_search,
-    prepare_data
-)
-from .type import (
-    type_accounts,
-    get_type_company_account_data,
-    get_types_filter_query
-)
-
 
 # [Item Form]
 @frappe.whitelist(methods=["POST"])
 def get_type_accounts(type_name):
+    from .type import type_accounts
+    
     data = type_accounts(type_name)
     if not data:
         return 0
@@ -48,12 +29,21 @@ def get_type_accounts(type_name):
 
 ## [Expense]
 def get_item_company_account(item: str, company: str):
+    from .account import get_item_company_account_data
+    from .cache import (
+        get_cached_value,
+        get_cache,
+        set_cache
+    )
+    from .type import get_type_company_account_data
+    
+    dt = "Expense Item"
     key = f"{item}-{company}-account-data"
-    cache = get_cache(__ITEM__, key)
+    cache = get_cache(dt, key)
     if cache and isinstance(cache, dict):
         return cache
     
-    expense_type = get_cached_value(__ITEM__, item, "expense_type")
+    expense_type = get_cached_value(dt, item, "expense_type")
     if not expense_type:
         return {}
     
@@ -77,8 +67,8 @@ def get_item_company_account(item: str, company: str):
         data = frappe._dict({"account": "", "currency": ""})
         data.update(default)
         
-        if (acc := get_cached_value(__COMPANY__, company, "default_expense_account")):
-            if (cur := get_cached_value(__ACCOUNT__, cstr(acc), "account_currency")):
+        if (acc := get_cached_value("Company", company, "default_expense_account")):
+            if (cur := get_cached_value("Account", cstr(acc), "account_currency")):
                 data.update({
                     "account": cstr(acc),
                     "currency": cstr(cur)
@@ -86,7 +76,7 @@ def get_item_company_account(item: str, company: str):
                 valid = True
     
     if valid:
-        set_cache(__ITEM__, key, data)
+        set_cache(dt, key, data)
     
     return data
 
@@ -94,7 +84,14 @@ def get_item_company_account(item: str, company: str):
 # [Exoense Form]
 @frappe.whitelist()
 def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-    doc = frappe.qb.DocType(__ITEM__)
+    from .search import (
+        filter_search,
+        prepare_data
+    )
+    from .type import get_types_filter_query
+    
+    dt = "Expense Item"
+    doc = frappe.qb.DocType(dt)
     qry = (
         frappe.qb.from_(doc)
         .select(doc.name)
@@ -102,10 +99,10 @@ def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
         .where(doc.expense_type.isin(get_types_filter_query()))
     )
     
-    qry = filter_search(doc, qry, __ITEM__, txt, doc.name, "name")
+    qry = filter_search(doc, qry, dt, txt, doc.name, "name")
     
     data = qry.run(as_dict=as_dict)
     
-    data = prepare_data(data, __ITEM__, "name", txt, as_dict)
+    data = prepare_data(data, dt, "name", txt, as_dict)
     
     return data

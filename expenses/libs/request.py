@@ -8,17 +8,7 @@ import frappe
 from frappe.utils import has_common
 
 from .cache import get_cached_doc
-from .check import get_count
 from .common import parse_json
-from .doctypes import __REQUEST__
-from .expense import (
-    get_expenses_for_company,
-    set_expenses_restored,
-    set_expenses_requested,
-    set_expenses_approved,
-    set_expenses_rejected,
-    get_expenses
-)
 
 
 # [Request]
@@ -42,6 +32,8 @@ __REQUEST_REVIEWER_ROLE__ = "Expenses Request Reviewer"
 
 # [Request]
 def is_company_expenses(expenses: list, company: str):
+    from .expense import get_expenses_for_company
+    
     data = get_expenses_for_company(expenses, company)
     if not data or len(data) != len(expenses):
         return False
@@ -51,26 +43,36 @@ def is_company_expenses(expenses: list, company: str):
 
 # [Request]
 def is_request_amended(name: str):
-    return get_count(__REQUEST__, {"amended_from": name}) > 0
+    from .check import get_count
+    
+    return get_count("Expenses Request", {"amended_from": name}) > 0
 
 
 # [Request]
 def restore_expenses(expenses: list):
+    from .expense import set_expenses_restored
+    
     set_expenses_restored(expenses)
 
 
 # [Request]
 def request_expenses(expenses: list):
+    from .expense import set_expenses_requested
+    
     set_expenses_requested(expenses)
 
 
 # [Request]
 def approve_expenses(expenses: list):
+    from .expense import set_expenses_approved
+    
     set_expenses_approved(expenses)
 
 
 # [Request]
 def reject_expenses(expenses: list):
+    from .expense import set_expenses_rejected
+    
     set_expenses_rejected(expenses)
 
 
@@ -98,6 +100,8 @@ def is_request_reviewer():
 # [Request Form]
 @frappe.whitelist(methods=["POST"])
 def get_expenses_data(expenses):
+    from .expense import get_expenses
+    
     if isinstance(expenses, str):
         expenses = parse_json(expenses)
     
@@ -157,7 +161,7 @@ def reject_request(name, reason):
     ):
         return 0
     
-    doc = get_cached_doc(__REQUEST__, name)
+    doc = get_cached_doc("Expenses Request", name)
     if not doc:
         return 0
     
@@ -173,7 +177,9 @@ def reject_request(name, reason):
 
 ## [Entry]
 def get_request(name: str):
-    doc = get_cached_doc(__REQUEST__, name)
+    from .expense import get_expenses
+    
+    doc = get_cached_doc("Expenses Request", name)
     
     if doc.status != RequestStatus.Approved:
         return None
@@ -186,9 +192,9 @@ def get_request(name: str):
 
 # [Entry]
 def process_request(name: str):
-    get_cached_doc(__REQUEST__, name).process(ignore_permissions=True)
+    get_cached_doc("Expenses Request", name).process(ignore_permissions=True)
 
 
 # [Entry]
 def reject_request(name: str):
-    get_cached_doc(__REQUEST__, name).reject(ignore_permissions=True)
+    get_cached_doc("Expenses Request", name).reject(ignore_permissions=True)

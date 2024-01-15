@@ -13,20 +13,19 @@ from frappe.utils import (
     today
 )
 
-from .background import (
-    is_job_running,
-    enqueue_job
-)
 from .common import (
     log_error,
     error
 )
-from .doctypes import _JOURNAL_
-from .entry import get_entry_data
 
 
 # [Entry]
 def enqueue_journal_entry(entry: str):
+    from .background import (
+        is_job_running,
+        enqueue_job
+    )
+    
     job_name = f"exp-make-journal-entry-{entry}"
     if not is_job_running(job_name):
         enqueue_job(
@@ -39,6 +38,8 @@ def enqueue_journal_entry(entry: str):
 
 ## [Internal]
 def make_journal_entry(entry: str):
+    from .entry import get_entry_data
+    
     doc = get_entry_data(entry)
     if not doc:
         error(_(
@@ -52,7 +53,8 @@ def make_journal_entry(entry: str):
         ).format(entry), throw=False)
         return 0
     
-    if frappe.db.exists(_JOURNAL_, {"bill_no": entry}):
+    dt = "Journal Entry"
+    if frappe.db.exists(dt, {"bill_no": entry}):
         error(_(
             "The expenses entry \"{0}\" has already been added to journal."
         ).format(entry), throw=False)
@@ -109,10 +111,10 @@ def make_journal_entry(entry: str):
     })
     
     try:
-        (frappe.new_doc(_JOURNAL_)
+        (frappe.new_doc(dt)
             .update({
                 "title": doc.name,
-                "voucher_type": _JOURNAL_,
+                "voucher_type": dt,
                 "posting_date": today(),
                 "company": doc.company,
                 "bill_no": doc.name,
@@ -136,10 +138,11 @@ def make_journal_entry(entry: str):
 
 # [Entry]
 def cancel_journal_entry(entry: str):
+    dt = "Journal Entry"
     filters = {"bill_no": entry}
-    if frappe.db.exists(_JOURNAL_, filters):
+    if frappe.db.exists(dt, filters):
         try:
-            frappe.get_doc(_JOURNAL_, filters).cancel()
+            frappe.get_doc(dt, filters).cancel()
         except Exception as exc:
             log_error(exc)
             error(_(
