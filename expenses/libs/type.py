@@ -25,7 +25,7 @@ def type_form_setup():
     from .account import get_types_with_accounts
     
     return {
-        "has_accounts": get_types_with_accounts("Expense Type")
+        "has_accounts": get_types_with_accounts()
     }
 
 
@@ -201,7 +201,7 @@ def type_accounts(name):
     if not name or not isinstance(name, str):
         return None
     
-    return get_type_accounts("Expense Type", name)
+    return get_type_accounts(name)
 
 
 ## [Item]
@@ -214,7 +214,7 @@ def get_type_company_account(name: str, company: str):
     if cache and isinstance(cache, dict):
         return cache
     
-    data = get_type_company_account_data(dt, name, company)
+    data = get_type_company_account_data(name, company)
     if not data or not isinstance(data, dict):
         return None
     
