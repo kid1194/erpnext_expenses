@@ -84,21 +84,21 @@ def _fixtures_uninstall(roles):
 def _doctypes_uninstall(roles):
     from expenses import __module__
     
-    try:
-        docs = [
-            ["Workspace", __module__],
-            ["Report", "Expenses Entry Report"],
-            ["Workflow", "Expenses Request Review"],
-            ["Print Format", [
-                "Expense",
-                "Expenses Entry",
-                "Expenses Request"
-            ]],
-            ["DocType", __DOCTYPES__],
-            ["Role", roles],
-            ["Module Def", __module__]
-        ]
-        for v in docs:
+    docs = [
+        ["Workspace", __module__],
+        ["Report", "Expenses Entry Report"],
+        ["Workflow", "Expenses Request Review"],
+        ["Print Format", [
+            "Expense",
+            "Expenses Entry",
+            "Expenses Request"
+        ]],
+        ["DocType", __DOCTYPES__],
+        ["Role", roles],
+        ["Module Def", __module__]
+    ]
+    for v in docs:
+        try:
             delete_doc(
                 v[0], v[1],
                 ignore_permissions=True,
@@ -106,8 +106,8 @@ def _doctypes_uninstall(roles):
                 ignore_on_trash=True,
                 delete_permanently=True
             )
-    except Exception:
-        pass
+        except Exception:
+            pass
 
 
 ## [Internal]
