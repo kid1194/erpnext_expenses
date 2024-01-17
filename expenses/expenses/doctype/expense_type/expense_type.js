@@ -457,7 +457,7 @@ frappe.ui.form.on('Expense Type', {
     }
 });
 
-frappe.ui.form.on('Expense Account', {
+frappe.ui.form.on('Expense Type Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         frm._type.table.data.del(cstr(row.name || cdn));

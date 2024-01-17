@@ -6,7 +6,6 @@
 
 from .account import *
 from .attachment import *
-from .background import *
 from .cache import *
 from .check import *
 from .common import *
@@ -16,6 +15,6 @@ from .item import *
 from .journal import *
 from .realtime import *
 from .request import *
-from .settings import *
+from .settings import settings, is_enabled
 from .type import *
 from .update import *

@@ -150,7 +150,7 @@ frappe.ui.form.on('Expense Item', {
     }
 });
 
-frappe.ui.form.on('Expense Account', {
+frappe.ui.form.on('Expense Item Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         frm._item.table.del(cstr(row.name || cdn));

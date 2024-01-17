@@ -10,8 +10,8 @@ import frappe
 from frappe import _
 
 from expenses import (
-    __MODULE__,
-    __PRODUCTION__
+    __module__,
+    __production__
 )
 from expenses.version import __frappe_v13__
 
@@ -19,11 +19,11 @@ from .logger import get_logger
 
 
 ## [Internal]
-_LOGGER_ERROR = get_logger("error") if not __PRODUCTION__ else None
+_LOGGER_ERROR = get_logger("error") if not __production__ else None
 
 
 ## [Internal]
-_LOGGER_INFO = get_logger("info") if not __PRODUCTION__ else None
+_LOGGER_INFO = get_logger("info") if not __production__ else None
 
 
 ## [Entry, Journal, Update]
@@ -57,12 +57,12 @@ def error(text, log=True, throw=True):
     
     if log:
         if __frappe_v13__:
-            frappe.log_error(text, __MODULE__)
+            frappe.log_error(text, __module__)
         else:
-            frappe.log_error(__MODULE__, text)
+            frappe.log_error(__module__, text)
     
     if throw:
-        frappe.throw(text, title=__MODULE__)
+        frappe.throw(text, title=__module__)
 
 
 ## [Attachment, Request, Type, Update]

@@ -19,9 +19,9 @@ from frappe.desk.doctype.notification_settings.notification_settings import (
 )
 
 from expenses import (
-    __MODULE__,
-    __VERSION__,
-    __PRODUCTION__
+    __module__,
+    __version__,
+    __production__
 )
 
 from .background import (
@@ -38,7 +38,7 @@ from .settings import settings
 
 ## [Hooks]
 def auto_check_for_update():
-    if __PRODUCTION__:
+    if __production__:
         doc = settings()
         if cint(doc.is_enabled) and cint(doc.auto_check_for_update):
             process_check_for_update(doc)
@@ -47,7 +47,7 @@ def auto_check_for_update():
 # [Settings Form]
 @frappe.whitelist()
 def check_for_update():
-    if __PRODUCTION__:
+    if __production__:
         return 0
     doc = settings()
     if not cint(doc.is_enabled):
@@ -90,7 +90,7 @@ def process_check_for_update(doc):
         return 0
     
     latest_version = latest_version.pop()
-    has_update = compare_versions(latest_version, __VERSION__) > 0
+    has_update = compare_versions(latest_version, __version__) > 0
     
     doc.latest_check = now()
     
@@ -166,7 +166,7 @@ def send_notification(version, sender, receivers, message):
         "document_type": "Expenses Settings",
         "document_name": "Expenses Settings",
         "from_user": sender,
-        "subject": "{0}: {1}".format(__MODULE__, _("New Version Available")),
+        "subject": "{0}: {1}".format(__module__, _("New Version Available")),
         "type": "Alert",
         "email_content": "<p><h2>{0} {1}</h2></p><p>{2}</p>".format(
             _("Version"), version, _(message)
@@ -174,7 +174,7 @@ def send_notification(version, sender, receivers, message):
     }
     for receiver in receivers:
         if is_notifications_enabled(receiver):
-            doc["for_user"] = receiver
             (frappe.new_doc("Notification Log")
                 .update(doc)
+                .update({"for_user": receiver})
                 .insert(ignore_permissions=True, ignore_mandatory=True))

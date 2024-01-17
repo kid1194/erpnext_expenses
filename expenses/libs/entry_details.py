@@ -9,12 +9,13 @@ import frappe
 
 ## [Expense]
 def get_expense_entries(expense: str):
-    doc = frappe.qb.DocType("Expenses Entry Details")
+    dt = "Expenses Entry"
+    doc = frappe.qb.DocType(f"{dt} Details")
     data = (
         frappe.qb.from_(doc)
         .select(doc.parent)
         .where(doc.expense_ref == expense)
-        .where(doc.parenttype == "Expenses Entry")
+        .where(doc.parenttype == dt)
         .where(doc.parentfield == "expenses")
     ).run(as_dict=True)
     

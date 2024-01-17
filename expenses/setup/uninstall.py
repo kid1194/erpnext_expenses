@@ -7,8 +7,6 @@
 import frappe
 from frappe.model.delete_doc import delete_doc
 
-from expenses import __MODULE__
-
 
 ## [Install, Internal]
 __DOCTYPES__ = [
@@ -84,9 +82,11 @@ def _fixtures_uninstall(roles):
 
 ## [Internal]
 def _doctypes_uninstall(roles):
+    from expenses import __module__
+    
     try:
         docs = [
-            ["Workspace", __MODULE__],
+            ["Workspace", __module__],
             ["Report", "Expenses Entry Report"],
             ["Workflow", "Expenses Request Review"],
             ["Print Format", [
@@ -96,7 +96,7 @@ def _doctypes_uninstall(roles):
             ]],
             ["DocType", __DOCTYPES__],
             ["Role", roles],
-            ["Module Def", __MODULE__]
+            ["Module Def", __module__]
         ]
         for v in docs:
             delete_doc(

@@ -9,11 +9,9 @@ from frappe.utils import now
 from frappe.utils.user import get_system_managers
 
 from expenses import (
-    __VERSION__,
-    __PRODUCTION__
+    __version__,
+    __production__
 )
-
-from expenses.libs.settings import settings
 
 from .uninstall import (
     __DOCTYPES__ as doctypes,
@@ -23,7 +21,7 @@ from .uninstall import (
 
 ## [Hooks]
 def before_install():
-    if not __PRODUCTION__:
+    if not __production__:
         after_uninstall()
 
 
@@ -35,6 +33,8 @@ def after_sync():
 
 ## [Internal]
 def _settings_setup():
+    from expenses.libs import settings
+    
     try:
         doc = settings()
         
@@ -67,8 +67,8 @@ def _settings_setup():
             doc.auto_check_for_update = 0
             doc.send_update_notification = 0
         
-        doc.current_version = __VERSION__
-        doc.latest_version = __VERSION__
+        doc.current_version = __version__
+        doc.latest_version = __version__
         doc.latest_check = now()
         doc.has_update = 0
             

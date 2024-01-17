@@ -7,10 +7,6 @@
 import frappe
 
 
-## [Internal]
-__FILE__ = "File"
-
-
 # [Entry, Entry Form, Expense, Expense Form]
 @frappe.whitelist(methods=["POST"])
 def delete_attach_files(doctype, name, files):
@@ -32,7 +28,7 @@ def delete_attach_files(doctype, name, files):
         return 0
     
     if (file_names := frappe.get_all(
-        __FILE__,
+        "File",
         fields=["name"],
         filters=[
             ["file_url", "in", files],
@@ -53,7 +49,7 @@ def delete_attach_files(doctype, name, files):
 ## [Internal]
 def files_delete(files: list):
     for file in files:
-        frappe.get_doc(__FILE__, file).delete(ignore_permissions=True)
+        frappe.get_doc("File", file).delete(ignore_permissions=True)
 
 
 ## [Expense]

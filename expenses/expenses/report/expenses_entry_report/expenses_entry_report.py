@@ -8,13 +8,10 @@ import frappe
 from frappe import _, throw
 from frappe.utils import cint, flt
 
-from expenses.libs import (
-    get_cached_value,
-    __ENTRY__
-)
-
 
 def execute(filters=None):
+    from expenses.libs import get_cached_value
+    
     if not filters:
         return [], []
 
@@ -47,12 +44,13 @@ def validate_filters(filters, account_details):
 
 
 def get_columns(currency):
+    dt = "Expenses Entry"
     return [
         {
-            "label": _(__ENTRY__),
+            "label": _(dt),
             "fieldname": "expenses_entry",
             "fieldtype": "Link",
-            "options": __ENTRY__,
+            "options": dt,
         },
         {
             "label": _("Mode of Payment"),
@@ -91,7 +89,7 @@ def get_columns(currency):
 
 
 def get_result(filters, currency):
-    doc = frappe.qb.DocType(__ENTRY__)
+    doc = frappe.qb.DocType("Expenses Entry")
     qry = (
         frappe.qb.from_(doc)
         .select(

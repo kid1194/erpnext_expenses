@@ -4,7 +4,7 @@
 # Licence: Please refer to LICENSE file
 
 
-__MODULE__ = "Expenses"
-__ABBR__ = "EXP"
-__VERSION__ = "1.0.0"
-__PRODUCTION__ = False
+__module__ = "Expenses"
+__abbr__ = "EXP"
+__version__ = "1.0.0"
+__production__ = False

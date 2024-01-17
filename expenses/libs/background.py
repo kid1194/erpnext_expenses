@@ -10,7 +10,7 @@ import uuid
 import frappe
 from frappe.utils import cstr
 
-from expenses.version import __frappe_v15__
+from expenses.version import __frappe_mv15__
 
 
 ## [Expense]
@@ -24,7 +24,7 @@ def uuid_key(args):
 
 ## [Expense, Journal, Update]
 def is_job_running(name: str):
-    if __frappe_v15__:
+    if __frappe_mv15__:
         from frappe.utils.background_jobs import is_job_enqueued
         return is_job_enqueued(name)
     
@@ -36,7 +36,7 @@ def is_job_running(name: str):
 
 ## [Attachment, Expense, Journal, Update]
 def enqueue_job(method: str, job_name: str, **kwargs):
-    if __frappe_v15__:
+    if __frappe_mv15__:
         frappe.enqueue(
             method,
             job_id=job_name,

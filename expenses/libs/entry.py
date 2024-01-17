@@ -34,10 +34,12 @@ def get_mode_of_payment_data(mode_of_payment, company):
     ):
         return {}
     
-    mop_type = get_cached_value("Mode of Payment", mode_of_payment, "type")
+    dt = "Mode of Payment"
+    mop_type = get_cached_value(dt, mode_of_payment, "type")
     
-    doc = frappe.qb.DocType("Mode of Payment Account")
-    adoc = frappe.qb.DocType("Account")
+    adt = "Account"
+    doc = frappe.qb.DocType(f"{dt} Account")
+    adoc = frappe.qb.DocType(adt)
     data = (
         frappe.qb.from_(doc)
         .select(
@@ -47,7 +49,7 @@ def get_mode_of_payment_data(mode_of_payment, company):
         .inner_join(adoc)
         .on(adoc.name == doc.default_account)
         .where(doc.parent == mode_of_payment)
-        .where(doc.parenttype == "Mode of Payment")
+        .where(doc.parenttype == dt)
         .where(doc.parentfield == "accounts")
         .where(doc.company == company)
         .limit(1)
@@ -61,17 +63,18 @@ def get_mode_of_payment_data(mode_of_payment, company):
             "account": None,
             "currency": None
         }
+        cdt = "Company"
         
         if mop_type == "Bank":
-            data["account"] = get_cached_value("Company", company, "default_bank_account")
+            data["account"] = get_cached_value(cdt, company, "default_bank_account")
         elif mop_type == "Cash":
-            data["account"] = get_cached_value("Company", company, "default_cash_account")
+            data["account"] = get_cached_value(cdt, company, "default_cash_account")
         
         if data["account"]:
-            data["currency"] = get_cached_value("Account", data["account"], "account_currency")
+            data["currency"] = get_cached_value(adt, data["account"], "account_currency")
     
     data["type"] = mop_type
-    data["company_currency"] = get_cached_value("Company", company, "default_currency")
+    data["company_currency"] = get_cached_value(cdt, company, "default_currency")
     
     return data
 
@@ -159,9 +162,11 @@ def get_exchange_rate_value(from_currency, to_currency: str, date=None, args=Non
         checkpoint_date = add_days(date, -stale_days)
         filters.append(["date", ">", get_datetime_str(checkpoint_date)])
     
+    dt = "Currency Exchange"
+    
     if not is_multi:
         entries = frappe.get_all(
-            "Currency Exchange",
+            dt,
             fields=["exchange_rate"],
             filters=filters,
             order_by="date desc",
@@ -174,7 +179,7 @@ def get_exchange_rate_value(from_currency, to_currency: str, date=None, args=Non
     
     else:
         entries = frappe.get_all(
-            "Currency Exchange",
+            dt,
             fields=["from_currency", "exchange_rate"],
             filters=filters,
             order_by="date desc"
