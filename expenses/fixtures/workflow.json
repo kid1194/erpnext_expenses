@@ -266,39 +266,6 @@
     "state": "Pending"
    },
    {
-    "action": "Approve",
-    "allow_self_approval": 0,
-    "allowed": "Accounts Manager",
-    "condition": null,
-    "next_state": "Approved",
-    "parent": "Expenses Request Review",
-    "parentfield": "transitions",
-    "parenttype": "Workflow",
-    "state": "Rejected"
-   },
-   {
-    "action": "Approve",
-    "allow_self_approval": 0,
-    "allowed": "System Manager",
-    "condition": null,
-    "next_state": "Approved",
-    "parent": "Expenses Request Review",
-    "parentfield": "transitions",
-    "parenttype": "Workflow",
-    "state": "Rejected"
-   },
-   {
-    "action": "Approve",
-    "allow_self_approval": 0,
-    "allowed": "Administrator",
-    "condition": null,
-    "next_state": "Approved",
-    "parent": "Expenses Request Review",
-    "parentfield": "transitions",
-    "parenttype": "Workflow",
-    "state": "Rejected"
-   },
-   {
     "action": "Reject",
     "allow_self_approval": 0,
     "allowed": "Accounts Manager",
