@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 
 import frappe
 
-from expenses import __ABBR__
+from expenses import __abbr__
 
 
 # [Common]
@@ -21,14 +21,14 @@ def get_logger(logType):
     if not site:
         site = "Frappe"
 
-    logger_name = "{}-{}-{}".format(__ABBR__, site, logType)
+    logger_name = "{}-{}-{}".format(__abbr__, site, logType)
 
     try:
         return frappe.loggers[logger_name]
     except KeyError:
         pass
 
-    logfile = "{}-{}.log".format(__ABBR__, logType)
+    logfile = "{}-{}.log".format(__abbr__, logType)
     log_filename = os.path.join("..", "logs", logfile)
 
     logger = logging.getLogger(logger_name)
