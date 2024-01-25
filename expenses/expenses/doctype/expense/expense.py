@@ -29,36 +29,34 @@ from expenses.libs import (
 
 
 class Expense(Document):
-    _emit_change = 0
-    
-    
     def before_validate(self):
         if self.docstatus.is_draft():
             if self.expense_item and self.company:
                 temp = item_expense_data(self.expense_item, self.company)
-                if not self.expense_account or self.expense_account != temp.account:
-                    self.expense_account = temp.account
-                if not self.currency or self.currency != temp.currency:
-                    self.currency = temp.currency
+                if temp:
+                    if not self.expense_account or self.expense_account != temp.account:
+                        self.expense_account = temp.account
+                    if not self.currency or self.currency != temp.currency:
+                        self.currency = temp.currency
                 
-                change = 0
-                for k in ["cost", "qty"]:
-                    if temp[k] and flt(self.get(k)) != temp[k]:
-                        self.set(k, temp[k])
-                        change += 1
+                    change = 0
+                    for k in ["cost", "qty"]:
+                        if temp[k] and flt(self.get(k)) != temp[k]:
+                            self.set(k, temp[k])
+                            change += 1
+                        
+                        else:
+                            mk = f"min_{k}"
+                            xk = f"max_{k}"
+                            if temp[mk] and flt(self.get(k)) < temp[mk]:
+                                self.set(k, temp[mk])
+                                change += 1
+                            if temp[xk] and flt(self.get(k)) > temp[xk]:
+                                self.set(k, temp[xk])
+                                change += 1
                     
-                    else:
-                        mk = f"min_{k}"
-                        xk = f"max_{k}"
-                        if temp[mk] and flt(self.get(k)) < temp[mk]:
-                            self.set(k, temp[mk])
-                            change += 1
-                        if temp[xk] and flt(self.get(k)) > temp[xk]:
-                            self.set(k, temp[xk])
-                            change += 1
-                
-                if change:
-                    self.total = flt(flt(self.cost) * flt(self.qty))
+                    if change:
+                        self.total = flt(flt(self.cost) * flt(self.qty))
             
             if not cint(self.is_paid):
                 if self.paid_by:
@@ -88,10 +86,8 @@ class Expense(Document):
         if not self.required_by or not getdate(self.required_by):
             throw(_("A valid expense required by date is required."))
         if (
-            (
-                self.is_new() or
-                self.has_value_changed("required_by")
-            ) and not is_expense_moderator() and
+            (self.is_new() or self.has_value_changed("required_by")) and
+            not is_expense_moderator() and
             cint(date_diff(getdate(self.required_by), getdate())) < 0
         ):
             throw(_("The expense required by date must be of today or later."))
@@ -129,7 +125,7 @@ class Expense(Document):
         if self.status != ExpenseStatus.Pending:
             self.status = ExpenseStatus.Pending
         
-        self._emit_change = 1
+        self.flags.emit_change = True
     
     
     def on_update(self):
@@ -144,10 +140,11 @@ class Expense(Document):
         clear_doc_cache(self.doctype, self.name)
         
         if (
+            not self.docstatus.is_cancelled() and
             (
                 self.status == ExpenseStatus.Rejected or
                 self.status == ExpenseStatus.Cancelled
-            ) and not self.docstatus.is_cancelled()
+            )
         ):
             self._check_links(str(self.status).lower())
             self.docstatus = DocStatus.cancelled()
@@ -172,7 +169,7 @@ class Expense(Document):
     
     
     def on_cancel(self):
-        self._emit_change = 1
+        self.flags.emit_change = True
         self._emit_change_event()
     
     
@@ -189,7 +186,7 @@ class Expense(Document):
     
     
     def after_delete(self):
-        self._emit_change = 1
+        self.flags.emit_change = True
         self._emit_change_event("trash")
     
     
@@ -268,13 +265,13 @@ class Expense(Document):
                     f.fieldname not in ignore and
                     self.has_value_changed(f.fieldname)
                 ):
-                    self._emit_change = 1
+                    self.flags.emit_change = True
                     break
     
     
     def _emit_change_event(self, action="change"):
-        if self._emit_change:
-            self._emit_change = 0
+        if self.flags.get("emit_change", False):
+            self.flags.pop("emit_change")
             emit_expense_changed({
                 "action": action,
                 "expense": self.name

@@ -2,11 +2,11 @@
  {
   "docstatus": 0,
   "doctype": "Role",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Expense Moderator",
   "role_name": "Expense Moderator",
   "home_page": "/desk",
-  "restrict_to_domain": null,
   "disabled": 0,
   "is_custom": 1,
   "desk_access": 1,
@@ -18,19 +18,16 @@
   "view_switcher": 1,
   "form_sidebar": 1,
   "timeline": 1,
-  "dashboard": 1,
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "dashboard": 1
  },
  {
   "docstatus": 0,
   "doctype": "Role",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Expenses Request Moderator",
   "role_name": "Expenses Request Moderator",
   "home_page": "/desk",
-  "restrict_to_domain": null,
   "disabled": 0,
   "is_custom": 1,
   "desk_access": 1,
@@ -42,19 +39,16 @@
   "view_switcher": 1,
   "form_sidebar": 1,
   "timeline": 1,
-  "dashboard": 1,
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "dashboard": 1
  },
  {
   "docstatus": 0,
   "doctype": "Role",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Expenses Request Reviewer",
   "role_name": "Expenses Request Reviewer",
   "home_page": "/desk",
-  "restrict_to_domain": null,
   "disabled": 0,
   "is_custom": 1,
   "desk_access": 1,
@@ -66,19 +60,16 @@
   "view_switcher": 1,
   "form_sidebar": 1,
   "timeline": 1,
-  "dashboard": 1,
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "dashboard": 1
  },
  {
   "docstatus": 0,
   "doctype": "Role",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Expenses Entry Moderator",
   "role_name": "Expenses Entry Moderator",
   "home_page": "/desk",
-  "restrict_to_domain": null,
   "disabled": 0,
   "is_custom": 1,
   "desk_access": 1,
@@ -90,9 +81,6 @@
   "view_switcher": 1,
   "form_sidebar": 1,
   "timeline": 1,
-  "dashboard": 1,
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "dashboard": 1
  }
 ]

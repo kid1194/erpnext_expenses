@@ -13,14 +13,11 @@ from expenses import (
     __production__
 )
 
-from .uninstall import (
-    __DOCTYPES__ as doctypes,
-    after_uninstall
-)
-
 
 ## [Hooks]
 def before_install():
+    from .uninstall import after_uninstall
+    
     if not __production__:
         after_uninstall()
 
@@ -33,7 +30,7 @@ def after_sync():
 
 ## [Internal]
 def _settings_setup():
-    from expenses.libs import settings
+    from expenses.libs.settings import settings
     
     try:
         doc = settings()
@@ -41,7 +38,6 @@ def _settings_setup():
         managers = get_system_managers(only_name=True)
         if managers:
             doc.auto_check_for_update = 1
-            doc.send_update_notification = 1
             
             if "Administrator" in managers:
                 sender = "Administrator"
@@ -79,6 +75,8 @@ def _settings_setup():
 
 ## [Internal]
 def _workspace_setup():
+    from .uninstall import get_doctypes
+    
     try:
         dt = "Workspace"
         name = "Accounting"
@@ -86,7 +84,7 @@ def _workspace_setup():
             return 0
         
         doc = frappe.get_doc(dt, name)
-        for doctype in doctypes:
+        for doctype in get_doctypes():
             doc.append("links", {
                 "dependencies": "",
                 "hidden": 0,

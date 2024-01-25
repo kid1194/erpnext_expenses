@@ -15,19 +15,6 @@ from frappe.utils import cstr
 from frappe.query_builder.functions import Locate
 
 
-## [Internal]
-__FIELD_TYPES__ = [
-    "Data",
-    "Text",
-    "Small Text",
-    "Long Text",
-    "Link",
-    "Select",
-    "Read Only",
-    "Text Editor"
-]
-
-
 ## [Expense, Item, Type]
 def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     meta = frappe.get_meta(doctype)
@@ -43,14 +30,25 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
             search_fields.append(meta.title_field)
         if meta.search_fields:
             search_fields.extend(meta.get_search_fields())
-
+        
+        field_types = [
+            "Data",
+            "Text",
+            "Small Text",
+            "Long Text",
+            "Link",
+            "Select",
+            "Read Only",
+            "Text Editor"
+        ]
+        
         for f in search_fields:
             fmeta = meta.get_field(f.strip())
             if (
                 doctype not in translated_search_doctypes and
                 (
                     f == "name" or
-                    (fmeta and fmeta.fieldtype in __FIELD_TYPES__)
+                    (fmeta and fmeta.fieldtype in field_types)
                 )
             ):
                 search_filters.append(doc.field(f.strip()).like("%" + search + "%"))

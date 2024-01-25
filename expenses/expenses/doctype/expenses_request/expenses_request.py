@@ -29,10 +29,6 @@ from expenses.libs import (
 
 
 class ExpensesRequest(Document):
-    _emit_change = 0
-    _expenses_status = 0
-    
-    
     def before_validate(self):
         if (
             self.is_new() and (
@@ -103,7 +99,7 @@ class ExpensesRequest(Document):
             self.workflow_state = self.status
         
         if self.is_new():
-            self._expenses_status = 1
+            self.flags.expenses_status = 1
             if is_request_amended(self.name) and self.expenses:
                 restore_expenses([v.expense for v in self.expenses])
         
@@ -121,11 +117,11 @@ class ExpensesRequest(Document):
         if self.workflow_state != self.status:
             self.workflow_state = self.status
         
-        self._emit_change = 1
+        self.flags.emit_change = True
     
     
     def on_update(self):
-        if self._expenses_status:
+        if self.flags.get("expenses_status", 0):
             self._handle_expenses()
         
         self._emit_change_event()
@@ -155,9 +151,9 @@ class ExpensesRequest(Document):
         clear_doc_cache(self.doctype, self.name)
         
         if self.workflow_state == RequestStatus.Approved:
-            self._expenses_status = 2
+            self.flags.expenses_status = 2
         elif self.workflow_state == RequestStatus.Rejected:
-            self._expenses_status = 3
+            self.flags.expenses_status = 3
         
         if not self.reviewer:
             self.reviewer = frappe.session.user
@@ -169,7 +165,7 @@ class ExpensesRequest(Document):
     
     
     def on_update_after_submit(self):
-        if self._expenses_status:
+        if self.flags.get("expenses_status", 0):
             self._handle_expenses()
         
         self._emit_change_event()
@@ -195,10 +191,10 @@ class ExpensesRequest(Document):
     def on_cancel(self):
         clear_doc_cache(self.doctype, self.name)
         
-        self._expenses_status = 3
+        self.flags.expenses_status = 3
         self._handle_expenses()
         
-        self._emit_change = 1
+        self.flags.emit_change = True
         self._emit_change_event()
     
     
@@ -208,7 +204,7 @@ class ExpensesRequest(Document):
     
     
     def after_delete(self):
-        self._emit_change = 1
+        self.flags.emit_change = True
         self._emit_change_event("trash")
     
     
@@ -233,16 +229,16 @@ class ExpensesRequest(Document):
     
     
     def _handle_expenses(self):
-        if self._expenses_status:
+        if self.flags.get("expenses_status", 0):
             expenses = [v.expense for v in self.expenses]
-            if self._expenses_status == 1:
+            if self.flags.expenses_status == 1:
                 request_expenses(expenses)
-            elif self._expenses_status == 2:
+            elif self.flags.expenses_status == 2:
                 approve_expenses(expenses)
-            elif self._expenses_status == 3:
+            elif self.flags.expenses_status == 3:
                 reject_expenses(expenses)
             
-            self._expenses_status = 0
+            self.flags.pop("expenses_status")
     
     
     def _change_status(self, status, action, ignore_permissions=False, reason=None):
@@ -304,13 +300,13 @@ class ExpensesRequest(Document):
                         )
                     )
                 ):
-                    self._emit_change = 1
+                    self.flags.emit_change = True
                     break
     
     
     def _emit_change_event(self, action="change"):
-        if self._emit_change:
-            self._emit_change = 0
+        if self.flags.get("emit_change", False):
+            self.flags.pop("emit_change")
             emit_request_changed({
                 "action": action,
                 "request": self.name

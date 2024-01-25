@@ -19,9 +19,6 @@ from expenses.libs import (
 
 
 class ExpenseItem(Document):
-    _emit_change = False
-    
-    
     def before_validate(self):
         if self.expense_accounts:
             existing = []
@@ -64,15 +61,15 @@ class ExpenseItem(Document):
         clear_doc_cache(self.doctype, self._get_name())
         
         if not self.is_new():
-            for f in self.meta.get("fields"):
+            for f in self.meta.get("fields", []):
                 if self.has_value_changed(f.fieldname):
-                    self._emit_change = True
+                    self.flags.emit_change = True
                     break
     
     
     def on_update(self):
-        if self._emit_change:
-            self._emit_change = False
+        if self.flags.get("emit_change", False):
+            self.flags.pop("emit_change")
             emit_item_changed({
                 "action": "change",
                 "item": self.name,

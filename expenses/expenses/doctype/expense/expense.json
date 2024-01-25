@@ -1,12 +1,10 @@
 {
- "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
  "autoname": "format:EXP-{YY}{MM}{DD}-{###}",
- "creation": "2023-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04",
  "description": "Expense for Expenses module",
  "doctype": "DocType",
- "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "main_section",
@@ -51,7 +49,6 @@
    "options": "Company",
    "reqd": 1,
    "bold": 1,
-   "only_select": 1,
    "remember_last_selected_value": 1,
    "in_list_view": 1,
    "in_filter": 1,
@@ -67,7 +64,6 @@
    "options": "Expense Item",
    "reqd": 1,
    "bold": 1,
-   "only_select": 1,
    "in_list_view": 1,
    "in_filter": 1,
    "in_standard_filter": 1,
@@ -80,9 +76,9 @@
    "fieldtype": "Link",
    "label": "Expense Account",
    "options": "Account",
+   "read_only": 1,
    "hidden": 1,
    "report_hide": 1,
-   "only_select": 1,
    "ignore_user_permissions": 1
   },
   {
@@ -93,7 +89,6 @@
    "fieldname": "required_by",
    "fieldtype": "Date",
    "label": "Required By",
-   "default": "Today",
    "reqd": 1,
    "bold": 1,
    "in_list_view": 1,
@@ -119,7 +114,6 @@
    "label": "Project",
    "description": "Use only if expense is project related",
    "options": "Project",
-   "only_select": 1,
    "remember_last_selected_value": 1,
    "ignore_user_permissions": 1,
    "search_index": 1
@@ -140,7 +134,6 @@
    "fetch_from": "expense_account.account_currency",
    "read_only": 1,
    "report_hide": 1,
-   "only_select": 1,
    "ignore_user_permissions": 1
   },
   {
@@ -171,6 +164,7 @@
    "fieldtype": "Currency",
    "label": "Total",
    "options": "currency",
+   "non_negative": 1,
    "read_only": 1,
    "in_list_view": 1,
    "in_preview": 1
@@ -205,7 +199,6 @@
    "options": "Employee",
    "read_only_depends_on": "eval:!doc.is_paid",
    "mandatory_depends_on": "eval:doc.is_paid",
-   "only_select": 1,
    "ignore_user_permissions": 1,
    "search_index": 1
   },
@@ -216,7 +209,6 @@
    "options": "Expense",
    "hidden": 1,
    "read_only_depends_on": "eval:!doc.is_paid",
-   "only_select": 1,
    "ignore_user_permissions": 1,
    "search_index": 1
   },
@@ -232,7 +224,6 @@
    "label": "Party Type",
    "description": "Use only if expense is party related",
    "options": "DocType",
-   "only_select": 1,
    "ignore_user_permissions": 1,
    "search_index": 1
   },
@@ -248,7 +239,6 @@
    "options": "party_type",
    "read_only_depends_on": "eval:!doc.party_type",
    "mandatory_depends_on": "eval:doc.party_type",
-   "only_select": 1,
    "ignore_user_permissions": 1,
    "search_index": 1
   },
@@ -291,8 +281,7 @@
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
- "links": [],
- "modified": "2023-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense",
@@ -378,7 +367,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "default_print_format": "Expense",
- "states": [],
  "max_attachments": 10,
  "track_changes": 1
 }

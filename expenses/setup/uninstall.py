@@ -9,24 +9,26 @@ from frappe.model.delete_doc import delete_doc
 
 
 ## [Install, Internal]
-__DOCTYPES__ = [
-    "Expense Attachment",
-    "Expense Item Account",
-    "Expense Type Account",
-    "Expenses Entry Details",
-    "Expenses Request Details",
-    "Expenses Update Receiver",
-    "Expenses Entry",
-    "Expenses Request",
-    "Expense",
-    "Expense Item",
-    "Expense Type",
-    "Expenses Settings"
-]
+def get_doctypes():
+    return [
+        "Expense Attachment",
+        "Expense Item Account",
+        "Expense Type Account",
+        "Expenses Entry Details",
+        "Expenses Request Details",
+        "Expenses Update Receiver",
+        "Expenses Entry",
+        "Expenses Request",
+        "Expense",
+        "Expense Item",
+        "Expense Type",
+        "Expenses Settings"
+    ]
 
 
 ## [Install, Hooks]
 def after_uninstall():
+    doctypes = get_doctypes()
     roles = [
         "Expense Supervisor",
         "Expenses Reviewer",
@@ -37,16 +39,16 @@ def after_uninstall():
         "Expenses Entry Moderator"
     ]
     
-    _workspace_uninstall()
+    _workspace_uninstall(doctypes)
     _fixtures_uninstall(roles)
-    _doctypes_uninstall(roles)
+    _doctypes_uninstall(doctypes, roles)
     _fixtures_cleanup()
     
     frappe.clear_cache()
 
 
 ## [Internal]
-def _workspace_uninstall():
+def _workspace_uninstall(doctypes):
     try:
         dt = "Workspace"
         name = "Accounting"
@@ -57,7 +59,7 @@ def _workspace_uninstall():
         found = 0
         
         for v in doc.links:
-            if v.type == "Link" and v.label in __DOCTYPES__:
+            if v.type == "Link" and v.label in doctypes:
                 doc.links.remove(v)
                 found = 1
         
@@ -81,7 +83,7 @@ def _fixtures_uninstall(roles):
 
 
 ## [Internal]
-def _doctypes_uninstall(roles):
+def _doctypes_uninstall(doctypes, roles):
     from expenses import __module__
     
     docs = [
@@ -93,7 +95,7 @@ def _doctypes_uninstall(roles):
             "Expenses Entry",
             "Expenses Request"
         ]],
-        ["DocType", __DOCTYPES__],
+        ["DocType", doctypes],
         ["Role", roles],
         ["Module Def", [__module__]]
     ]

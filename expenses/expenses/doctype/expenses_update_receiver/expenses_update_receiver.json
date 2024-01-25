@@ -1,13 +1,10 @@
 {
- "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
- "editable_grid": 1,
  "autoname": "hash",
- "creation": "2023-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04",
  "description": "Update receiver for Expenses module",
  "doctype": "DocType",
- "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "user"
@@ -21,17 +18,13 @@
    "reqd": 1,
    "bold": 1,
    "in_list_view": 1,
-   "ignore_user_permissions": 1,
-   "only_select": 1
+   "ignore_user_permissions": 1
   }
  ],
  "istable": 1,
- "links": [],
- "modified": "2023-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Update Receiver",
- "owner": "Administrator",
- "permissions": [],
- "states": []
+ "owner": "Administrator"
 }

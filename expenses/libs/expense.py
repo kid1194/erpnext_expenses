@@ -19,10 +19,6 @@ ExpenseStatus = frappe._dict({
 })
 
 
-## [Internal]
-__EXPENSE_MODERATOR_ROLE__ = "Expense Moderator"
-
-
 # [Expense, Expense Form]
 @frappe.whitelist(methods=["POST"])
 def item_expense_data(item, company):
@@ -49,7 +45,7 @@ def expense_form_setup():
 # [Expense]
 ## [Internal]
 def is_expense_moderator():
-    return 1 if __EXPENSE_MODERATOR_ROLE__ in frappe.get_roles() else 0
+    return 1 if "Expense Moderator" in frappe.get_roles() else 0
 
 
 # [Expense]
@@ -106,7 +102,7 @@ def get_expenses_for_company(names: list, company: str):
         filters={
             "name": ["in", names],
             "company": company,
-            "docstatus": 1,
+            "docstatus": 1
         },
         pluck="name"
     )
@@ -198,10 +194,7 @@ def search_expenses_by_company(
     company: str, search: str=None, existing: list=None,
     date: str=None, as_dict=False
 ):
-    from .search import (
-        filter_search,
-        prepare_data
-    )
+    from .search import filter_search, prepare_data
     
     dt = "Expense"
     doc = frappe.qb.DocType(dt)

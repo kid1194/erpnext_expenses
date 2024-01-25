@@ -1,12 +1,10 @@
 {
- "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
  "autoname": "format:EXP-R-{YY}{MM}{DD}-{###}",
- "creation": "2023-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04",
  "description": "Expenses Request for Expenses module",
  "doctype": "DocType",
- "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "main_section",
@@ -36,7 +34,6 @@
    "default": ":Company",
    "reqd": 1,
    "bold": 1,
-   "only_select": 1,
    "remember_last_selected_value": 1,
    "in_list_view": 1,
    "in_filter": 1,
@@ -91,7 +88,6 @@
    "options": "User",
    "read_only": 1,
    "hidden": 1,
-   "only_select": 1,
    "allow_on_submit": 1,
    "in_list_view": 1,
    "in_filter": 1,
@@ -124,7 +120,6 @@
    "hidden": 1,
    "print_hide": 1,
    "report_hide": 1,
-   "only_select": 1,
    "ignore_user_permissions": 1,
    "allow_on_submit": 1
   },
@@ -135,7 +130,6 @@
    "options": "Expenses Request",
    "read_only": 1,
    "hidden": 1,
-   "only_select": 1,
    "allow_on_submit": 1,
    "ignore_user_permissions": 1
   },
@@ -150,8 +144,7 @@
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
- "links": [],
- "modified": "2023-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Request",
@@ -255,7 +248,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
  "default_print_format": "Expenses Request",
  "track_changes": 1
 }

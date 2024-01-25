@@ -1,13 +1,11 @@
 {
- "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
  "editable_grid": 1,
  "autoname": "hash",
- "creation": "2023-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04",
  "description": "Expense attachment for Expenses module",
  "doctype": "DocType",
- "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "file",
@@ -47,12 +45,9 @@
   }
  ],
  "istable": 1,
- "links": [],
- "modified": "2023-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense Attachment",
- "owner": "Administrator",
- "permissions": [],
- "states": []
+ "owner": "Administrator"
 }

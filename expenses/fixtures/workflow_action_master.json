@@ -2,41 +2,33 @@
  {
   "docstatus": 0,
   "doctype": "Workflow Action Master",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Submit",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null,
   "workflow_action_name": "Submit"
  },
  {
   "docstatus": 0,
   "doctype": "Workflow Action Master",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Cancel",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null,
   "workflow_action_name": "Cancel"
  },
  {
   "docstatus": 0,
   "doctype": "Workflow Action Master",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Approve",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null,
   "workflow_action_name": "Approve"
  },
  {
   "docstatus": 0,
   "doctype": "Workflow Action Master",
-  "modified": "2023-04-04 04:04:04.119400",
+  "creation": "2023-04-04 04:04:04",
+  "modified": "2023-04-04 04:04:04",
   "name": "Reject",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null,
   "workflow_action_name": "Reject"
  }
 ]

@@ -26,9 +26,6 @@ from expenses.libs import (
 
 class ExpenseType(NestedSet):
     nsm_parent_field = "parent_type"
-    _disable_descendants = False
-    _old_data = None
-    _emit_change = False
     
     
     def before_validate(self):
@@ -66,24 +63,25 @@ class ExpenseType(NestedSet):
                 cint(self.is_group) and
                 type_children_exists(name)
             ):
-                self._disable_descendants = True
-                self._old_data = get_type_lft_rgt(self.name)
-                self._emit_change = True
+                self.flags.disable_descendants = True
+                self.flags.old_data = get_type_lft_rgt(self.name)
+                self.flags.emit_change = True
             
-            if not self._emit_change:
-                for f in self.meta.get("fields"):
+            if not self.flags.get("emit_change", False):
+                for f in self.meta.get("fields", []):
                     if self.has_value_changed(f.fieldname):
-                        self._emit_change = True
+                        self.flags.emit_change = True
                         break
     
     
     def on_update(self):
-        if self._disable_descendants:
-            old = self._old_data
-            self._disable_descendants = False
-            self._old_data = None
+        if self.flags.get("disable_descendants", False):
+            old = self.flags.old_data
+            self.flags.pop("disable_descendants")
+            self.flags.pop("old_data")
             
-            if (cur := get_type_lft_rgt(self.name)):
+            cur = get_type_lft_rgt(self.name)
+            if cur:
                 if type_has_descendants(cur.lft, cur.rgt):
                     disable_type_descendants(cur.lft, cur.rgt)
                 elif (
@@ -96,8 +94,8 @@ class ExpenseType(NestedSet):
         if not frappe.local.flags.ignore_update_nsm:
             super(ExpenseType, self).on_update()
         
-        if self._emit_change:
-            self._emit_change = False
+        if self.flags.get("emit_change", False):
+            self.flags.pop("emit_change")
             emit_type_changed({
                 "action": "change",
                 "type": self.name,
@@ -141,7 +139,8 @@ class ExpenseType(NestedSet):
             }
         
         if parent_type:
-            if (error := self._validate_parent(parent_type, True)):
+            error = self._validate_parent(parent_type, True)
+            if error:
                 return error
             
             self.parent_type = parent_type
@@ -214,7 +213,8 @@ class ExpenseType(NestedSet):
     
     
     def _validate_type(self):
-        if (doc := self._get_old_doc()):
+        doc = self._get_old_doc()
+        if doc:
             name = self._get_name(doc)
             is_group = cint(self.is_group)
             is_old_group = cint(doc.is_group)

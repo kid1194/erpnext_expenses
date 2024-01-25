@@ -1,12 +1,10 @@
 {
- "actions": [],
  "allow_copy": 1,
  "allow_import": 1,
  "autoname": "format:EXP-E-{YYYY}-{#####}",
- "creation": "2023-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04",
  "description": "Expenses Entry for Expenses module",
  "doctype": "DocType",
- "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "main_section",
@@ -52,7 +50,6 @@
    "default": ":Company",
    "reqd": 1,
    "bold": 1,
-   "only_select": 1,
    "remember_last_selected_value": 1,
    "in_list_view": 1,
    "in_filter": 1,
@@ -68,7 +65,6 @@
    "bold": 1,
    "read_only_depends_on": "eval:!doc.company",
    "mandatory_depends_on": "eval:doc.company",
-   "only_select": 1,
    "remember_last_selected_value": 1,
    "in_list_view": 1,
    "in_filter": 1,
@@ -180,6 +176,7 @@
    "label": "Total",
    "options": "payment_currency",
    "bold": 1,
+   "non_negative": 1,
    "read_only": 1,
    "in_list_view": 1,
    "in_preview": 1
@@ -203,6 +200,7 @@
    "label": "Total (Company Currency)",
    "options": "Company:company:default_currency",
    "bold": 1,
+   "non_negative": 1,
    "read_only": 1,
    "print_hide": 1
   },
@@ -252,7 +250,6 @@
    "options": "Expenses Entry",
    "read_only": 1,
    "hidden": 1,
-   "only_select": 1,
    "allow_on_submit": 1,
    "ignore_user_permissions": 1
   },
@@ -275,8 +272,7 @@
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
- "links": [],
- "modified": "2023-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Entry",
@@ -350,7 +346,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
  "default_print_format": "Expenses Entry",
  "track_changes": 1
 }

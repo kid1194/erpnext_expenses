@@ -6,7 +6,6 @@
 
 import frappe
 from frappe import _, throw
-from frappe.utils import nowdate
 from frappe.model.document import Document
 from frappe.utils import (
     flt,
@@ -33,11 +32,6 @@ from expenses.libs import (
 
 
 class ExpensesEntry(Document):
-    _emit_change = 0
-    _request_status = 0
-    _journal_status = 0
-    
-    
     def before_validate(self):
         if (
             self.is_new() and (
@@ -74,10 +68,11 @@ class ExpensesEntry(Document):
                         not self.payment_currency
                     ):
                         mop = get_mode_of_payment_data(self.mode_of_payment, self.company)
-                        self.payment_account = mop["account"]
-                        self.payment_target = mop["type"]
-                        self.payment_currency = mop["currency"]
-                        company_currency = mop["company_currency"]
+                        if mop:
+                            self.payment_account = mop["account"]
+                            self.payment_target = mop["type"]
+                            self.payment_currency = mop["currency"]
+                            company_currency = mop["company_currency"]
                 
                 if (
                     not flt(self.exchange_rate) and
@@ -168,33 +163,33 @@ class ExpensesEntry(Document):
     def before_save(self):
         clear_doc_cache(self.doctype, self.name)
         if self.is_new() and self.expenses_request_ref:
-            self._request_status = 1
+            self.flags.request_status = 1
         
         self._check_change()
     
     
     def before_submit(self):
         clear_doc_cache(self.doctype, self.name)
-        self._journal_status = 1
-        self._emit_change = 1
+        self.flags.journal_status = 1
+        self.flags.emit_change = True
     
     
     def on_update(self):
-        if self._request_status:
+        if self.flags.get("request_status", 0):
             self._handle_request()
         
         self._emit_change_event()
     
     
     def after_submit(self):
-        if self._journal_status == 1:
-            self._journal_status = 0
+        if self.flags.get("journal_status", 0) == 1:
+            self.flags.pop("journal_status")
             enqueue_journal_entry(self.name)
     
     
     def before_update_after_submit(self):
         clear_doc_cache(self.doctype, self.name)
-        for f in self.meta.get("fields"):
+        for f in self.meta.get("fields", []):
             if (
                 not cint(f.allow_on_submit) and
                 self.has_value_changed(f.fieldname)
@@ -207,21 +202,21 @@ class ExpensesEntry(Document):
     
     def before_cancel(self):
         if self.expenses_request_ref:
-            self._request_status = 2
+            self.flags.request_status = 2
         if self.docstatus.is_submitted():
-            self._journal_status = 2
+            self.flags.journal_status = 2
     
     
     def on_cancel(self):
         clear_doc_cache(self.doctype, self.name)
-        if self._request_status:
+        if self.flags.get("request_status", 0):
             self._handle_request()
         
-        if self._journal_status == 2:
-            self._journal_status = 0
+        if self.flags.get("journal_status", 0) == 2:
+            self.flags.pop("journal_status")
             cancel_journal_entry(self.name)
         
-        self._emit_change = 1
+        self.flags.emit_change = True
         self._emit_change_event()
     
     
@@ -238,7 +233,7 @@ class ExpensesEntry(Document):
     
     
     def after_delete(self):
-        self._emit_change = 1
+        self.flags.emit_change = True
         self._emit_change_event("trash")
     
     
@@ -270,13 +265,13 @@ class ExpensesEntry(Document):
     
     
     def _handle_request(self):
-        if self._request_status == 1:
+        if self.flags.get("request_status", 0) == 1:
             process_request(self.expenses_request_ref)
         
-        elif self._request_status == 2:
+        elif self.flags.get("request_status", 0) == 2:
             reject_request(self.expenses_request_ref)
         
-        self._request_status = 0
+        self.flags.pop("request_status")
     
     
     def _get_old_doc(self):
@@ -305,15 +300,15 @@ class ExpensesEntry(Document):
     
     def _check_change(self):
         if not self.is_new():
-            for f in self.meta.get("fields"):
+            for f in self.meta.get("fields", []):
                 if self.has_value_changed(f.fieldname):
-                    self._emit_change = 1
+                    self.flags.emit_change = True
                     break
     
     
     def _emit_change_event(self, action="change"):
-        if self._emit_change:
-            self._emit_change = 0
+        if self.flags.get("emit_change", False):
+            self.flags.pop("emit_change")
             emit_entry_changed({
                 "action": action,
                 "entry": self.name

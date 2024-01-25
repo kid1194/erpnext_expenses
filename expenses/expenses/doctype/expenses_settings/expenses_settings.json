@@ -1,9 +1,7 @@
 {
- "actions": [],
- "creation": "2023-04-04 04:04:04.119400",
+ "creation": "2023-04-04 04:04:04",
  "description": "Settings for Expenses module",
  "doctype": "DocType",
- "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "general_section",
@@ -55,23 +53,24 @@
    "fieldtype": "Check",
    "label": "Send Update Notification",
    "default": "1",
-   "read_only_depends_on": "eval:!doc.is_enabled || !doc.auto_check_for_update"
+   "read_only_depends_on": "eval:!doc.is_enabled"
   },
   {
    "fieldname": "update_notification_sender",
    "fieldtype": "Link",
    "label": "Update Notification Sender",
    "options": "User",
+   "bold": 1,
    "read_only_depends_on": "eval:!doc.is_enabled || !doc.send_update_notification",
    "mandatory_depends_on": "eval:doc.is_enabled && doc.send_update_notification",
-   "ignore_user_permissions": 1,
-   "only_select": 1
+   "ignore_user_permissions": 1
   },
   {
    "fieldname": "update_notification_receivers",
    "fieldtype": "Table MultiSelect",
    "label": "Update Notification Receivers",
    "options": "Expenses Update Receiver",
+   "bold": 1,
    "read_only_depends_on": "eval:!doc.is_enabled || !doc.send_update_notification",
    "mandatory_depends_on": "eval:doc.is_enabled && doc.send_update_notification"
   },
@@ -122,8 +121,7 @@
  ],
  "icon": "fa fa-cog",
  "issingle": 1,
- "links": [],
- "modified": "2023-04-04 04:04:04.119400",
+ "modified": "2023-04-04 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Settings",
@@ -180,9 +178,5 @@
    "submit": 1,
    "write": 1
   }
- ],
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ ]
 }

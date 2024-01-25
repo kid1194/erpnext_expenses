@@ -19,4 +19,4 @@ def settings(for_update=False):
 ## [Update]
 @frappe.whitelist()
 def is_enabled():
-    return cint(getattr(settings(), "is_enabled", 0)) == 1
+    return cint(settings().is_enabled) == 1
