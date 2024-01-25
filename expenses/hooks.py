@@ -35,6 +35,7 @@ doctype_list_js = {
 
 before_install = "expenses.setup.install.before_install"
 after_sync = "expenses.setup.install.after_sync"
+after_migrate = "expenses.setup.migrate.after_migrate"
 after_uninstall = "expenses.setup.uninstall.after_uninstall"
 
 

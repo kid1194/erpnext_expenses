@@ -4,7 +4,7 @@
  "allow_import": 1,
  "autoname": "Prompt",
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Expense type for Expenses",
+ "description": "Expense type for Expenses module",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",
@@ -167,6 +167,7 @@
  "sort_order": "DESC",
  "states": [],
  "show_name_in_global_search": 1,
+ "translated_doctype": 1,
  "translate_link_fields": 1,
  "track_changes": 1
 }

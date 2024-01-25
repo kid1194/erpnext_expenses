@@ -56,8 +56,10 @@ def get_item_company_account(item: str, company: str):
         "min_qty": 0.0,
         "max_qty": 0.0
     }
-    if (data := get_type_company_account_data(cstr(expense_type), company)):
-        if (item_data := get_item_company_account_data(item, company)):
+    data = get_type_company_account_data(cstr(expense_type), company)
+    if data:
+        item_data = get_item_company_account_data(item, company)
+        if item_data:
             data.update(item_data)
         else:
             data.update(default)
@@ -67,8 +69,10 @@ def get_item_company_account(item: str, company: str):
         data = frappe._dict({"account": "", "currency": ""})
         data.update(default)
         
-        if (acc := get_cached_value("Company", company, "default_expense_account")):
-            if (cur := get_cached_value("Account", cstr(acc), "account_currency")):
+        acc = get_cached_value("Company", company, "default_expense_account")
+        if acc:
+            cur = get_cached_value("Account", cstr(acc), "account_currency")
+            if cur:
                 data.update({
                     "account": cstr(acc),
                     "currency": cstr(cur)

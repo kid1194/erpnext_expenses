@@ -85,9 +85,9 @@ def _doctypes_uninstall(roles):
     from expenses import __module__
     
     docs = [
-        ["Workspace", __module__],
-        ["Report", "Expenses Entry Report"],
-        ["Workflow", "Expenses Request Review"],
+        ["Workspace", [__module__]],
+        ["Report", ["Expenses Entry Report"]],
+        ["Workflow", ["Expenses Request Review"]],
         ["Print Format", [
             "Expense",
             "Expenses Entry",
@@ -95,19 +95,20 @@ def _doctypes_uninstall(roles):
         ]],
         ["DocType", __DOCTYPES__],
         ["Role", roles],
-        ["Module Def", __module__]
+        ["Module Def", [__module__]]
     ]
     for v in docs:
-        try:
-            delete_doc(
-                v[0], v[1],
-                ignore_permissions=True,
-                ignore_missing=True,
-                ignore_on_trash=True,
-                delete_permanently=True
-            )
-        except Exception:
-            pass
+        for name in v[1]:
+            try:
+                delete_doc(
+                    v[0], name,
+                    ignore_permissions=True,
+                    ignore_missing=True,
+                    ignore_on_trash=True,
+                    delete_permanently=True
+                )
+            except Exception:
+                pass
 
 
 ## [Internal]

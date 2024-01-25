@@ -181,10 +181,11 @@ def get_expenses(names: list):
     if not data or not isinstance(data, list):
         return {"error": _("Unable to get the expenses data.")}
     
-    if (attachments := get_files_by_parents(
+    attachments = get_files_by_parents(
         [v["name"] for v in data],
         dt, "attachments"
-    )):
+    )
+    if attachments:
         for i in range(len(data)):
             if data[i]["name"] in attachments:
                 data[i]["attachments"] = attachments.get(data[i]["name"])

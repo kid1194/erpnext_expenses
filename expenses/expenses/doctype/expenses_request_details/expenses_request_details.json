@@ -4,7 +4,7 @@
  "allow_import": 1,
  "autoname": "hash",
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Expenses request details for Expenses",
+ "description": "Expenses request details for Expenses module",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",

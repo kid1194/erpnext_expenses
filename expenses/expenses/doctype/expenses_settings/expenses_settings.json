@@ -1,7 +1,7 @@
 {
  "actions": [],
  "creation": "2023-04-04 04:04:04.119400",
- "description": "Settings for Expenses",
+ "description": "Settings for Expenses module",
  "doctype": "DocType",
  "document_type": "Document",
  "engine": "InnoDB",

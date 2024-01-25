@@ -107,7 +107,7 @@ cd ~/frappe-bench
 bench --site [sitename] uninstall-app expenses
 ```
 
-3. (Optional) Remove plugin from bench
+3. Remove plugin from bench cache
 
 ```
 bench remove-app expenses
