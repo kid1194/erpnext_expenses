@@ -20,6 +20,7 @@ from expenses.libs import (
 
 class ExpenseType(NestedSet):
     nsm_parent_field = "parent_type"
+    nsm_oldparent_field = "old_parent_type"
     
     
     _ignored_fields = ["old_parent_type", "lft", "rgt"]
