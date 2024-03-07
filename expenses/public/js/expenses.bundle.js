@@ -426,7 +426,7 @@ class LevelUp extends LevelUpBase {
     _routes() {
         let v;
         try { this._router.obj && (v = (!this._router.old ? frappe.get_route() : v) || this._router.obj.parse()); } catch(_) {}
-        if (v) this._router.val = v;
+        if (this.$isArrVal(v)) this._router.val = v;
     }
     route(i) { return this._router.val[i] || this._router.val[0]; }
     get is_list() { return this.route(0).toLowerCase() === 'list'; }
