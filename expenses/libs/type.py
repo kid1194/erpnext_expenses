@@ -91,7 +91,8 @@ def query_types(txt, filters, start, page_len, as_dict=False):
         if "is_group" in filters:
             qry = qry.where(doc.is_group == cint(filters["is_group"]))
         
-        if filters.get("not_child_of", "") and
+        if (
+            filters.get("not_child_of", "") and
             isinstance(filters["not_child_of"], str)
         ):
             from .cache import get_cached_value
