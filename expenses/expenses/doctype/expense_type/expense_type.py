@@ -218,7 +218,7 @@ class ExpenseType(NestedSet):
         from expenses.libs import emit_type_changed
         
         emit_type_changed({
-            "action": "change" if change else: "trash",
+            "action": "change" if change else "trash",
             "type": self.name
         })
     
