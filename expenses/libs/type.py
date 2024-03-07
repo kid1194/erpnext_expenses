@@ -75,7 +75,7 @@ def query_types(txt, filters, start, page_len, as_dict=False):
     doc = frappe.qb.DocType(dt)
     qry = (
         frappe.qb.from_(doc)
-        .select(doc.name)
+        .select(doc.name, doc.name.as_("label"))
         .where(doc.disabled == 0)
         .where(Criterion.any([
             IfNull(doc.parent_type, "") == "",

@@ -109,7 +109,7 @@ def search_items(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
     doc = frappe.qb.DocType(dt)
     qry = (
         frappe.qb.from_(doc)
-        .select(doc.name)
+        .select(doc.name, doc.name.as_("label"))
         .where(doc.disabled == 0)
         .where(doc.name.isin(get_items_with_company_account_query(filters["company"])))
         .where(doc.expense_type.isin(get_types_filter_query()))
