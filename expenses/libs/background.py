@@ -4,17 +4,18 @@
 # Licence: Please refer to LICENSE file
 
 
-import hashlib
-import uuid
-
 import frappe
-from frappe.utils import cstr
 
-from expenses.version import __frappe_mv15__
+from expenses.version import is_version_gt
 
 
-## [Expense]
+# [Expense]
 def uuid_key(args):
+    import hashlib
+    import uuid
+    
+    from frappe.utils import cstr
+    
     from .common import to_json
     
     return cstr(uuid.UUID(hashlib.sha256(
@@ -22,21 +23,23 @@ def uuid_key(args):
     ).hexdigest()[::2]))
 
 
-## [Expense, Journal, Update]
+# [Expense, Journal, Update]
 def is_job_running(name: str):
-    if __frappe_mv15__:
+    if is_version_gt(14):
         from frappe.utils.background_jobs import is_job_enqueued
+        
         return is_job_enqueued(name)
     
     else:
         from frappe.core.page.background_jobs.background_jobs import get_info
+        
         jobs = [d.get("job_name") for d in get_info("Jobs", job_status="active")]
         return True if name in jobs else False
 
 
-## [Attachment, Expense, Journal, Update]
+# [Attachment, Expense, Journal, Update]
 def enqueue_job(method: str, job_name: str, **kwargs):
-    if __frappe_mv15__:
+    if is_version_gt(14):
         frappe.enqueue(
             method,
             job_id=job_name,

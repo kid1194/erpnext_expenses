@@ -4,21 +4,19 @@
 # Licence: Please refer to LICENSE file
 
 
-import re
-
-from pypika.enums import Order
-from pypika.terms import Criterion
-
 import frappe
 from frappe import _
 from frappe.utils import cstr
-from frappe.query_builder.functions import Locate
 
 
-## [Expense, Item, Type]
+# [Expense, Item, Type]
 def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     meta = frappe.get_meta(doctype)
     if search:
+        from pypika.enums import Order
+        
+        from frappe.query_builder.functions import Locate
+        
         qry = qry.select(Locate(search, relevance).as_("_relevance"))
         qry = qry.orderby("_relevance", doc.modified, doc.idx, order=Order.desc)
         
@@ -41,7 +39,6 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
             "Read Only",
             "Text Editor"
         ]
-        
         for f in search_fields:
             fmeta = meta.get_field(f.strip())
             if (
@@ -54,6 +51,8 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
                 search_filters.append(doc.field(f.strip()).like("%" + search + "%"))
         
         if len(search_filters) > 1:
+            from pypika.terms import Criterion
+            
             qry = qry.where(Criterion.any(search_filters))
         else:
             qry = qry.where(search_filters.pop(0))
@@ -66,9 +65,11 @@ def filter_search(doc, qry, doctype, search, relevance, filter_column=None):
     return qry
 
 
-## [Expense, Item, Type]
+# [Expense, Item, Type]
 def prepare_data(data, dt, column, search, as_dict):
     if search and dt in frappe.get_hooks("translated_search_doctypes"):
+        import re
+        
         data = [
             v
             for v in data
@@ -85,7 +86,6 @@ def prepare_data(data, dt, column, search, as_dict):
         return (cstr(value).lower().startswith(args[0].lower()) is not True, value)
     
     data = sorted(data, key=relevance_sorter)
-    
     if as_dict:
         for r in data:
             r.pop("_relevance")

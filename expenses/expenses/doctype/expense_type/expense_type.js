@@ -7,488 +7,256 @@
 
 
 frappe.ui.form.on('Expense Type', {
-    setup: function(frm) {
-        frappe.exp()
-            .on('ready change', function() {
-                this.setup_form(frm);
-            })
-            .on('exp_type_changed', function(ret) {
-                if (!ret) return;
-                if (cstr(ret.action) === 'change' && (
-                    cstr(ret.type) === cstr(frm.doc.name)
-                    || cstr(ret.old_type) === cstr(frm.doc.name)
-                )) {
-                    let message = __('The expense type data has changed. Reload to update the form.');
-                    if (frm.is_dirty())
-                        message = message + '<br/><strong class="text-danger">'
-                            + __('Warning: All the unsaved changes will be discarded.')
-                        + '</strong>';
-                    
-                    frappe.warn(
-                        __('Expense Type Changed'),
-                        message,
-                        function() { frm.reload_doc(); },
-                        __('Reload')
-                    );
-                } else if (
-                    cstr(ret.action) === 'trash'
-                    && cstr(ret.type) === cstr(frm.doc.name)
-                ) {
-                    window.setTimeout(function() {
-                        frm.trigger('go_to_tree');
-                    }, 6000);
-                    frappe.throw({
-                        title: __('Expense Type Removed'),
-                        message: __('The expense type has been removed. You will be redirected automatically back to the Tree View.'),
-                    });
-                }
-            });
+    onload: function(frm) {
+        frappe.exp().on('ready change', function() { this.setup_form(frm); });
         frm._type = {
-            is_new: false,
-            reqd_accounts: true,
-            has_accounts: [],
-            tree: {
-                show: false,
-                ready: false,
-                pending: false,
-            },
-            table: {
-                ready: false,
-                data: frappe.exp().table(2),
-            },
+            is_group: 0,
+            tree: {show: 0, ready: 0, pending: 0},
+            table: {ready: 0, data: frappe.exp().table(2)},
             toolbar: {
-                ready: false,
-                pending: false,
+                pending: 0,
                 list: [
                     [
-                        'Convert To Item',
+                        __('Convert To Item'),
                         'convert_group_to_item',
-                        'Unable to convert the expense type group to an item.'
+                        __('Unable to convert the expense type group to an item.')
                     ],
                     [
-                        'Convert To Group',
+                        __('Convert To Group'),
                         'convert_item_to_group',
-                        'Unable to convert the expense type item to a group.'
+                        __('Unable to convert the expense type item to a group.')
                     ],
                 ],
             },
+            go_to_tree: function() { frappe.set_route('Tree', frm.doctype); },
         };
-    },
-    onload: function(frm) {
-        frm._type.is_new = !!frm.is_new();
-        
-        frm.set_query('parent_type', function() {
-            let filters = {is_group: 1},
-            name = cstr(frm.doc.name);
-            if (name.length && cint(frm.doc.is_group))
-                filters.name = ['!=', name];
-            return {
-                query: frappe.exp().path('search_types'),
-                filters: filters,
-            };
+        frm.set_query('parent_type', function(doc) {
+            let qry = {query: frappe.exp().get_method('search_types')};
+            if (!frm.is_new()) qry.filters = {is_not: cstr(frm.docname)};
+            return qry;
         });
-        
         frm.set_query('company', 'expense_accounts', function(doc, cdt, cdn) {
-            let filters = {is_group: 0},
-            companies = frm._type.table.data.col(1);
-            if (companies.length) filters.name = ['not in', companies];
+            let filters = {is_group: 0};
+            if (frm._type.table.data.length)
+                filters.name = ['not in', frm._type.table.data.col(1)];
             return {filters: filters};
         });
         frm.set_query('account', 'expense_accounts', function(doc, cdt, cdn) {
             return {filters: {
-                is_group: 0,
-                root_type: 'Expense',
+                is_group: 0, root_type: 'Expense',
                 company: cstr(locals[cdt][cdn].company),
             }};
         });
-        
-        frappe.exp().request(
-            'type_form_setup',
-            null,
-            function(ret) {
-                if (this.$isDataObj(ret) && this.$isArr(ret.has_accounts))
-                    frm._type.has_accounts = ret.has_accounts;
+        if (!!frm.is_new()) frm._type.tree.show = !!(frappe.route_options || {}).from_tree;
+        else if (frappe.exp().$isArrVal(frm.doc.expense_accounts))
+            for (let i = 0, l = frm.doc.expense_accounts.length, v; i < l; i++) {
+                v = frm.doc.expense_accounts[i];
+                frm._type.table.data.add(cstr(v.name), cstr(v.company), cstr(v.account));
             }
-        );
-        
-        if (!frm._type.is_new && (frm.doc.expense_accounts || []).length) {
-            var del = [];
-            frm.doc.expense_accounts.forEach(function(v, i) {
-                let name = cstr(v.name),
-                company = cstr(v.company);
-                if (
-                    !frm._type.table.data.has(name)
-                    && !frm._type.table.data.has(company, 1)
-                ) frm._type.table.data.add(name, company, cstr(v.account));
-                else del.push(i);
-            });
-            if (del.length) {
-                var table = frm.doc.expense_accounts.slice();
-                del.reverse().forEach(function(i) {
-                    table.splice(i, 1);
-                });
-                frm.set_value('expense_accounts', table);
-                frm.refresh_field('expense_accounts');
-            }
-        }
-        
-        if (frm._type.is_new) {
-            let tmp = frappe.exp().pop_cache('create-expense-type');
-            if (frappe.exp().$isDataObj(tmp)) {
-                frm._type.tree.show = true;
-                if (!frappe.exp().$isEmptyObj(tmp)) {
-                    if (cint(tmp.is_group)) frm.set_value('is_group', 1);
-                    if (cstr(tmp.parent_type).length)
-                        frm.set_value('parent_type', frappe.utils.escape_html(cstr(tmp.parent_type)));
-                    frm.trigger('check_expense_accounts_status');
-                }
-            }
-        }
     },
     refresh: function(frm) {
-        frm.trigger('form_init');
+        if (!!frm.is_new()) {
+            if (frm._type.tree.show && !frm._type.tree.ready) frm.events.setup_tree_toolbar(frm);
+            if (!frm._type.table.ready) frm.events.setup_child_table(frm);
+        } else {
+            if (frm._type.tree.ready) frm.events.setup_tree_toolbar(frm, 1);
+            if (frm._type.table.ready) frm.events.setup_child_table(frm, 1);
+            frm.events.toggle_disabled_desc(frm);
+        }
     },
     is_group: function(frm) {
-        frm.trigger('check_expense_accounts_status');
-    },
-    parent_type: function(frm) {
-        frm.trigger('check_expense_accounts_status');
+        let val = cint(frm.doc.is_group) > 0 ? 0 : 1;
+        frm.set_df_property('parent_type', 'reqd', val);
+        frm.set_df_property('parent_type', 'bold', val);
+        frm.events.toggle_disabled_desc(frm);
     },
     validate: function(frm) {
         if (!cstr(frm.doc.name).length) {
-            frappe.exp()
-                .focus(frm, 'name')
-                .error('A valid expense type name is required.');
+            frappe.throw(__('A valid name is required.'));
             return false;
         }
         if (!cint(frm.doc.is_group) && !cstr(frm.doc.parent_type).length) {
-            frappe.exp()
-                .focus(frm, 'parent_type')
-                .error('A valid expense type parent is required.');
-            return false;
-        }
-        if (!(frm.doc.expense_accounts || []).length) {
-            frappe.exp()
-                .focus(frm, 'expense_accounts')
-                .error('At least one valid expense account is required.');
+            frappe.throw(__('A valid parent type is required.'));
             return false;
         }
     },
     after_save: function(frm) {
-        if (frm._type.tree.ready && frm._type.tree.pending) {
-            frm.trigger('go_to_tree');
-            return;
-        }
-        if (frm._type.table.ready && frm._type.is_new)
-            frm.trigger('unsetup_child_table');
-        frm._type.is_new = false;
-        if (frm._type.toolbar.ready && frm._type.toolbar.pending)
-            frm.trigger('toolbar_action_handler');
+        if (frm._type.tree.pending) return frm._type.go_to_tree();
+        if (frm._type.table.ready) frm.events.setup_child_table(frm, 1);
+        if (frm._type.toolbar.pending) frm.events.toolbar_action_handler(frm);
     },
-    form_init: function(frm) {
-        if (frm._type.is_new && frm._type.tree.show && !frm._type.tree.ready)
-            frm.trigger('setup_tree_toolbar');
-        if (frm._type.is_new && !frm._type.table.ready)
-            frm.trigger('setup_child_table');
-        if (!frm._type.is_new) frm.trigger('toggle_disabled_desc');
-        if (!frm._type.is_new && !frm._type.toolbar.ready)
-            frm.trigger('add_toolbar_buttons');
-    },
-    check_expense_accounts_status: function(frm) {
-        let parent = cstr(frm.doc.parent_type),
-        reqd = !cint(frm.doc.is_group) && (
-            !parent.length
-            || frm._type.has_accounts.indexOf(parent) < 0
-        );
-        if (frm._type.reqd_accounts === reqd) return;
-        frm._type.reqd_accounts = reqd;
-        frm.trigger('update_expense_accounts_status');
-    },
-    update_expense_accounts_status: function(frm) {
-        let table = 'expense_accounts',
-        reqd = frm._type.reqd_accounts ? 1 : 0;
-        frm.toggle_reqd(table, reqd);
-        frm.set_df_property(table, 'bold', reqd);
-        frm.refresh_field(table);
-    },
-    setup_tree_toolbar: function(frm) {
-        frm._type.tree.ready = true;
+    setup_tree_toolbar: function(frm, del) {
         let btn = __('Go Back');
-        if (frm.custom_buttons[btn]) return;
+        if (del && frm.custom_buttons[btn]) {
+            frm._type.tree.show = frm._type.tree.ready = 0;
+            frm.custom_buttons[btn].remove();
+            delete frm.custom_buttons[btn];
+        }
+        if (del) return;
+        frm._type.tree.ready = 1;
         frm.add_custom_button(btn, function() {
-            if (!frm.is_dirty()) frm.trigger('go_to_tree');
+            if (!frm.is_dirty()) frm._type.go_to_tree();
             else {
-                frm._type.tree.pending = true;
-                frappe.exp().error('The form contains some unsaved changes. Click "Save" in order to proceed.');
+                frm._type.tree.pending = 1;
+                frappe.exp().warn(__('The form contains some unsaved changes. Click "Save" in order to proceed.'));
             }
         });
         frm.change_custom_button_type(btn, null, 'info');
     },
-    go_to_tree: function(frm) {
-        frappe.set_route('Tree', frm.doctype);
-    },
-    setup_child_table: function(frm) {
-        frm._type.table.ready = true;
-        var field_grid = frm.get_field('expense_accounts').grid;
-        field_grid.add_custom_button(
-            __('Add All Companies'),
-            function() {
-                frappe.dom.freeze(__('Adding all companies and their default expense accounts.'));
-                frappe.exp().request(
-                    'get_all_companies_accounts',
-                    null,
-                    function(ret) {
-                        frappe.dom.unfreeze();
-                        if (!this.$isArr(ret) || !ret.length) {
-                            frappe.show_alert({
-                                indicator: 'blue',
-                                message: __('There are no companies to add.'),
-                            });
-                            return;
-                        }
-                        
-                        let start = frm._type.table.data.length;
-                        ret.forEach(function(v) {
-                            let company = cstr(v.name);
-                            if (!frm._type.table.data.has(company, 1)) {
-                                let row = frm.add_child(
-                                    'expense_accounts',
-                                    {company: company, account: cstr(v.default_expense_account)}
-                                );
-                                frm._type.table.data.add(
-                                    cstr(row.name),
-                                    cstr(row.company),
-                                    cstr(row.account)
-                                );
-                            }
-                        });
-                        
-                        if (start < frm._type.table.data.length)
-                            frappe.show_alert({
-                                indicator: 'green',
-                                message: __('The expense accounts table has been updated successfully.'),
-                            });
-                        else
-                            frappe.show_alert({
-                                indicator: 'blue',
-                                message: __('The expense accounts table already has all the companies.'),
-                            });
-                        
-                        frm.trigger('unsetup_child_table');
-                    },
-                    function(e) {
-                        frappe.dom.unfreeze();
-                        frappe.show_alert({
-                            indicator: 'red',
-                            message: e.message,
-                        });
-                    }
-                );
-            }
-        )
-        .removeClass('btn-default')
-        .addClass('btn-secondary');
-        
-        field_grid.add_custom_button(
-            __('Copy From'),
-            function() {
-                frappe.prompt(
-                    [
-                        {
-                            fieldname: 'expense_type',
-                            fieldtype: 'Link',
-                            label: __('Expense Type'),
-                            options: 'Expense Type',
-                            reqd: 1,
-                            bold: 1,
-                            get_query: function() {
-                                return {
-                                    query: frappe.exp().path('search_types'),
-                                    filters: {
-                                        name: ['!=', cstr(frm.doc.name)],
-                                    },
-                                };
-                            },
-                        },
-                    ],
-                    function(vals) {
-                        frappe.dom.freeze(__('Copying expense accounts from "{0}".', [vals.expense_type]));
-                        frappe.exp().request(
-                            'type_accounts',
-                            {name: vals.expense_type},
-                            function(ret) {
-                                frappe.dom.unfreeze();
-                                if (!this.$isArr(ret) || !ret.length) {
-                                    frappe.show_alert({
-                                        indicator: 'blue',
-                                        message: __('The selected expense type has no expense accounts.'),
-                                    });
-                                    return;
-                                }
-                                
-                                ret.forEach(function(v) {
-                                    let company = cstr(v.company);
-                                    if (!frm._type.table.data.has(company, 1)) {
-                                        let row = frm.add_child(
-                                            'expense_accounts',
-                                            {company: company, account: cstr(v.account)}
-                                        );
-                                        frm._type.table.data.add(
-                                            cstr(row.name),
-                                            cstr(row.company),
-                                            cstr(row.account)
-                                        );
-                                    }
-                                });
-                                
-                                frappe.show_alert({
-                                    indicator: 'green',
-                                    message: __('The expense accounts table has been updated successfully.'),
-                                });
-                                
-                                frm.trigger('unsetup_child_table');
-                            },
-                            function(e) {
-                                frappe.dom.unfreeze();
-                                frappe.show_alert({
-                                    indicator: 'red',
-                                    message: e.message,
-                                });
-                            }
-                        );
-                    },
-                    __('Select Expense Type'),
-                    __('Copy')
-                );
-            }
-        )
-        .removeClass('btn-default')
-        .addClass('btn-secondary');
-    },
-    unsetup_child_table: function(frm) {
-        frm._type.table.ready = false;
-        let label = __('Add All Companies'),
-        grid = frm.get_field('expense_accounts').grid,
-        btn = grid.custom_buttons[label];
-        if (btn) {
-            btn.remove();
+    setup_child_table: function(frm, del) {
+        let grid = frm.get_field('expense_accounts').grid,
+        label = __('Import Companies Accounts');
+        if (del && grid.custom_buttons[label]) {
+            frm._type.table.ready = 0;
+            grid.custom_buttons[label].remove();
             delete grid.custom_buttons[label];
         }
+        if (del) return;
+        frm._type.table.ready = 1;
+        grid.add_custom_button(
+            label, frappe.exp().$fn(function(e) {
+                var $btn = $(e.target);
+                $btn.attr('disabled', true);
+                this.disable_table(frm, 'expense_accounts')
+                .request('get_companies_accounts', null, function(ret) {
+                    if (!this.$isArrVal(ret)) {
+                        $btn.attr('disabled', false);
+                        this.enable_table(frm, 'expense_accounts');
+                        frappe.show_alert({
+                            indicator: 'blue',
+                            message: __('There are no companies to import.'),
+                        });
+                        return;
+                    }
+                    let x = 0;
+                    for (let i = 0, l = ret.length, v, c, r; i < l; i++) {
+                        v = ret[i];
+                        c = cstr(v.company);
+                        if (frm._type.table.data.has(c, 1)) continue;
+                        x++;
+                        r = frm.add_child('expense_accounts', {company: c, account: cstr(v.account)});
+                        frm._type.table.data.add(cstr(r.name), cstr(r.company), cstr(r.account));
+                    }
+                    $btn.attr('disabled', false);
+                    this.enable_table(frm, 'expense_accounts');
+                    frappe.show_alert({
+                        indicator: x ? 'green' : 'blue',
+                        message: x ? __('The expense accounts table has been updated successfully.')
+                            : __('The expense accounts table already has all the companies.'),
+                    }); 
+                },
+                function(e) {
+                    $btn.attr('disabled', false);
+                    this.enable_table(frm, 'expense_accounts');
+                    frappe.show_alert({indicator: 'red', message: e.message});
+                }
+            );
+        }))
+        .removeClass('btn-default')
+        .addClass('btn-secondary');
     },
     toggle_disabled_desc: function(frm) {
-        let field = frm.get_field('disabled');
-        if (!cint(frm.doc.is_group)) field.toggle_description(false);
-        else {
-            field.set_new_description(__(
-                'Disabling an expense type group will result in '
-                + 'disabling all its child types and their linked expense items'
-            ));
-            field.toggle_description(true);
-        }
+        let val = cint(frm.doc.is_group);
+        if (!!frm.is_new()) frm._type.is_group = val;
+        if (val === frm._type.is_group) return;
+        frm.events.add_toolbar_buttons(frm, 1);
+        frm._type.is_group = val;
+        frappe.exp().set_field_desc(frm, 'disabled', !frm._type.is_group ? null
+            : __('Disabling an expense type group will result in disabling all its child types and their linked expense items')
+        );
+        frm.events.add_toolbar_buttons(frm);
     },
-    add_toolbar_buttons: function(frm) {
-        if (frm._type.toolbar.ready) return;
-        frm._type.toolbar.ready = true;
-        var toolbar = frm._type.toolbar.list[cint(frm.doc.is_group) ? 0 : 1];
-        let btn = __(toolbar[0]);
-        if (frm.custom_buttons[btn]) return;
+    add_toolbar_buttons: function(frm, del) {
+        let btn = frm._type.toolbar.list[frm._type.is_group ? 0 : 1][0];
+        if (del && frm.custom_buttons[btn]) {
+            frm.custom_buttons[btn].remove();
+            delete frm.custom_buttons[btn];
+        }
+        if (del) return;
         frm.add_custom_button(btn, function() {
-            if (!frm.is_dirty()) frm.trigger('toolbar_action_handler');
+            if (!frm.is_dirty()) frm.events.toolbar_action_handler(frm);
             else {
-                frm._type.toolbar.pending = true;
-                frappe.exp().error('The form contains some unsaved changes. Click "Save" in order to proceed.');
+                frm._type.toolbar.pending = 1;
+                frappe.exp().error(__('The form contains some unsaved changes. Click "Save" in order to proceed.'));
             }
-            
         });
         frm.change_custom_button_type(btn, null, 'info');
     },
     toolbar_action_handler: function(frm) {
-        frm._type.toolbar.pending = false;
-        if (!cint(frm.doc.is_group) || cstr(frm.doc.parent_type).length)
-            frm.trigger('toolbar_action_request');
+        frm._type.toolbar.pending = 0;
+        if (!frm._type.is_group || cstr(frm.doc.parent_type).length)
+            frm.events.toolbar_action_request(frm);
         else
-            frm.trigger('toolbar_action_prompt');
+            frm.events.toolbar_action_prompt(frm);
     },
-    toolbar_action_request: function(frm) {
-        let toolbar = frm._type.toolbar.list[cint(frm.doc.is_group) ? 0 : 1],
-        vals = frm._type.toolbar.values;
-        delete frm._type.toolbar.values;
+    toolbar_action_request: function(frm, val) {
         frappe.exp().request(
-            toolbar[1],
+            frm._type.toolbar.list[frm._type.is_group ? 0 : 1][1],
             {
-                name: frm.doc.name,
-                parent_type: vals ? cstr(vals.parent_type) : null
+                name: cstr(frm.docname),
+                parent_type: frappe.exp().$isStrVal(val) ? val : null
             },
             function(ret) {
-                if (!ret) frappe.exp().error(toolbar[2]);
-                else if (ret.error) frappe.exp().error(ret.error);
+                if (!ret) this.error(frm._type.toolbar.list[frm._type.is_group ? 0 : 1][2]);
+                else if (ret.error) this.error(ret.error);
                 else frm.reload_doc();
             }
         );
     },
     toolbar_action_prompt: function(frm) {
         frappe.prompt(
-            [
-                {
-                    fieldname: 'parent_type',
-                    fieldtype: 'Link',
-                    label: __('Parent Type'),
-                    options: 'Expense Type',
-                    reqd: 1,
-                    bold: 1,
-                    get_query: function() {
-                        return {
-                            query: frappe.exp().path('search_types'),
-                            filters: {
-                                name: ['!=', cstr(frm.doc.name)],
-                                is_group: 1,
-                            },
-                        };
-                    },
+            [{
+                fieldname: 'parent_type',
+                fieldtype: 'Link',
+                label: __('Parent Type'),
+                options: 'Expense Type',
+                reqd: 1,
+                bold: 1,
+                get_query: function() {
+                    return {
+                        query: frappe.exp().get_method('search_types'),
+                        filters: {is_not: cstr(frm.docname)},
+                    };
                 },
-            ],
-            function(ret) {
-                frm._type.toolbar.values = ret;
-                frm.trigger('toolbar_action_request');
-            },
+            }],
+            function(ret) { ret && frm.events.toolbar_action_request(frm, cstr(ret.parent_type)); },
             __('Select A Parent Type'),
             __('Convert')
         );
     }
 });
 
+
 frappe.ui.form.on('Expense Type Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-        frm._type.table.data.del(cstr(row.name || cdn));
+        frm._type.table.data.del(cstr(cdn));
     },
     company: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn],
-        name = cstr(row.name || cdn),
+        name = cstr(cdn),
         company = cstr(row.company),
         account = cstr(row.account);
         if (!company.length) {
             frm._type.table.data.del(name);
-            if (account.length) frappe.model.set_value(row, 'account', '');
-        } else if (frm._type.table.data.has(company, 1)) {
-            frm._type.table.data.del(name);
-            frappe.model.set_value(row, 'company', '');
-            if (account.length) frappe.model.set_value(row, 'account', '');
+            if (account.length) frappe.model.set_value(cdt, cdn, 'account', '');
+        } else if (
+            !frm._type.table.data.has(name)
+            && frm._type.table.data.has(company, 1)
+        ) {
+            let vals = {company: ''}
+            if (account.length) vals.account = '';
+            frappe.model.set_value(cdt, cdn, vals);
+            frappe.exp().invalid_field(frm, 'expense_accounts', cdn, 'company',
+                __('Company has already been selected.'))
         } else {
             frm._type.table.data.add(name, company, null);
+            frappe.exp().valid_field(frm, 'expense_accounts', cdn, 'company');
         }
     },
     account: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn],
-        name = cstr(row.name || cdn),
-        company = cstr(row.company),
         account = cstr(row.account);
-        if (!account.length) return;
-        if (!company.length || !frm._type.table.data.has(company, 1)) {
-            frm._type.table.data.del(name);
-            if (account.length) frappe.model.set_value(row, 'account', '');
-            return;
-        }
-        frm._type.table.data.add(name, null, account);
+        if (account.length)
+            frm._type.table.data.add(cstr(cdn), cstr(row.company), account);
     },
 });

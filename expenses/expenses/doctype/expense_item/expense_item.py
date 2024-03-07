@@ -4,61 +4,40 @@
 # Licence: Please refer to LICENSE file
 
 
-from frappe import _, throw
+from frappe import _
 from frappe.utils import flt
 from frappe.model.document import Document
 
 from expenses.libs import (
-    clear_doc_cache,
-    get_count,
-    type_exists,
-    account_exists,
-    has_item_expenses,
-    emit_item_changed
+    error,
+    clear_doc_cache
 )
 
 
 class ExpenseItem(Document):
+    def before_insert(self):
+        self._inherit_accounts()
+    
+    
     def before_validate(self):
-        if self.expense_accounts:
-            existing = []
-            keys = ["cost", "qty"]
-            for v in self.expense_accounts:
-                if (
-                    not v.company or
-                    not v.account or
-                    v.company in existing
-                ):
-                    self.expense_accounts.remove(v)
-                
-                else:
-                    existing.append(v.company)
-                    for k in keys:
-                        mk = f"min_{k}"
-                        xk = f"max_{k}"
-                        val = flt(v[k])
-                        if val != 0:
-                            if val < 0:
-                                v[k] = 0
-                            v[mk] = 0
-                            v[xk] = 0
-                        else:
-                            mval = flt(v[mk])
-                            xval = flt(v[xk])
-                            if xval < 0:
-                                v[xk] = 0
-                            if mval < 0 or mval > xval:
-                                v[mk] = 0
+        self._inherit_accounts()
     
     
     def validate(self):
+        from expenses.libs import check_app_status
+        
+        check_app_status()
         self._validate_name()
         self._validate_type()
         self._validate_accounts()
     
     
+    def before_rename(self, olddn, newdn, merge=False):
+        clear_doc_cache(self.doctype, olddn)
+    
+    
     def before_save(self):
-        clear_doc_cache(self.doctype, self._get_name())
+        clear_doc_cache(self.doctype, self.name)
         
         if not self.is_new():
             for f in self.meta.get("fields", []):
@@ -68,73 +47,102 @@ class ExpenseItem(Document):
     
     
     def on_update(self):
-        if self.flags.get("emit_change", False):
-            self.flags.pop("emit_change")
-            emit_item_changed({
-                "action": "change",
-                "item": self.name,
-                "old_item": self._get_name()
-            })
+        self._emit_change()
     
     
     def on_trash(self):
+        from expenses.libs import has_item_expenses
+        
         if has_item_expenses(self.name):
-            throw(_(
-                "An expense item with existing linked expenses cannot be removed."
-            ))
+            self._error(_("An expense item with existing linked expenses cannot be removed."))
     
     
     def after_delete(self):
-        emit_item_changed({
-            "action": "trash",
-            "item": self.name
-        })
+        self.flags.emit_change = True
+        self._emit_change(True)
+    
+    
+    def _inherit_accounts(self):
+        if self.expense_type:
+            from expenses.libs import get_type_accounts_list
+            
+            accounts = get_type_accounts_list(self.expense_type)
+            if not self.expense_accounts:
+                for v in accounts:
+                    self.append("expense_accounts", v)
+            else:
+                accounts_len = len(accounts)
+                accounts = {v["company"]:v for v in accounts}
+                keys = ["cost", "qty"]
+                exist = []
+                for v in self.expense_accounts:
+                    if v.company not in accounts or v.company in exist:
+                        self.expense_accounts.remove(v)
+                    else:
+                        exist.append(v.company)
+                        if accounts[v.company]["account"] != v.account:
+                            v.account = accounts[v.company]["account"]
+                        for k in keys:
+                            mk = f"min_{k}"
+                            xk = f"max_{k}"
+                            va = flt(v.get(k))
+                            if va != 0:
+                                if va < 0:
+                                    v.set(k, 0)
+                                v.set(mk, 0)
+                                v.set(xk, 0)
+                            else:
+                                mv = flt(v.get(mk))
+                                xv = flt(v.get(xk))
+                                if xv < 0:
+                                    v.set(xk, 0)
+                                if mv < 0 or mv > xv:
+                                    v.set(mk, 0)
+                
+                if accounts_len != len(self.expense_accounts):
+                    exist = [v.company for v in self.expense_accounts]
+                    for company in accounts:
+                        if company not in exist:
+                            self.append("expense_accounts", accounts[company])
     
     
     def _validate_name(self):
         if not self.name:
-            throw(_("A valid expense item name is required."))
+            self._error(_("A valid expense item name is required."))
+        
+        from expenses.libs import get_count
         
         count = get_count(self.doctype, {"name": self.name})
         limit = 1 if not self.is_new() else 0
         if count != limit:
-            throw(_("The expense item \"{0}\" already exists.").format(self.name))
+            self._error(_("The expense item \"{0}\" already exists.").format(self.name))
     
     
     def _validate_type(self):
         if not self.expense_type:
-            throw(_("A valid expense type is required."))
+            self._error(_("A valid expense type is required."))
         
-        if not type_exists(self.expense_type, enabled=True):
-            throw(_("The expense type \"{0}\" is disabled or does not exist.").format(self.expense_type))
+        from expenses.libs import type_exists
+        
+        if not type_exists(self.expense_type):
+            self._error(_("The expense type \"{0}\" does not exist.").format(self.expense_type))
     
     
     def _validate_accounts(self):
-        if self.expense_accounts:
-            for v in self.expense_accounts:
-                if not account_exists(v.account, {"company": v.company}, True):
-                    throw(_(
-                        "The expense account \"{0}\" is disabled, does not exist or does not belong to company \"{1}\"."
-                    ).format(v.account, v.company))
+        if not self.expense_accounts:
+            self._error(_("At least one inherited expense account from expense type is required."))
     
     
-    def _get_old_doc(self):
-        if self.is_new():
-            return None
-        
-        doc = self.get_doc_before_save()
-        if not doc:
-            self.load_doc_before_save()
-            doc = self.get_doc_before_save()
-        
-        return doc
+    def _emit_change(self, trash=False):
+        if self.flags.get("emit_change", False):
+            from expenses.libs import emit_item_changed
+            
+            self.flags.pop("emit_change")
+            emit_item_changed({
+                "action": "trash" if trash else "change",
+                "item": self.name
+            })
     
     
-    def _get_name(self, doc=None):
-        if not doc:
-            doc = self._get_old_doc()
-        
-        if doc and doc.name and doc.name != self.name:
-            return doc.name
-        
-        return self.name
+    def _error(self, msg):
+        error(msg, _("Expense Item Error"))

@@ -7,69 +7,67 @@
 import frappe
 
 
-# [Settings]
+# [EXP Settings]
 def users_exists(names: list, attrs: dict=None, enabled: bool=None):
     return _all_exists("User", "name", names, attrs, enabled, "enabled", 1)
 
 
-# [Settings]
-## [Update]
+# [EXP Settings, Update]
 def user_exists(name: str, attrs: dict=None, enabled: bool=None):
     return _exists("User", name, attrs, enabled, "enabled", 1)
 
 
-# [Item, Type]
+# [EXP Item, EXP Type]
 def type_exists(name: str, attrs: dict=None, enabled: bool=None):
     return _exists("Expense Type", name, attrs, enabled)
 
 
-# [Type]
+# [EXP Type]
 def type_children_exists(parent: str):
     return _has("Expense Type", {"parent_type": parent})
 
 
-# [Type]
+# [EXP Type]
 def items_of_type_exists(expense_type: str):
     return _has("Expense Item", {"expense_type": expense_type})
 
 
-# [Entry, Item, Type]
+# [EXP Entry, EXP Type]
 def account_exists(name: str, attrs: dict=None, enabled: bool=None):
     return _exists("Account", name, attrs, enabled)
 
 
-# [Item]
+# [EXP Item]
 def has_item_expenses(expense_item: str):
     return _has("Expense", {"expense_item": expense_item})
 
 
-# [Item, Type]
-## [Request, Type, Internal]
+# [EXP Item, Request, Internal]
 def get_count(dt: str, filters: dict):
     return frappe.db.count(dt, filters)
 
 
-## [Entry, Expense]
+# [Entry, Expense]
 def can_use_expense_claim():
     return _exists("DocType", "Expense Claim")
 
 
-## [Expense]
+# [Expense]
 def expense_claim_exists(name: str, attrs: dict=None):
     return _exists("Expense Claim", name, attrs)
 
 
-## [Expense]
+# [Expense]
 def expense_exists(name: str, attrs: dict=None):
     return _exists("Expense", name, attrs)
 
 
-## [Internal]
+# [Internal]
 def _has(dt: str, filters: dict):
     return get_count(dt, filters) > 0
 
 
-## [Internal]
+# [Internal]
 def _exists(
     dt: str, name: str, attrs: dict=None, enabled: bool=None,
     status_col: str="disabled", enabled_val: int=0
@@ -90,7 +88,7 @@ def _exists(
     return frappe.db.exists(params) != None
 
 
-## [Internal]
+# [Internal]
 def _all_exists(
     dt: str, field: str, names: list, attrs: dict=None,
     enabled: bool=None, status_col: str="disabled", enabled_val: int=0
@@ -98,7 +96,6 @@ def _all_exists(
     from .filter import all_filter
     
     data = all_filter(dt, field, names, attrs, enabled, status_col, enabled_val)
-    
     if not data or len(data) != len(names):
         return False
     

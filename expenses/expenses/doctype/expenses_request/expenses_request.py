@@ -5,137 +5,66 @@
 
 
 import frappe
-from frappe import _, throw
-from frappe.utils import (
-    cint,
-    nowdate
-)
+from frappe import _
+from frappe.utils import cint, nowdate
 from frappe.model.document import Document
 from frappe.model.docstatus import DocStatus
 
 from expenses.libs import (
+    error,
     clear_doc_cache,
-    RequestStatus,
-    is_company_expenses,
-    is_request_amended,
-    restore_expenses,
-    request_expenses,
-    approve_expenses,
-    reject_expenses,
-    is_request_moderator,
-    is_request_reviewer,
-    emit_request_changed
+    is_request_reviewer
 )
 
 
 class ExpensesRequest(Document):
+    def before_insert(self):
+        self._set_defaults(True)
+        self._prepare_expenses()
+    
+    
     def before_validate(self):
-        if (
-            self.is_new() and (
-                not self.posting_date or
-                (
-                    self.posting_date and
-                    self.posting_date != nowdate() and
-                    not is_request_moderator()
-                )
-            )
-        ):
-            self.posting_date = nowdate()
-        
-        elif (
-            self.docstatus.is_draft() and (
-                not self.posting_date or
-                (
-                    self.posting_date and
-                    self.has_value_changed("posting_date") and
-                    self.posting_date != self._get_old_posting_date() and
-                    not is_request_moderator()
-                )
-            )
-        ):
-            self.posting_date = nowdate()
-        
-        if (
-            (
-                self.is_new() and self.expenses
-            ) or (
-                self.docstatus.is_draft() and
-                self.has_value_changed("expenses")
-            )
-        ):
-            existing = []
-            defs = {
-                "expense_item": None,
-                "total": None,
-                "is_advance": None,
-                "required_by": None
-            }
-            for v in self.expenses:
-                if not v.expense or v.expense in existing:
-                    self.expenses.remove(v)
-                else:
-                    existing.append(v.expense)
-                    v.update(defs)
+        self._set_defaults()
     
     
     def validate(self):
         if self.docstatus.is_draft():
             if not self.company:
-                throw(_("A valid expense request company is required."))
+                self._error(_("A valid company is required."))
             if not self.posting_date:
-                throw(_("A valid expense request posting date is required."))
+                self._error(_("A valid posting date is required."))
             if not self.expenses:
-                throw(_("At least one valid expense is required."))
+                self._error(_("At least one valid expense is required."))
             
             self._validate_expenses()
     
     
     def before_save(self):
         clear_doc_cache(self.doctype, self.name)
-        if not self.status:
-            self.status = RequestStatus.Draft
-        
-        if self.workflow_state != self.status:
-            self.workflow_state = self.status
-        
-        if self.is_new():
-            self.flags.expenses_status = 1
-            if is_request_amended(self.name) and self.expenses:
-                restore_expenses([v.expense for v in self.expenses])
-        
+        self._prepare_expenses()
         self._check_change()
     
     
     def before_submit(self):
         clear_doc_cache(self.doctype, self.name)
-        if (
-            not self.status or
-            self.status != RequestStatus.Pending
-        ):
+        if self.status != RequestStatus.Pending:
             self.status = RequestStatus.Pending
-        
         if self.workflow_state != self.status:
             self.workflow_state = self.status
-        
         self.flags.emit_change = True
     
     
     def on_update(self):
-        if self.flags.get("expenses_status", 0):
-            self._handle_expenses()
-        
-        self._emit_change_event()
+        self._handle_expenses()
+        self._emit_change()
     
     
     def before_update_after_submit(self):
-        is_reviewer = is_request_reviewer()
         if (
-            (
-                self.workflow_state == RequestStatus.Approved or
-                self.workflow_state == RequestStatus.Rejected
-            ) and not is_request_reviewer()
+            self.workflow_state in (RequestStatus.Approved, RequestStatus.Rejected) and
+            not is_request_reviewer()
         ):
-            throw(_("Insufficient permission to modify the expenses request."))
+            self._error(_("Insufficient permission to modify the expenses request."))
         
         if (
             self.status != RequestStatus.Pending and
@@ -146,44 +75,37 @@ class ExpensesRequest(Document):
                 self.has_value_changed("expenses")
             )
         ):
-            throw(_("The expenses request cannot be modified."))
+            self._error(_("The expenses request cannot be modified."))
         
         clear_doc_cache(self.doctype, self.name)
-        
         if self.workflow_state == RequestStatus.Approved:
             self.flags.expenses_status = 2
         elif self.workflow_state == RequestStatus.Rejected:
             self.flags.expenses_status = 3
-        
         if not self.reviewer:
             self.reviewer = frappe.session.user
-        
         if self.status != self.workflow_state:
             self.status = self.workflow_state
-        
         self._check_change()
     
     
     def on_update_after_submit(self):
-        if self.flags.get("expenses_status", 0):
-            self._handle_expenses()
-        
-        self._emit_change_event()
+        self._handle_expenses()
+        self._emit_change()
     
     
     def before_cancel(self):
         if self.docstatus.is_cancelled():
-            throw(_("The expenses request \"{0}\" has already been cancelled.").format(self.name))
-        
+            self._error(_("Expenses request \"{0}\" has already been cancelled.").format(self.name))
         if self.status != RequestStatus.Pending:
             if self.status == RequestStatus.Approved:
-                throw(_("An approved expenses request cannot be cancelled."))
+                self._error(_("Approved expenses request cannot be cancelled."))
             elif self.status == RequestStatus.Rejected:
-                throw(_("A rejected expenses request cannot be cancelled."))
+                self._error(_("Rejected expenses request cannot be cancelled."))
             elif self.status == RequestStatus.Processed:
-                throw(_("A processed expenses request cannot be cancelled."))
+                self._error(_("Processed expenses request cannot be cancelled."))
             else:
-                throw(_("An expenses request with invalid status cannot be cancelled."))
+                self._error(_("Only pending expenses request can be cancelled."))
         
         self.status = RequestStatus.Cancelled
     
@@ -195,17 +117,17 @@ class ExpensesRequest(Document):
         self._handle_expenses()
         
         self.flags.emit_change = True
-        self._emit_change_event()
+        self._emit_change()
     
     
     def on_trash(self):
         if self.docstatus.is_submitted():
-            throw(_("A submitted expenses request cannot be removed."))
+            self._error(_("Submitted expenses request cannot be removed."))
     
     
     def after_delete(self):
         self.flags.emit_change = True
-        self._emit_change_event("trash")
+        self._emit_change("trash")
     
     
     def approve(self, ignore_permissions=False):
@@ -220,44 +142,106 @@ class ExpensesRequest(Document):
         self._change_status(RequestStatus.Processed, "process", ignore_permissions)
     
     
+    def _set_defaults(self, insert=False):
+        from expenses.libs import is_request_moderator
+        
+        insert = insert or self.is_new()
+        now = nowdate()
+        is_moderator = is_request_moderator()
+        if (
+            insert and (
+                not self.posting_date or (
+                    self.posting_date != now and
+                    not is_moderator
+                )
+            )
+        ):
+            self.posting_date = now
+        elif (
+            not insert and self.docstatus.is_draft() and (
+                not self.posting_date or (
+                    self.has_value_changed("posting_date") and
+                    self.posting_date != self._old_posting_date() and
+                    not is_moderator
+                )
+            )
+        ):
+            self.posting_date = now
+        
+        if (
+            (insert and self.expenses) or
+            (self.docstatus.is_draft() and self.has_value_changed("expenses"))
+        ):
+            exist = []
+            defs = {
+                "expense_item": None,
+                "total": None,
+                "is_advance": None,
+                "required_by": None
+            }
+            for v in self.expenses:
+                if not v.expense or v.expense in exist:
+                    self.expenses.remove(v)
+                else:
+                    exist.append(v.expense)
+                    v.update(defs)
+        
+        if not self.status:
+            self.status = RequestStatus.Draft
+        
+        if self.workflow_state != self.status:
+            self.workflow_state = self.status
+    
+    
+    def _prepare_expenses(self):
+        if self.is_new():
+            from expenses.libs import is_request_amended
+            
+            self.flags.expenses_status = 1
+            if is_request_amended(self.name) and self.expenses:
+                from expenses.libs import restore_expenses
+                
+                restore_expenses([v.expense for v in self.expenses])
+    
+    
     def _validate_expenses(self):
-        if (not is_company_expenses(
-            [v.expense for v in self.expenses],
-            self.company
-        )):
-            throw(_("An expenses request cannot include expenses of multiple companies."))
+        from expenses.libs import is_company_expenses
+        
+        if not is_company_expenses([v.expense for v in self.expenses], self.company):
+            self._error(_("An expenses request can only include expenses for a single company."))
     
     
     def _handle_expenses(self):
         if self.flags.get("expenses_status", 0):
+            status = self.flags.pop("expenses_status")
             expenses = [v.expense for v in self.expenses]
-            if self.flags.expenses_status == 1:
+            if status == 1:
+                from expenses.libs import request_expenses
+                
                 request_expenses(expenses)
-            elif self.flags.expenses_status == 2:
+            elif status == 2:
+                from expenses.libs import approve_expenses
+                
                 approve_expenses(expenses)
-            elif self.flags.expenses_status == 3:
+            elif status == 3:
+                from expenses.libs import reject_expenses
+                
                 reject_expenses(expenses)
-            
-            self.flags.pop("expenses_status")
     
     
     def _change_status(self, status, action, ignore_permissions=False, reason=None):
         if not self.docstatus.is_submitted():
             status = status.lower()
-            throw(_(f"The expenses request cannot be {status}."))
+            self._error(_("Expenses request cannot be {0}.").format(_(status)))
         
-        if (
-            not ignore_permissions and
-            not is_request_reviewer()
-        ):
-            throw(_(f"Insufficient permission to {action} an expenses request."))
+        if not ignore_permissions and not is_request_reviewer():
+            self._error(_("Insufficient permission to {0} an expenses request.").format(_(action)))
         
         self.status = status
         self.workflow_state = status
         
         if status == RequestStatus.Rejected:
             self.docstatus = DocStatus.cancelled()
-            
             if reason:
                 self.add_comment(
                     "Workflow",
@@ -269,45 +253,40 @@ class ExpensesRequest(Document):
         self.save(ignore_permissions=ignore_permissions)
     
     
-    def _get_old_posting_date(self):
+    def _old_posting_date(self):
         if self.is_new():
             return None
-        
         doc = self.get_doc_before_save()
         if not doc:
             self.load_doc_before_save()
             doc = self.get_doc_before_save()
-        
-        if not doc:
-            return None
-        
-        return doc.posting_date
+        return doc.posting_date if doc else None
     
     
     def _check_change(self):
         if not self.is_new():
             submitted = self.docstatus.is_submitted()
-            for f in self.meta.get("fields"):
+            for f in self.meta.get("fields", []):
                 if (
-                    self.has_value_changed(f.fieldname) and
-                    (
-                        (
-                            submitted and
-                            f.fieldname == "workflow_state"
-                        ) or (
-                            not submitted and
-                            not cint(f.allow_on_submit)
-                        )
+                    self.has_value_changed(f.fieldname) and (
+                        (submitted and f.fieldname == "workflow_state") or
+                        (not submitted and not cint(f.allow_on_submit))
                     )
                 ):
                     self.flags.emit_change = True
                     break
     
     
-    def _emit_change_event(self, action="change"):
+    def _emit_change(self, action="change"):
         if self.flags.get("emit_change", False):
+            from expenses.libs import emit_request_changed
+            
             self.flags.pop("emit_change")
             emit_request_changed({
                 "action": action,
                 "request": self.name
             })
+    
+    
+    def _error(self, msg):
+        error(msg, _("Expenses Request Error"))

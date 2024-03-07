@@ -7,40 +7,36 @@
 import frappe
 
 
-# [Settings]
-def emit_app_status_changed(data=None, after_commit=True):
-    emit_event("exp_app_status_changed", data, after_commit)
+# [EXP Settings]
+def emit_app_status_changed(data=None):
+    emit_event("exp_app_status_changed", data)
 
 
-# [Type]
-def emit_type_changed(data=None, after_commit=True):
-    emit_event("exp_type_changed", data, after_commit)
+# [EXP Type]
+def emit_type_changed(data=None):
+    emit_event("exp_type_changed", data)
 
 
-# [Item]
-def emit_item_changed(data=None, after_commit=True):
-    emit_event("exp_item_changed", data, after_commit)
+# [EXP Item]
+def emit_item_changed(data=None):
+    emit_event("exp_item_changed", data)
 
 
-# [Expense]
-def emit_expense_changed(data=None, after_commit=True):
-    emit_event("exp_expense_changed", data, after_commit)
+# [EXP Expense]
+def emit_expense_changed(data=None):
+    emit_event("exp_expense_changed", data)
 
 
-# [Request]
-def emit_request_changed(data=None, after_commit=True):
-    emit_event("exp_expenses_request_changed", data, after_commit)
+# [EXP Request]
+def emit_request_changed(data=None):
+    emit_event("exp_expenses_request_changed", data)
 
 
-# [Entry]
-def emit_entry_changed(data=None, after_commit=True):
-    emit_event("exp_expenses_entry_changed", data, after_commit)
+# [EXP Entry]
+def emit_entry_changed(data=None):
+    emit_event("exp_expenses_entry_changed", data)
 
 
-## [Internal]
-def emit_event(event: str, data, after_commit: bool=True):
-    frappe.publish_realtime(
-        event=event,
-        message=data,
-        after_commit=after_commit
-    )
+# [Internal]
+def emit_event(event: str, data):
+    frappe.publish_realtime(event=event, message=data)

@@ -7,65 +7,65 @@
 import json
 
 import frappe
-from frappe import _
 
 from expenses import (
     __module__,
     __production__
 )
-from expenses.version import __frappe_v13__
-
-from .logger import get_logger
 
 
-## [Internal]
-_LOGGER_ERROR = get_logger("error") if not __production__ else None
+# [Internal]
+if not __production__:
+    from .logger import get_logger
+    
+    _LOGGER_ERROR = get_logger("error")
+    _LOGGER_INFO = get_logger("info")
+else:
+    _LOGGER_ERROR = None
+    _LOGGER_INFO = None
 
 
-## [Internal]
-_LOGGER_INFO = get_logger("info") if not __production__ else None
-
-
-## [Entry, Journal, Update]
+# [Entry, Journal, Update]
 def log_error(data):
     if _LOGGER_ERROR:
         _LOGGER_ERROR.error(data)
     else:
-        error({"error log": data}, throw=False)
+        error_log({"error log": data})
 
 
-## [Update]
+# [Update]
 def log_info(data):
     if _LOGGER_INFO:
         _LOGGER_INFO.info(data)
     else:
-        error({"info log": data}, throw=False)
+        error_log({"info log": data})
 
 
-## [Entry, Journal]
-def error(text, log=True, throw=True):
-    if not log and not throw:
-        log = True
-    
-    if not isinstance(text, str):
-        old = text
-        text = to_str(old)
-        if not text:
-            text = to_json(old)
-        if not text:
-            text = "Unable to log or throw a non-string error."
-    
-    if log:
-        if __frappe_v13__:
+# [Internal]
+def error_log(text):
+    text = get_str(text)
+    if text:
+        from expenses.version import is_version_lt
+        
+        if is_version_lt(14):
             frappe.log_error(text, __module__)
         else:
             frappe.log_error(__module__, text)
-    
-    if throw:
-        frappe.throw(text, title=__module__)
 
 
-## [Attachment, Request, Type, Update]
+# [EXP Entry, EXP Expense, EXP Item, EXP Request, EXP Type, Entry, Journal, System]
+def error(text, title=None):
+    text = to_str(text)
+    if not text:
+        text = "Unable to throw a non-string error."
+    if title:
+        title = to_str(title)
+    if not title:
+        title = __module__
+    frappe.throw(text, title=title)
+
+
+# [Attachment, Item, Request, Type, Update]
 def parse_json(data, default=None):
     if not isinstance(data, str):
         return data
@@ -75,7 +75,7 @@ def parse_json(data, default=None):
         return default
 
 
-## [Background, Expense, Internal]
+# [Background, Expense, Internal]
 def to_json(data, default=None):
     if isinstance(data, str):
         return data
@@ -85,7 +85,7 @@ def to_json(data, default=None):
         return default
 
 
-## [Internal]
+# [Internal]
 def to_str(data, default=None):
     if isinstance(data, str):
         return data
@@ -93,3 +93,13 @@ def to_str(data, default=None):
         return str(data)
     except Exception:
         return default
+
+
+# [Internal]
+def get_str(data, default=None):
+    val = to_str(data)
+    if val is None:
+        val = to_json(data)
+    if val is None:
+        return default
+    return val

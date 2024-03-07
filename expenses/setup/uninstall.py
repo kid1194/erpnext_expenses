@@ -5,10 +5,9 @@
 
 
 import frappe
-from frappe.model.delete_doc import delete_doc
 
 
-## [Install, Internal]
+# [Install, Internal]
 def get_doctypes():
     return [
         "Expense Attachment",
@@ -26,7 +25,7 @@ def get_doctypes():
     ]
 
 
-## [Install, Hooks]
+# [Install, Hooks]
 def after_uninstall():
     doctypes = get_doctypes()
     roles = [
@@ -38,16 +37,14 @@ def after_uninstall():
         "Expenses Request Reviewer",
         "Expenses Entry Moderator"
     ]
-    
     _workspace_uninstall(doctypes)
     _fixtures_uninstall(roles)
     _doctypes_uninstall(doctypes, roles)
     _fixtures_cleanup()
-    
     frappe.clear_cache()
 
 
-## [Internal]
+# [Internal]
 def _workspace_uninstall(doctypes):
     try:
         dt = "Workspace"
@@ -57,19 +54,17 @@ def _workspace_uninstall(doctypes):
         
         doc = frappe.get_doc(dt, name)
         found = 0
-        
         for v in doc.links:
             if v.type == "Link" and v.label in doctypes:
                 doc.links.remove(v)
                 found = 1
-        
         if found:
             doc.save(ignore_permissions=True)
     except Exception:
         pass
 
 
-## [Internal]
+# [Internal]
 def _fixtures_uninstall(roles):
     try:
         doc = frappe.qb.DocType("Has Role")
@@ -82,8 +77,10 @@ def _fixtures_uninstall(roles):
         pass
 
 
-## [Internal]
+# [Internal]
 def _doctypes_uninstall(doctypes, roles):
+    from frappe.model.delete_doc import delete_doc
+    
     from expenses import __module__
     
     docs = [
@@ -113,7 +110,7 @@ def _doctypes_uninstall(doctypes, roles):
                 pass
 
 
-## [Internal]
+# [Internal]
 def _fixtures_cleanup():
     try:
         actions = [

@@ -4,7 +4,7 @@
  "editable_grid": 1,
  "autoname": "hash",
  "creation": "2023-04-04 04:04:04",
- "description": "Expense type company and expense account for Expenses module",
+ "description": "Expense type company and account for Expenses module",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [

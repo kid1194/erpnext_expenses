@@ -9,8 +9,8 @@
  "field_order": [
   "main_section",
   "disabled",
-  "main_column",
   "is_group",
+  "main_column",
   "parent_type",
   "accounts_section",
   "expense_accounts",
@@ -26,12 +26,8 @@
    "fieldname": "disabled",
    "fieldtype": "Check",
    "label": "Is Disabled",
-   "read_only_depends_on": "eval:doc.__islocal",
+   "depends_on": "eval:!doc.__islocal",
    "search_index": 1
-  },
-  {
-   "fieldname": "main_column",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "is_group",
@@ -46,11 +42,14 @@
    "search_index": 1
   },
   {
+   "fieldname": "main_column",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "parent_type",
    "fieldtype": "Link",
    "label": "Parent Type",
    "options": "Expense Type",
-   "mandatory_depends_on": "eval:!doc.is_group",
    "in_list_view": 1,
    "in_filter": 1,
    "in_standard_filter": 1,
@@ -66,9 +65,7 @@
    "fieldname": "expense_accounts",
    "fieldtype": "Table",
    "label": "Expense Accounts",
-   "options": "Expense Type Account",
-   "reqd": 1,
-   "bold": 1
+   "options": "Expense Type Account"
   },
   {
    "fieldname": "lft",
@@ -93,7 +90,7 @@
  ],
  "icon": "fa fa-folder-o",
  "is_tree": 1,
- "modified": "2023-04-04 04:04:04",
+ "modified": "2024-02-28 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense Type",

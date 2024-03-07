@@ -29,8 +29,8 @@ An expenses management module for ERPNext.
 ---
 
 ### Requirements
-- Frappe >= v13.0.0
-- ERPNext >= v13.0.0
+- [Frappe](https://github.com/frappe/frappe) >= v13.0.0
+- [ERPNext](https://github.com/frappe/erpnext) >= v13.0.0
 
 ---
 
@@ -76,7 +76,7 @@ cd ~/frappe-bench/apps/expenses
 git pull
 ```
 
-3. Go to bench directory
+3. Go to bench directory (Optional)
 
 ```
 cd ~/frappe-bench
@@ -88,7 +88,7 @@ cd ~/frappe-bench
 bench --site [sitename] migrate
 ```
 
-5. (Optional) Restart bench
+5. Restart bench
 
 ```
 bench restart
@@ -113,7 +113,7 @@ bench --site [sitename] uninstall-app expenses
 bench remove-app expenses
 ```
 
-4. (Optional) Restart bench
+4. Restart bench
 
 ```
 bench restart
@@ -126,16 +126,16 @@ bench restart
   - Create the hierarchy of expense types based on your needs
   - Under each type, add the expense account for each company
 
-ℹ️ *Note: The expense accounts are inherited from parents if not set*
+ℹ️ *Note: Expense accounts are inherited from parents, if not set.*
 
-ℹ️ *Note: Child expense types will be required to add expense accounts unless is already set in parent type or in one of its ancestors*
+ℹ️ *Note: Only expense types with self and/or inherited expense accounts can be linked to expense items.*
 
 2. **Expense Item**
   - Create the expense items that reflect your expenses
   - Add each expense item to the expense type that it belongs to
   - Change the expense account for each company and/or set the expense defaults (cost, quantity, etc..)
 
-ℹ️ *Note: The expense accounts are inherited from expense types if not changed*
+ℹ️ *Note: Expense accounts are inherited from linked expense type and are not modifiable except for cost and quantity related fields.*
 
 3. **Expense**
   - Create a company expense and fill the cost, quantity, etc..
@@ -155,7 +155,7 @@ bench restart
   - Modify the update notification settings
   - Check for update manually
 
-ℹ️ *Note: Plugin update functionality will only be enabled in the PRODUCTION stage*
+ℹ️ *Note: Module update functionality will only be enabled in the PRODUCTION stage*
 
 ---
 

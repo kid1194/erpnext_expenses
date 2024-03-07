@@ -11,22 +11,10 @@ frappe.provide('frappe.listview_settings');
 
 frappe.listview_settings['Expenses Entry'] = {
     onload: function(list) {
-        frappe.exp().on('ready change', function() {
-            frappe.dom.unfreeze();
-            if (!this.is_enabled)
-                frappe.dom.freeze(
-                    '<strong class="text-danger">'
-                    + __('The Expenses app has been disabled.')
-                    + '</strong>'
-                );
-        });
+        frappe.exp().on('ready change', function() { this.setup_list(list); });
     },
     formatters: {
-        payment_reference: function(v) {
-            return cstr(v);
-        },
-        clearance_date: function(v) {
-            return cstr(v);
-        },
+        payment_reference: function(v) { return cstr(v); },
+        clearance_date: function(v) { return cstr(v); },
     },
 };

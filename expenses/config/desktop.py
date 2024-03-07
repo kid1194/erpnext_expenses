@@ -16,6 +16,6 @@ def get_data():
             "icon": "octicon octicon-note",
             "type": "module",
             "label": _("Expenses"),
-            "description": _("Expenses management for ERPNext")
+            "description": _("An expenses management module for ERPNext")
         }
     ]

@@ -11,7 +11,7 @@ from .cache import get_cached_doc
 from .common import parse_json
 
 
-# [Request]
+# [EXP Request, Internal]
 RequestStatus = frappe._dict({
     "Draft": "Draft",
     "Pending": "Pending",
@@ -22,15 +22,7 @@ RequestStatus = frappe._dict({
 })
 
 
-## [Internal]
-__REQUEST_MODERATOR_ROLE__ = "Expenses Request Moderator"
-
-
-## [Internal]
-__REQUEST_REVIEWER_ROLE__ = "Expenses Request Reviewer"
-
-
-# [Request]
+# [EXP Request]
 def is_company_expenses(expenses: list, company: str):
     from .expense import get_expenses_for_company
     
@@ -41,42 +33,42 @@ def is_company_expenses(expenses: list, company: str):
     return True
 
 
-# [Request]
+# [EXP Request]
 def is_request_amended(name: str):
     from .check import get_count
     
     return get_count("Expenses Request", {"amended_from": name}) > 0
 
 
-# [Request]
+# [EXP Request]
 def restore_expenses(expenses: list):
     from .expense import set_expenses_restored
     
     set_expenses_restored(expenses)
 
 
-# [Request]
+# [EXP Request]
 def request_expenses(expenses: list):
     from .expense import set_expenses_requested
     
     set_expenses_requested(expenses)
 
 
-# [Request]
+# [EXP Request]
 def approve_expenses(expenses: list):
     from .expense import set_expenses_approved
     
     set_expenses_approved(expenses)
 
 
-# [Request]
+# [EXP Request]
 def reject_expenses(expenses: list):
     from .expense import set_expenses_rejected
     
     set_expenses_rejected(expenses)
 
 
-# [Request Form]
+# [EXP Request Form]
 @frappe.whitelist()
 def request_form_setup():
     return {
@@ -85,33 +77,33 @@ def request_form_setup():
     }
 
 
-# [Request]
-## [Internal]
+# [EXP Request, Internal]
 def is_request_moderator():
-    return 1 if __REQUEST_MODERATOR_ROLE__ in frappe.get_roles() else 0
+    return 1 if "Expenses Request Moderator" in frappe.get_roles() else 0
 
 
-# [Request]
-## [Internal]
+# [EXP Request, Internal]
 def is_request_reviewer():
-    return 1 if __REQUEST_REVIEWER_ROLE__ in frappe.get_roles() else 0
+    return 1 if "Expenses Request Reviewer" in frappe.get_roles() else 0
 
 
-# [Request Form]
+# [EXP Request Form]
 @frappe.whitelist(methods=["POST"])
 def get_expenses_data(expenses):
-    from .expense import get_expenses
-    
-    if isinstance(expenses, str):
-        expenses = parse_json(expenses)
-    
+    expenses = parse_json(expenses)
     if not expenses or not isinstance(expenses, list):
         return []
     
-    return get_expenses([str(v) for v in expenses])
+    expense = [v for v in expenses if v and isinstance(v, str)]
+    if not expenses:
+        return []
+    
+    from .expense import get_expenses
+    
+    return get_expenses(expenses)
 
 
-# [Request Form]
+# [EXP Request Form]
 @frappe.whitelist()
 def search_company_expenses(
     doctype, txt, searchfield, start, page_len, filters, as_dict=False
@@ -131,10 +123,9 @@ def search_company_expenses(
         isinstance(filters.get("existing"), (str, list))
     ):
         existing = filters.get("existing")
-        if isinstance(existing, str):
-            existing = parse_json(existing)
+        existing = parse_json(existing)
         if existing and isinstance(existing, list):
-            existing = [str(v) for v in existing]
+            existing = [v for v in existing if v and isinstance(v, str)]
         else:
             existing = None
     
@@ -152,7 +143,7 @@ def search_company_expenses(
     )
 
 
-# [Request Form]
+# [EXP Request Form]
 @frappe.whitelist(methods=["POST"])
 def reject_request(name, reason):
     if (
@@ -171,30 +162,32 @@ def reject_request(name, reason):
         doc.owner,
         comment_by=frappe.session.user
     )
-    
     return 1
 
 
-## [Entry]
+# [Entry]
 def get_request(name: str):
     from .expense import get_expenses
     
     doc = get_cached_doc("Expenses Request", name)
-    
-    if doc.status != RequestStatus.Approved:
+    if not doc or doc.status != RequestStatus.Approved:
         return None
     
-    data = doc.as_dict()
+    data = doc.as_dict(
+        no_nulls=False,
+        no_default_fields=False,
+        convert_dates_to_str=True,
+        no_child_table_fields=False
+    )
     data["expenses"] = get_expenses([v.expense for v in doc.expenses])
-    
     return data
 
 
-# [Entry]
+# [EXP Entry]
 def process_request(name: str):
     get_cached_doc("Expenses Request", name).process(ignore_permissions=True)
 
 
-# [Entry]
+# [EXP Entry]
 def reject_request(name: str):
     get_cached_doc("Expenses Request", name).reject(ignore_permissions=True)

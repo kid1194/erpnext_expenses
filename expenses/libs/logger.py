@@ -10,11 +10,11 @@ from logging.handlers import RotatingFileHandler
 
 import frappe
 
-from expenses import __abbr__
-
 
 # [Common]
 def get_logger(logType):
+    from expenses import __abbr__
+    
     if not logType:
         logType = "error"
     site = getattr(frappe.local, "site", None)
@@ -30,18 +30,14 @@ def get_logger(logType):
 
     logfile = "{}-{}.log".format(__abbr__, logType)
     log_filename = os.path.join("..", "logs", logfile)
-
     logger = logging.getLogger(logger_name)
     logger.setLevel(getattr(logging, logType.upper(), None) or logging.ERROR)
     logger.propagate = False
-    
     handler = RotatingFileHandler(log_filename, maxBytes=100_000, backupCount=20)
     handler.setLevel(getattr(logging, logType.upper(), None) or logging.ERROR)
     handler.setFormatter(LoggingCustomFormatter())
     logger.addHandler(handler)
-
     frappe.loggers[logger_name] = logger
-
     return logger
 
 

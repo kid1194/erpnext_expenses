@@ -10,11 +10,11 @@ from frappe.utils import cint, flt
 
 
 def execute(filters=None):
-    from expenses.libs import get_cached_value
-    
     if not filters:
         return [], []
-
+    
+    from expenses.libs import get_cached_value
+    
     validate_filters(filters)
     currency = get_cached_value(
         "Company",
@@ -26,19 +26,18 @@ def execute(filters=None):
     totals = get_totals(data)
     chart = get_chart_data(totals, currency)
     summary = get_report_summary(totals, currency)
-
     return columns, data, None, chart, summary
 
 
 def validate_filters(filters, account_details):
     if not filters.get("company"):
         throw(_("{0} is mandatory").format(_("Company")))
-
+    
     if not filters.get("from_date") or not filters.get("to_date"):
         throw(_("{0} and {1} are mandatory").format(
             frappe.bold(_("From Date")), frappe.bold(_("To Date"))
         ))
-
+    
     if filters.from_date > filters.to_date:
         throw(_("From Date must be before To Date"))
 
@@ -116,9 +115,8 @@ def get_result(filters, currency):
         qry = qry.where(doc.docstatus > 0)
     else:
         qry = qry.where(doc.docstatus == 1)
-        
-    data = qry.run(as_dict=True)
     
+    data = qry.run(as_dict=True)
     for i in range(len(data)):
         data[i]["currency"] = currency
     
@@ -127,10 +125,8 @@ def get_result(filters, currency):
 
 def get_totals(data):
     totals = {"*": 0}
-    
     for v in get_mode_of_payments():
         totals[v] = 0
-    
     for v in data:
         totals["*"] += flt(v["total"])
         if v["mode_of_payment"] in totals:
@@ -142,7 +138,6 @@ def get_totals(data):
 def get_chart_data(totals, currency):
     labels = []
     datasets = []
-    
     for k, v in totals.items():
         if k != "*":
             labels.append(k)
@@ -164,12 +159,10 @@ def get_chart_data(totals, currency):
 
 def get_report_summary(totals, currency):
     summary = []
-    
     for k, v in totals.items():
         label = "Total Expenses"
         if k != "*":
             label += f" ({k})"
-        
         summary.append({
             "value": v,
             "label": _(label),

@@ -11,15 +11,7 @@ frappe.provide('frappe.listview_settings');
 
 frappe.listview_settings['Expenses Request'] = {
     onload: function(list) {
-        frappe.exp().on('ready change', function() {
-            frappe.dom.unfreeze();
-            if (!this.is_enabled)
-                frappe.dom.freeze(
-                    '<strong class="text-danger">'
-                    + __('The Expenses app has been disabled.')
-                    + '</strong>'
-                );
-        });
+        frappe.exp().on('ready change', function() { this.setup_list(list); });
     },
     button: {
         show: function(doc) {
@@ -33,13 +25,11 @@ frappe.listview_settings['Expenses Request'] = {
             return __('Create expenses entry for "{0}"', [cstr(doc.name)]);
         },
         action: function(doc) {
-            frappe.exp().set_cache('create-expenses-entry', cstr(doc.name));
+            frappe.route_options = {expenses_request_ref: cstr(doc.name)};
             frappe.set_route('Form', 'Expenses Entry');
         },
     },
     formatters: {
-        reviewer: function(v) {
-            return cstr(v);
-        },
+        reviewer: function(v) { return cstr(v); },
     },
 };

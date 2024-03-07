@@ -5,7 +5,7 @@
 
 
 import frappe
-from frappe import _, throw
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import (
     flt,
@@ -15,58 +15,158 @@ from frappe.utils import (
 
 from expenses.libs import (
     clear_doc_cache,
-    get_cached_value,
-    get_mode_of_payment_data,
-    get_current_exchange_rate,
-    is_entry_moderator,
-    can_use_expense_claim,
-    account_exists,
-    is_valid_claim,
-    process_request,
-    reject_request,
-    enqueue_journal_entry,
-    cancel_journal_entry,
-    delete_attach_files,
-    emit_entry_changed
+    get_cached_value
 )
 
 
 class ExpensesEntry(Document):
+    def before_insert(self):
+        self._set_defaults(True)
+    
+    
     def before_validate(self):
+        self._set_defaults()
+    
+    
+    def validate(self):
+        if self.docstatus.is_draft():
+            if not self.company:
+                self._error(_("A valid company is required."))
+            if not self.mode_of_payment:
+                self._error(_("A valid mode of payment is required."))
+            if not self.posting_date:
+                self._error(_("A valid posting date is required."))
+            if not self.expenses:
+                self._error(_("At least one valid expense is required."))
+            if self.payment_target == "Bank":
+                if not self.payment_reference:
+                    self._error(_("A valid payment reference is required."))
+                if not self.clearance_date:
+                    self._error(_("A valid reference / clearance date is required."))
+            
+            self._validate_expenses()
+    
+    
+    def before_save(self):
+        clear_doc_cache(self.doctype, self.name)
+        if self.is_new() and self.expenses_request_ref:
+            self.flags.request_status = 1
+        
+        self._check_change()
+    
+    
+    def before_submit(self):
+        clear_doc_cache(self.doctype, self.name)
+        self.flags.journal_status = 1
+        self.flags.emit_change = True
+    
+    
+    def on_update(self):
+        if self.flags.get("request_status", 0):
+            self._handle_request()
+        
+        self._emit_change()
+    
+    
+    def after_submit(self):
+        if self.flags.get("journal_status", 0) == 1:
+            from expenses.libs import enqueue_journal_entry
+            
+            self.flags.pop("journal_status")
+            enqueue_journal_entry(self.name)
+    
+    
+    def before_update_after_submit(self):
+        clear_doc_cache(self.doctype, self.name)
+        for f in self.meta.get("fields", []):
+            if (
+                not cint(f.allow_on_submit) and
+                self.has_value_changed(f.fieldname)
+            ):
+                self._error(_(
+                    "The expenses entry cannot be modified after {0}."
+                ).format(_("submit") if self.docstatus.is_submitted() else _("cancel")))
+                break
+    
+    
+    def before_cancel(self):
+        if self.expenses_request_ref:
+            self.flags.request_status = 2
+        if self.docstatus.is_submitted():
+            self.flags.journal_status = 2
+    
+    
+    def on_cancel(self):
+        clear_doc_cache(self.doctype, self.name)
+        if self.flags.get("request_status", 0):
+            self._handle_request()
+        
+        if self.flags.get("journal_status", 0) == 2:
+            from expenses.libs import cancel_journal_entry
+            
+            self.flags.pop("journal_status")
+            cancel_journal_entry(self.name)
+        
+        self.flags.emit_change = True
+        self._emit_change()
+    
+    
+    def on_trash(self):
+        if self.docstatus.is_submitted():
+            self._error(_("A submitted expenses entry cannot be removed."))
+        
+        if self.attachments:
+            from expenses.libs import delete_attach_files
+            
+            delete_attach_files(
+                self.doctype,
+                self.name,
+                [v.file for v in self.attachments]
+            )
+    
+    
+    def after_delete(self):
+        self.flags.emit_change = True
+        self._emit_change("trash")
+    
+    
+    def _set_defaults(self, insert=False):
+        from expenses.libs import is_entry_moderator
+        
+        if not insert:
+            insert = self.is_new()
+        
+        now = nowdate()
+        is_moderator = is_entry_moderator()
         if (
-            self.is_new() and (
-                not self.posting_date or
-                (
-                    self.posting_date and
-                    self.posting_date != nowdate() and
-                    not is_entry_moderator()
+            insert and (
+                not self.posting_date or (
+                    self.posting_date != now and
+                    not is_moderator
                 )
             )
         ):
-            self.posting_date = nowdate()
+            self.posting_date = now
         
         elif (
             self.docstatus.is_draft() and (
                 not self.posting_date or
                 (
-                    self.posting_date and
                     self.has_value_changed("posting_date") and
                     self.posting_date != self._get_old_posting_date() and
-                    not is_entry_moderator()
+                    not is_moderator
                 )
             )
         ):
-            self.posting_date = nowdate()
+            self.posting_date = now
         
         if self.docstatus.is_draft():
             if self.company:
                 company_currency = None
                 if self.mode_of_payment:
-                    if (
-                        not self.payment_account or
-                        not self.payment_target or
-                        not self.payment_currency
-                    ):
+                    if not self.payment_account or not self.payment_target or not self.payment_currency:
+                        from expenses.libs import get_mode_of_payment_data
+                        
                         mop = get_mode_of_payment_data(self.mode_of_payment, self.company)
                         if mop:
                             self.payment_account = mop["account"]
@@ -74,10 +174,9 @@ class ExpensesEntry(Document):
                             self.payment_currency = mop["currency"]
                             company_currency = mop["company_currency"]
                 
-                if (
-                    not flt(self.exchange_rate) and
-                    self.payment_currency
-                ):
+                from expenses.libs import get_current_exchange_rate
+                
+                if not flt(self.exchange_rate) and self.payment_currency:
                     if not company_currency:
                         company_currency = self._get_company_currency()
                     
@@ -133,130 +232,40 @@ class ExpensesEntry(Document):
                         self.total_in_account_currency = flt(flt(self.total) / flt(self.exchange_rate))
         
         if self.attachments:
-            existing = []
+            exist = []
             for v in self.attachments:
-                if not v.file or v.file in existing:
+                if not v.file or v.file in exist:
                     self.attachments.remove(v)
                 else:
-                    existing.append(v.file)
-    
-    
-    def validate(self):
-        if self.docstatus.is_draft():
-            if not self.company:
-                throw(_("A valid expenses entry company is required."))
-            if not self.mode_of_payment:
-                throw(_("A valid expenses entry mode of payment is required."))
-            if not self.posting_date:
-                throw(_("A valid expenses entry posting date is required."))
-            if not self.expenses:
-                throw(_("At least one valid expenses entry is required."))
-            if self.payment_target == "Bank":
-                if not self.payment_reference:
-                    throw(_("A valid expenses entry payment reference is required."))
-                if not self.clearance_date:
-                    throw(_("A valid expenses entry reference / clearance date is required."))
-            
-            self._validate_expenses()
-    
-    
-    def before_save(self):
-        clear_doc_cache(self.doctype, self.name)
-        if self.is_new() and self.expenses_request_ref:
-            self.flags.request_status = 1
-        
-        self._check_change()
-    
-    
-    def before_submit(self):
-        clear_doc_cache(self.doctype, self.name)
-        self.flags.journal_status = 1
-        self.flags.emit_change = True
-    
-    
-    def on_update(self):
-        if self.flags.get("request_status", 0):
-            self._handle_request()
-        
-        self._emit_change_event()
-    
-    
-    def after_submit(self):
-        if self.flags.get("journal_status", 0) == 1:
-            self.flags.pop("journal_status")
-            enqueue_journal_entry(self.name)
-    
-    
-    def before_update_after_submit(self):
-        clear_doc_cache(self.doctype, self.name)
-        for f in self.meta.get("fields", []):
-            if (
-                not cint(f.allow_on_submit) and
-                self.has_value_changed(f.fieldname)
-            ):
-                throw(_(
-                    "The expenses entry cannot be modified after {0}."
-                ).format("submit" if self.docstatus.is_submitted() else "cancel"))
-                break
-    
-    
-    def before_cancel(self):
-        if self.expenses_request_ref:
-            self.flags.request_status = 2
-        if self.docstatus.is_submitted():
-            self.flags.journal_status = 2
-    
-    
-    def on_cancel(self):
-        clear_doc_cache(self.doctype, self.name)
-        if self.flags.get("request_status", 0):
-            self._handle_request()
-        
-        if self.flags.get("journal_status", 0) == 2:
-            self.flags.pop("journal_status")
-            cancel_journal_entry(self.name)
-        
-        self.flags.emit_change = True
-        self._emit_change_event()
-    
-    
-    def on_trash(self):
-        if self.docstatus.is_submitted():
-            throw(_("A submitted expenses entry cannot be removed."))
-        
-        if self.attachments:
-            delete_attach_files(
-                self.doctype,
-                self.name,
-                [v.file for v in self.attachments]
-            )
-    
-    
-    def after_delete(self):
-        self.flags.emit_change = True
-        self._emit_change_event("trash")
+                    exist.append(v.file)
     
     
     def _validate_expenses(self):
+        from expenses.libs import (
+            can_use_expense_claim,
+            account_exists,
+            is_valid_claim
+        )
+        
         use_expense_claim = can_use_expense_claim()
         for v in self.expenses:
             if not account_exists(v.account, {"company": v.company}, True):
-                throw(_(
+                self._error(_(
                     "The expense account \"{0}\" is disabled, does not exist or does not belong to company \"{1}\"."
                 ).format(v.account, v.company))
             
             if cint(v.is_paid):
                 if not v.paid_by:
-                    throw(_(
+                    self._error(_(
                         "A valid paid by employee for expense account \"{0}\" is required."
                     ).format(v.account))
                 if use_expense_claim:
                     if not v.expense_claim:
-                        throw(_(
+                        self._error(_(
                             "A valid expense claim reference for expense account \"{0}\" is required."
                         ).format(v.account))
                     if not is_valid_claim(v.expense_claim, v.paid_by, self.company):
-                        throw(_(
+                        self._error(_(
                             "The expense claim reference for expense account \"{0}\" "
                             + "has not been submitted, "
                             + "is not paid, does not belong to the company, "
@@ -266,9 +275,13 @@ class ExpensesEntry(Document):
     
     def _handle_request(self):
         if self.flags.get("request_status", 0) == 1:
+            from expenses.libs import process_request
+            
             process_request(self.expenses_request_ref)
         
         elif self.flags.get("request_status", 0) == 2:
+            from expenses.libs import reject_request
+            
             reject_request(self.expenses_request_ref)
         
         self.flags.pop("request_status")
@@ -306,10 +319,16 @@ class ExpensesEntry(Document):
                     break
     
     
-    def _emit_change_event(self, action="change"):
+    def _emit_change(self, action="change"):
         if self.flags.get("emit_change", False):
+            from expenses.libs import emit_entry_changed
+            
             self.flags.pop("emit_change")
             emit_entry_changed({
                 "action": action,
                 "entry": self.name
             })
+    
+    
+    def _error(self, msg):
+        error(msg, _("Expenses Entry Error"))

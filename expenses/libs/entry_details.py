@@ -7,7 +7,7 @@
 import frappe
 
 
-## [Expense]
+# [Expense]
 def get_expense_entries(expense: str):
     dt = "Expenses Entry"
     doc = frappe.qb.DocType(f"{dt} Details")
@@ -18,7 +18,6 @@ def get_expense_entries(expense: str):
         .where(doc.parenttype == dt)
         .where(doc.parentfield == "expenses")
     ).run(as_dict=True)
-    
     if not data or not isinstance(data, list):
         return None
     

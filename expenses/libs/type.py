@@ -4,145 +4,130 @@
 # Licence: Please refer to LICENSE file
 
 
-from pypika.terms import Criterion
-from pypika.enums import Order
-
 import frappe
-from frappe import _, _dict
+from frappe import _
 from frappe.utils import cint
-from frappe.utils.nestedset import get_descendants_of
 
-from .cache import (
-    get_cache,
-    set_cache,
-    get_cached_doc
-)
+from .cache import get_cached_doc
 
 
-# [Type Form]
-@frappe.whitelist()
-def type_form_setup():
-    from .account import get_types_with_accounts
-    
-    return {
-        "has_accounts": get_types_with_accounts()
-    }
-
-
-# [Type]
-def get_type_lft_rgt(name: str):
-    data = frappe.db.get_value("Expense Type", name, ["lft", "rgt"], as_dict=True)
-    if data:
-        data = _dict(data)
-        data.lft = cint(data.lft)
-        data.rgt = cint(data.rgt)
-    
-    return data
-
-
-# [Type]
-def type_has_descendants(lft, rgt):
-    from .check import get_count
-    
-    return get_count(
-        "Expense Type",
-        {
-            "lft": [">", lft],
-            "rgt": ["<", rgt],
-        }
-    ) > 0
-
-
-# [Type]
+# [EXP Type]
 def disable_type_descendants(lft, rgt):
-    doc = frappe.qb.DocType("Expense Type")
-    (
-        frappe.qb.update(doc)
-        .set(doc.disabled, 1)
-        .where(doc.disabled == 0)
-        .where(doc.lft.gt(lft))
-        .where(doc.rgt.lt(rgt))
-    ).run()
+    dt = "Expense Type"
+    names = frappe.get_list(
+        dt,
+        fields=["name"],
+        filters=[
+            [dt, "disabled", "!=", 1],
+            [dt, "lft", ">", cint(lft)],
+            [dt, "rgt", "<", cint(rgt)]
+        ],
+        pluck="name",
+        ignore_permissions=True,
+        strict=False
+    )
+    if names and isinstance(names, list):
+        doc = frappe.qb.DocType(dt)
+        (
+            frappe.qb.update(doc)
+            .set(doc.disabled, 1)
+            .where(doc.name.isin(names))
+        ).run()
+        
+        from .cache import clear_doc_cache
+        
+        for name in names:
+            clear_doc_cache(dt, name)
 
 
-# [Type Form]
+# [EXP Type Form]
 @frappe.whitelist()
 def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-    from .common import parse_json
-    from .search import (
-        filter_search,
-        prepare_data
-    )
+    if filters:
+        from .common import parse_json
+        
+        filters = parse_json(filters)
+    
+    if not filters or not isinstance(filters, dict):
+        filters = {}
+    
+    filters["is_group"] = 1
+    
+    return query_types(txt, filters, start, page_len, as_dict)
+
+
+# [Item, Internal]
+def query_types(txt, filters, start, page_len, as_dict=False):
+    from pypika.functions import IfNull
+    from pypika.terms import Criterion
+    
+    from .search import filter_search, prepare_data
     
     dt = "Expense Type"
+    fdoc = frappe.qb.DocType(dt).as_("parent")
+    fqry = (
+        frappe.qb.from_(fdoc)
+        .select(fdoc.name)
+        .where(fdoc.disabled == 0)
+        .where(fdoc.is_group == 1)
+    )
+    
     doc = frappe.qb.DocType(dt)
     qry = (
         frappe.qb.from_(doc)
         .select(doc.name)
         .where(doc.disabled == 0)
+        .where(Criterion.any([
+            IfNull(doc.parent_type, "") == "",
+            doc.parent_type.isin(fqry)
+        ]))
     )
-    
     qry = filter_search(doc, qry, dt, txt, doc.name, "name")
     
-    pdoc = frappe.qb.DocType(dt).as_("parent")
-    parent_qry = (
-        frappe.qb.from_(pdoc)
-        .select(pdoc.name)
-        .where(pdoc.disabled == 0)
-        .where(pdoc.is_group == 1)
-        .where(pdoc.lft.lt(doc.lft))
-        .where(pdoc.rgt.gt(doc.rgt))
-        .orderby(doc.lft, order=Order.desc)
-    )
-    
-    qry = qry.where(Criterion.any([
-        doc.parent_type.isnull(),
-        doc.parent_type == "",
-        doc.parent_type.isin(parent_qry)
-    ]))
-    
-    if "name" in filters and filters.get("name"):
-        if isinstance(name, str):
-            name = parse_json(name)
+    if filters:
+        if filters.get("is_not", "") and isinstance(filters["is_not"], str):
+            qry = qry.where(doc.name != filters["is_not"])
         
-        if (
-            isinstance(name, list) and len(name) == 2 and
-            isinstance(name[0], str) and name[1]
+        if "is_group" in filters:
+            qry = qry.where(doc.is_group == cint(filters["is_group"]))
+        
+        if filters.get("not_child_of", "") and
+            isinstance(filters["not_child_of"], str)
         ):
-            if name[0] == "=" and isinstance(name[1], str):
-                qry = qry.where(doc.name == name[1])
-            elif name[0] == "!=" and isinstance(name[1], str):
-                qry = qry.where(doc.name != name[1])
-            elif name[0] == "in" and isinstance(name[1], list):
-                qry = qry.where(doc.name.isin(name[1]))
-            elif name[0] == "not in" and isinstance(name[1], list):
-                qry = qry.where(doc.name.notin(name[1]))
-    
-    if "is_group" in filters:
-        is_group = 1 if cint(filters.get("is_group")) > 0 else 0
-        qry = qry.where(doc.is_group == is_group)
+            from .cache import get_cached_value
+            
+            parent = get_cached_value(dt, filters["not_child_of"], ["lft", "rgt"])
+            if parent:
+                qry = qry.where(doc.lft.lt(cint(parent.lft)))
+                qry = qry.where(doc.rgt.gt(cint(parent.rgt)))
+        
+        if cint(filters.get("has_accounts", 0)):
+            from .account import filter_types_with_accounts
+            
+            qry = filter_types_with_accounts(qry, doc)
     
     data = qry.run(as_dict=as_dict)
-    
     data = prepare_data(data, dt, "name", txt, as_dict)
-    
     return data
 
 
-# [Type Form]
+# [EXP Type Form]
 @frappe.whitelist()
-def get_all_companies_accounts():
+def get_companies_accounts():
     dt = "Company"
     return frappe.get_list(
         dt,
-        fields=["name", "default_expense_account"],
-        filters=[
-            [dt, "is_group", "=", 0]
-        ]
+        fields=[
+            "name as company",
+            "default_expense_account as account"
+        ],
+        filters=[[dt, "is_group", "=", 0]],
+        ignore_permissions=True,
+        strict=False
     )
 
 
-# [Type Form]
+# [EXP Type Form, EXP Type Tree]
 @frappe.whitelist(methods=["POST"])
 def convert_group_to_item(name, parent_type=None):
     if (
@@ -158,7 +143,7 @@ def convert_group_to_item(name, parent_type=None):
     return doc.convert_group_to_item(parent_type);
 
 
-# [Type Form]
+# [EXP Type Form, EXP Type Tree]
 @frappe.whitelist(methods=["POST"])
 def convert_item_to_group(name):
     if not name or not isinstance(name, str):
@@ -171,7 +156,7 @@ def convert_item_to_group(name):
     return doc.convert_item_to_group();
 
 
-# [Type Tree]
+# [EXP Type Tree]
 @frappe.whitelist()
 def get_type_children(doctype, parent, is_root=False):
     return frappe.get_list(
@@ -188,25 +173,15 @@ def get_type_children(doctype, parent, is_root=False):
                 "=",
                 "" if is_root else parent
             ]
-        ]
+        ],
+        ignore_permissions=True,
+        strict=False
     )
 
 
-# [Type Form]
-## [Item]
-@frappe.whitelist(methods=["POST"])
-def type_accounts(name):
-    from .account import get_type_accounts
-    
-    if not name or not isinstance(name, str):
-        return None
-    
-    return get_type_accounts(name)
-
-
-## [Item]
+# [Item]
 def get_type_company_account(name: str, company: str):
-    from .account import get_type_company_account_data
+    from .cache import get_cache, set_cache
     
     dt = "Expense Type"
     key = f"{name}-{company}-account-data"
@@ -214,18 +189,19 @@ def get_type_company_account(name: str, company: str):
     if cache and isinstance(cache, dict):
         return cache
     
-    data = get_type_company_account_data(name, company)
-    if not data or not isinstance(data, dict):
-        return None
+    from .account import get_type_company_account_data
     
-    set_cache(dt, key, data)
+    data = get_type_company_account_data(name, company)
+    if not (data is None):
+        set_cache(dt, key, data)
     
     return data
 
 
-## [Item]
+# [Item]
 def get_types_filter_query():
-    doc = frappe.qb.DocType("Expense Type")
+    dt = "Expense Type"
+    doc = frappe.qb.DocType(dt)
     return (
         frappe.qb.from_(doc)
         .select(doc.name)

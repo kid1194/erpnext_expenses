@@ -7,27 +7,23 @@
 import frappe
 
 
-# [Entry, Entry Form, Expense, Expense Form]
+# [EXP Entry, EXP Entry Form, EXP Expense, EXP Expense Form]
 @frappe.whitelist(methods=["POST"])
 def delete_attach_files(doctype, name, files):
-    from .background import enqueue_job
-    from .common import parse_json
-    
     if (
         not doctype or not isinstance(doctype, str) or
         not name or not isinstance(name, str) or
-        not files or (
-            not isinstance(files, str) and
-            not isinstance(files, list)
-        )
+        not files or not isinstance(files, (str, list))
     ):
         return 0
+    
+    from .common import parse_json
     
     files = parse_json(files)
     if not files or not isinstance(files, list):
         return 0
     
-    if (file_names := frappe.get_all(
+    file_names = frappe.get_all(
         "File",
         fields=["name"],
         filters=[
@@ -35,8 +31,13 @@ def delete_attach_files(doctype, name, files):
             ["attached_to_doctype", "=", doctype],
             ["ifnull(`attached_to_name`,\"\")", "in", [name, ""]]
         ],
-        pluck="name"
-    )):
+        pluck="name",
+        ignore_permissions=True,
+        strict=False
+    )
+    if file_names and isinstance(file_names, list):
+        from .background import enqueue_job
+        
         enqueue_job(
             "expenses.libs.attachment.files_delete",
             f"exp-files-delete-{name}",
@@ -46,13 +47,13 @@ def delete_attach_files(doctype, name, files):
     return 1
 
 
-## [Internal]
+# [Internal]
 def files_delete(files: list):
     for file in files:
         frappe.get_doc("File", file).delete(ignore_permissions=True)
 
 
-## [Expense]
+# [Expense]
 def get_files_by_parents(parents: list, parent_type: str, parent_field: str):
     dt = "Expense Attachment"
     data = frappe.get_all(
@@ -62,9 +63,10 @@ def get_files_by_parents(parents: list, parent_type: str, parent_field: str):
             [dt, "parent", "in", parents],
             [dt, "parenttype", "=", parent_type],
             [dt, "parentfield", "=", parent_field]
-        ]
+        ],
+        ignore_permissions=True,
+        strict=False
     )
-    
     if not data or not isinstance(data, list):
         return None
     

@@ -7,12 +7,12 @@
 import frappe
 
 
-## [Update]
+# [Update]
 def users_filter(names: list, attrs: dict=None, enabled: bool=None):
     return all_filter("User", "name", names, attrs, enabled, "enabled", 1)
 
 
-## [Check, Internal]
+# [Check, Internal]
 def all_filter(
     dt: str, field: str, names: list, attrs: dict=None,
     enabled: bool=None, status_col: str="disabled", enabled_val: int=0
@@ -41,11 +41,7 @@ def all_filter(
         pluck=field,
         strict=False
     )
-    
-    if (
-        not data or
-        not isinstance(data, list)
-    ):
+    if not data or not isinstance(data, list):
         return None
     
     return [v for v in data if v in names]

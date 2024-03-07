@@ -7,39 +7,22 @@
 import frappe
 
 
-## [Account, Item, Type]
-def get_cache(dt: str, key: str):
-    return frappe.cache().hget(dt, key)
+# [Account, Item, Type]
+def get_cache(dt: str, key: str, expires=False):
+    return frappe.cache().get_value(f"{dt}-{key}", expires=expires)
 
 
-## [Account, Item, Type]
-def set_cache(dt: str, key: str, data):
-    frappe.cache().hset(dt, key, data)
+# [Account, Item, Type]
+def set_cache(dt: str, key: str, data, expiry: int=None):
+    frappe.cache().set_value(f"{dt}-{key}", data, expires_in_sec=expiry)
 
 
-## []
-def get_tmp_cache(key: str):
-    return frappe.cache().get_value(key, expires=True)
-
-
-## []
-def set_tmp_cache(key: str, data, expiry: int):
-    frappe.cache().set_value(key, data, expires_in_sec=expiry)
-
-
-## []
+# []
 def del_cache(dt: str, key: str):
-    frappe.cache().hdel(dt, key)
-    clear_cache(f"{dt}-{key}")
+    frappe.cache().delete_key(f"{dt}-{key}")
 
 
-## [Internal]
-def clear_cache(dt: str):
-    frappe.cache().delete_key(dt)
-
-
-# [Type]
-## [Entry, Request, Settings, Type, Internal]
+# [EXP Type, Entry, Request, Settings, Type, Internal]
 def get_cached_doc(dt: str, name: str=None, for_update: bool=False):
     if name is None:
         name = dt
@@ -53,29 +36,23 @@ def get_cached_doc(dt: str, name: str=None, for_update: bool=False):
     return frappe.get_cached_doc(dt, name, for_update=for_update)
 
 
-# [Entry, Expense, Item, Request, Settings, Type]
-## [Internal]
+# [EXP Entry, EXP Expense, EXP Item, EXP Request, EXP Settings, EXP Type, Internal]
 def clear_doc_cache(dt: str, name: str=None):
+    frappe.cache().delete_keys(dt)
+    frappe.clear_cache(doctype=dt)
     if name is None:
         name = dt
-    
-    frappe.clear_cache(doctype=dt)
     frappe.clear_document_cache(dt, name)
-    clear_cache(dt)
 
 
-# [Entry]
-## [Account, Entry, Item]
-def get_cached_value(dt: str, name: str=None, field=None):
-    if field and not isinstance(field, (str, list)):
+# [Account, EXP Entry, Entry, Item]
+def get_cached_value(dt: str, name: str, field):
+    if not field or not isinstance(field, (str, list)):
         return None
     
     doc = get_cached_doc(dt, name)
     if not doc:
         return None
-    
-    if not field:
-        field = "name"
     
     if isinstance(field, str):
         return doc.get(field)

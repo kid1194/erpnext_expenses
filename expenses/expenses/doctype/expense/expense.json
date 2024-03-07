@@ -64,6 +64,7 @@
    "options": "Expense Item",
    "reqd": 1,
    "bold": 1,
+   "read_only_depends_on": "eval:!doc.company",
    "in_list_view": 1,
    "in_filter": 1,
    "in_standard_filter": 1,
@@ -251,7 +252,7 @@
    "fieldtype": "Table",
    "label": "Attachments",
    "options": "Expense Attachment",
-   "read_only_depends_on": "eval:doc.docstatus === 2 || (doc.status !== 'Draft' && doc.status !== 'Pending' && doc.status !== 'Requested')",
+   "depends_on": "eval:doc.docstatus < 2 && (doc.status === 'Draft' || doc.status === 'Pending' || doc.status === 'Requested')",
    "allow_on_submit": 1
   },
   {
@@ -275,13 +276,14 @@
    "default": "0",
    "read_only": 1,
    "hidden": 1,
+   "allow_on_submit": 1,
    "print_hide": 1,
    "report_hide": 1
   }
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
- "modified": "2023-04-04 04:04:04",
+ "modified": "2024-03-06 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense",

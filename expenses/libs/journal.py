@@ -9,22 +9,18 @@ from frappe import _
 from frappe.utils import (
     cint,
     flt,
-    cstr,
-    today
+    cstr
 )
 
 from .common import (
     log_error,
-    error
+    error_log
 )
 
 
-# [Entry]
+# [EXP Entry]
 def enqueue_journal_entry(entry: str):
-    from .background import (
-        is_job_running,
-        enqueue_job
-    )
+    from .background import is_job_running, enqueue_job
     
     job_name = f"exp-make-journal-entry-{entry}"
     if not is_job_running(job_name):
@@ -36,52 +32,49 @@ def enqueue_journal_entry(entry: str):
         )
 
 
-## [Internal]
+# [Internal]
 def make_journal_entry(entry: str):
     from .entry import get_entry_data
     
     doc = get_entry_data(entry)
     if not doc:
-        error(_(
+        error_log(_(
             "The expenses entry \"{0}\" does not exist."
-        ).format(entry), throw=False)
+        ).format(entry))
         return 0
     
     if cint(doc.docstatus) != 1:
-        error(_(
+        error_log(_(
             "The expenses entry \"{0}\" has not been submitted."
-        ).format(entry), throw=False)
+        ).format(entry))
         return 0
     
     dt = "Journal Entry"
     if frappe.db.exists(dt, {"bill_no": entry}):
-        error(_(
+        error_log(_(
             "The expenses entry \"{0}\" has already been added to journal."
-        ).format(entry), throw=False)
+        ).format(entry))
         return 0
     
     if not doc.payment_account:
-        error(_(
+        error_log(_(
             "The Mode of Payment of expenses entry \"{0}\" has no linked account."
-        ).format(entry), throw=False)
+        ).format(entry))
         return 0
     
     if (
         doc.payment_target == "Bank" and
         (not doc.payment_reference or not doc.clearance_date)
     ):
-        error(_(
+        error_log(_(
             "The payment reference and/or payment / clearance date for expenses entry \"{0}\" has not been set."
-        ).format(entry), throw=False)
+        ).format(entry))
         return 0
     
     multi_currency = 0
     accounts = []
     for v in doc.expenses:
-        if (
-            not multi_currency and
-            v.account_currency != doc.payment_currency
-        ):
+        if v.account_currency != doc.payment_currency:
             multi_currency = 1
         
         accounts.append({
@@ -110,6 +103,8 @@ def make_journal_entry(entry: str):
         "credit": flt(doc.total)
     })
     
+    from frappe.utils import today
+    
     try:
         (frappe.new_doc(dt)
             .update({
@@ -128,15 +123,14 @@ def make_journal_entry(entry: str):
             })
             .insert(ignore_permissions=True, ignore_mandatory=True)
             .submit())
-    
     except Exception as exc:
         log_error(exc)
-        error(_(
+        error_log(_(
             "Unable to create a journal entry for expenses entry \"{0}\"."
-        ).format(entry), throw=False)
+        ).format(entry))
 
 
-# [Entry]
+# [EXP Entry]
 def cancel_journal_entry(entry: str):
     dt = "Journal Entry"
     filters = {"bill_no": entry}
@@ -145,6 +139,6 @@ def cancel_journal_entry(entry: str):
             frappe.get_doc(dt, filters).cancel()
         except Exception as exc:
             log_error(exc)
-            error(_(
+            error_log(_(
                 "Unable to cancel the journal entry for expenses entry \"{0}\"."
-            ).format(entry), throw=False)
+            ).format(entry))

@@ -8,15 +8,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import (
-    get_request_session,
-    cint,
-    now,
-    markdown
-)
-from frappe.desk.doctype.notification_settings.notification_settings import (
-    is_notifications_enabled
-)
+from frappe.utils import cint
 
 from expenses import (
     __module__,
@@ -24,19 +16,10 @@ from expenses import (
     __production__
 )
 
-from .background import (
-    is_job_running,
-    enqueue_job
-)
-from .common import (
-    log_error,
-    log_info,
-    parse_json
-)
 from .settings import settings
 
 
-## [Hooks]
+# [Hooks]
 def auto_check_for_update():
     if __production__:
         doc = settings()
@@ -44,10 +27,10 @@ def auto_check_for_update():
             process_check_for_update(doc)
 
 
-# [Settings Form]
+# [EXP Settings Form]
 @frappe.whitelist()
 def check_for_update():
-    if __production__:
+    if not __production__:
         return 0
     doc = settings()
     if not cint(doc.is_enabled):
@@ -56,8 +39,10 @@ def check_for_update():
     return process_check_for_update(doc)
 
 
-## [Internal]
+# [Internal]
 def process_check_for_update(doc):
+    from frappe.utils import get_request_session
+    
     try:
         http = get_request_session()
         request = http.request(
@@ -67,6 +52,8 @@ def process_check_for_update(doc):
         status_code = request.status_code
         result = request.json()
     except Exception as exc:
+        from .common import log_error
+        
         log_error(exc)
         return 0
     
@@ -74,8 +61,9 @@ def process_check_for_update(doc):
         log_response("Invalid response status", status_code, result)
         return 0
     
-    data = parse_json(result)
+    from .common import parse_json
     
+    data = parse_json(result)
     if (
         not data or not isinstance(data, dict) or
         not getattr(data, "tag_name", "") or
@@ -89,11 +77,11 @@ def process_check_for_update(doc):
         log_response("Invalid response update version", status_code, result)
         return 0
     
+    from frappe.utils import now
+    
     latest_version = latest_version.pop()
     has_update = compare_versions(latest_version, __version__) > 0
-    
     doc.latest_check = now()
-    
     if has_update:
         doc.latest_version = latest_version
         doc.has_update = 1
@@ -101,8 +89,12 @@ def process_check_for_update(doc):
     doc.save(ignore_permissions=True)
     
     if has_update and cint(doc.send_update_notification):
+        from .background import is_job_running, enqueue_job
+        
         job_name = f"exp-send-notification-{latest_version}"
         if not is_job_running(job_name):
+            from frappe.utils import markdown
+            
             enqueue_job(
                 "expenses.libs.update.send_notification",
                 job_name,
@@ -117,6 +109,8 @@ def process_check_for_update(doc):
 
 # [Internal]
 def log_response(message, status, result):
+    from .common import log_info
+    
     log_info({
         "action": "check for update",
         "message": message,
@@ -153,14 +147,19 @@ def compare_versions(verA, verB):
 ## [Internal]
 def send_notification(version, sender, receivers, message):
     from .check import user_exists
-    from .filter import users_filter
     
     if not user_exists(sender, enabled=True):
         return 0
     
+    from .filter import users_filter
+    
     receivers = users_filter(receivers, enabled=True)
     if not receivers:
         return 0
+    
+    from frappe.desk.doctype.notification_settings.notification_settings import (
+        is_notifications_enabled
+    )
     
     doc = {
         "document_type": "Expenses Settings",

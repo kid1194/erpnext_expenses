@@ -7,7 +7,7 @@
 import frappe
 
 
-## [Expense]
+# [Expense]
 def get_expense_requests(expense: str):
     dt = "Expenses Request"
     doc = frappe.qb.DocType(dt)
@@ -21,7 +21,6 @@ def get_expense_requests(expense: str):
         .where(ddoc.parenttype == dt)
         .where(ddoc.parentfield == "expenses")
     ).run(as_dict=True)
-    
     if not data or not isinstance(data, list):
         return None
     

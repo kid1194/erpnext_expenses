@@ -14,7 +14,7 @@ with open("requirements.txt") as f:
 setup(
     name="expenses",
     version="1.0.0",
-    description="Expenses management for ERPNext",
+    description="An expenses management module for ERPNext",
     author="Ameen Ahmed (Level Up)",
     author_email="kid1194@gmail.com",
     packages=find_packages(),
