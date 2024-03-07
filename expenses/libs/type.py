@@ -160,6 +160,9 @@ def convert_item_to_group(name):
 # [EXP Type Tree]
 @frappe.whitelist()
 def get_type_children(doctype, parent=None, is_root=False):
+    if not parent:
+        return [{"value": "Expense Types", "expandable": 1, "parent": ""}]
+    
     return frappe.get_list(
         "Expense Type",
         fields=[
