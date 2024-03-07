@@ -12,7 +12,7 @@ frappe.provide('frappe.treeview_settings');
 frappe.treeview_settings['Expense Type'] = {
     breadcrumb: __('Expense Types'),
     title: __('Chart of Expense Types'),
-    get_tree_root: false,
+    get_tree_root: true,
     disable_add_node: true,
     root_label: 'Expense Types',
     show_expand_all: true,
