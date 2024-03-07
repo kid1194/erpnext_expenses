@@ -180,8 +180,8 @@ class LevelUpCore {
                 let f = function() { a.length ? fn.apply(null, a) : fn(); };
                 this._r = d ? window.setTimeout(f, tm) : f();
             },
-            call: function() { this._f(arguments); },
-            delay: function() { this._f(arguments, 1); },
+            call: function() { this._fn(arguments); },
+            delay: function() { this._fn(arguments, 1); },
             cancel: function() { this._r && (this._r = window.clearTimeout(this._r)); },
         };
     }
@@ -614,6 +614,8 @@ class LevelUp extends LevelUpBase {
             if (!f || !f.df || !!cint(f.df.hidden) || f.df.fieldtype !== 'Table' || !f.grid) return;
             f.df.__cannot_delete_rows != null && (f.df.cannot_delete_rows = f.df.__cannot_delete_rows);
             delete f.df.__cannot_delete_rows;
+            f.df.__in_place_edit != null && (f.df.in_place_edit = f.df.__in_place_edit);
+            delete f.df.__in_place_edit;
             f = f.grid;
             f.meta && f.__editable_grid != null && (f.meta.editable_grid = f.__editable_grid);
             delete f.__editable_grid;
@@ -642,6 +644,8 @@ class LevelUp extends LevelUpBase {
             fs && fs.push(k);
             f.df.__cannot_delete_rows = f.df.cannot_delete_rows;
             f.df.cannot_delete_rows = 1;
+            f.df.__in_place_edit = f.df.in_place_edit;
+            f.df.in_place_edit = false;
             f = f.grid;
             if (f.meta) {
                 f.__editable_grid = f.meta.editable_grid;
@@ -649,10 +653,10 @@ class LevelUp extends LevelUpBase {
             }
             if (!e) {
                 f.__static_rows = f.static_rows;
-                f.static_rows = 1;
+                f.static_rows = true;
             }
             f.__sortable_status = f.sortable_status;
-            f.sortable_status = 0;
+            f.sortable_status = false;
             if (
                 f.header_row && f.header_row.configure_columns_button
                 && f.header_row.configure_columns_button.is(':visible')
