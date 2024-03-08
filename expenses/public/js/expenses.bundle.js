@@ -11,7 +11,7 @@
         window.removeEventListener('load', onload);
         $(document).off('ready', onload);
         function $isFn(v) { return typeof v === 'function'; }
-        (function() {
+        /*(function() {
             let id = 'core-polyfill';
             function onload() {
                 Promise.wait = function(ms) {
@@ -45,7 +45,7 @@
                     document.getElementsByTagName('head')[0].appendChild($el);
                 }
             }
-        }());
+        }());*/
         (function() {
             Array.prototype.remove = function(v) {
                 v = this.indexOf(v);

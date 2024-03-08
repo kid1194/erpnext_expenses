@@ -252,7 +252,7 @@
    "fieldtype": "Table",
    "label": "Attachments",
    "options": "Expense Attachment",
-   "depends_on": "eval:doc.docstatus < 2 && (doc.status === 'Draft' || doc.status === 'Pending' || doc.status === 'Requested')",
+   "depends_on": "eval:doc.docstatus < 2 && in_list(['Draft', 'Pending', 'Requested'], doc.status)",
    "allow_on_submit": 1
   },
   {
