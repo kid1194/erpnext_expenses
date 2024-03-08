@@ -12,7 +12,7 @@ frappe.provide('frappe.model');
 
 frappe.listview_settings['Expense Item'] = {
     hide_name_column: true,
-    //add_fields: ['disabled'],
+    add_fields: ['disabled'],
     onload: function(list) {
         frappe.exp().on('ready change', function() { this.setup_list(list); });
     },
