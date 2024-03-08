@@ -10,7 +10,7 @@ frappe.provide('frappe.listview_settings');
 
 
 frappe.listview_settings['Expense'] = {
-    add_fields: ['party_type', 'party', 'paid_by'],
+    add_fields: ['party_type', 'party', 'is_paid', 'paid_by'],
     onload: function(list) {
         frappe.listview_settings.Expense.list = list;
         frappe.exp()
