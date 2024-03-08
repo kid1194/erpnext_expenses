@@ -790,7 +790,7 @@ class ExpenseTable {
         return r;
     }
     clear() {
-        for (let x = 0; x < this._n; x++) this._c[x].clear();
+        for (let x = 0; x < this._n; x++) this._c[x] && this._c[x].clear();
         return this;
     }
 }
