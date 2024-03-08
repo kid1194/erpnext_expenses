@@ -22,7 +22,7 @@ def search_item_types(doctype, txt, searchfield, start, page_len, filters, as_di
     from .type import query_types
     
     filters["is_group"] = 0
-    filters["has_accounts"] = 1
+    #filters["has_accounts"] = 1
     return query_types(txt, filters, start, page_len, as_dict)
 
 
