@@ -12,11 +12,11 @@
         $(document).off('ready', onload);
         function $isFn(v) { return typeof v === 'function'; }
         (function() {
-            Array.prototype.clear = function() {
+            Array.prototype.clear = function clear() {
                 if (this.length) this.splice(0, this.length);
                 return this;
             };
-            XMLHttpRequest.prototype.clear = function() {
+            XMLHttpRequest.prototype.clear = function clear() {
                 this.onload = this.onerror = this.onabort = this.ontimeout = null;
             };
         }());
@@ -558,7 +558,7 @@ class LevelUp extends LevelUpBase {
             if (o && !o.fields.includes(fk)) return;
             let f = this._get_field(frm, k, n, ck);
             if (!f || !f.df || !!cint(f.df.hidden) || !this._is_field(f.df.fieldtype)) return;
-            o && (fk = o.fields.indexOf(fk)) >= 0 && o.fields.splice(fk, 1);
+            //o && (fk = o.fields.indexOf(fk)) >= 0 && o.fields.splice(fk, 1);
             n == null && frm.set_df_property(k, 'read_only', 0);
             if (n == null) return this._toggle_translatable(f, 1);
             f = this._get_field(frm, k, n);
@@ -597,7 +597,7 @@ class LevelUp extends LevelUpBase {
             let fs = this.is_self_form(frm) && (frm[this._tmp] || {}).fields,
             i;
             if (fs && !fs.includes(k)) return;
-            fs && (i = fs.indexOf(k)) >= 0 && fs.splice(i, 1);
+            //fs && (i = fs.indexOf(k)) >= 0 && fs.splice(i, 1);
             let f = frm.get_field(k);
             if (!f || !f.df || !!cint(f.df.hidden) || f.df.fieldtype !== 'Table' || !f.grid) return;
             f.df.__in_place_edit != null && (f.df.in_place_edit = f.df.__in_place_edit);
