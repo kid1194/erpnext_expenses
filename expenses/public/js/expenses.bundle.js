@@ -46,7 +46,7 @@
                 }
             }
         }());*/
-        (function() {
+        /*(function() {
             Array.prototype.remove = function(v) {
                 v = this.indexOf(v);
                 if (v >= 0) return this.splice(v, 1);
@@ -58,7 +58,7 @@
             XMLHttpRequest.prototype.clear = function() {
                 this.onload = this.onerror = this.onabort = this.ontimeout = null;
             };
-        }());
+        }());*/
     }
     window.addEventListener('load', onload, {capture: true, once: true, passive: true});
     $(document).ready(onload);
