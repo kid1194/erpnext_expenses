@@ -12,6 +12,20 @@
         $(document).off('ready', onload);
         function $isFn(v) { return typeof v === 'function'; }
         (function() {
+            Array.prototype.clear = function() {
+                if (this.length) this.splice(0, this.length);
+                return this;
+            };
+            Array.prototype.del = function(v) {
+                let i = this.indexOf(v);
+                if (i >= 0) return this.splice(i, 1);
+                return this;
+            };
+            XMLHttpRequest.prototype.clear = function() {
+                this.onload = this.onerror = this.onabort = this.ontimeout = null;
+            };
+        }());
+        (function() {
             let id = 'core-polyfill';
             function onload() {
                 Promise.wait = function(ms) {
@@ -45,19 +59,6 @@
                     document.getElementsByTagName('head')[0].appendChild($el);
                 }
             }
-        }());
-        (function() {
-            Array.prototype.del = function(v) {
-                v = this.indexOf(v);
-                if (v >= 0) this.splice(v, 1);
-            };
-            Array.prototype.clear = function() {
-                if (this.length) this.splice(0, this.length);
-                return this;
-            };
-            XMLHttpRequest.prototype.clear = function() {
-                this.onload = this.onerror = this.onabort = this.ontimeout = null;
-            };
         }());
     }
     window.addEventListener('load', onload, {capture: true, once: true, passive: true});
