@@ -52,7 +52,6 @@ def search_types(doctype, txt, searchfield, start, page_len, filters, as_dict=Fa
         filters = {}
     
     filters["is_group"] = 1
-    
     return query_types(txt, filters, start, page_len, as_dict)
 
 

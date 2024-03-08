@@ -7,7 +7,6 @@
 
 
 frappe.provide('frappe.listview_settings');
-frappe.provide('frappe.model');
 
 
 frappe.listview_settings['Expense Type'] = {

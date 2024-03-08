@@ -6,6 +6,9 @@
 */
 
 
+frappe.require(['/assets/expenses/js/expenses.bundle.js']);
+
+
 frappe.provide('frappe.treeview_settings');
 
 
@@ -16,7 +19,7 @@ frappe.treeview_settings['Expense Type'] = {
     disable_add_node: true,
     root_label: __('Expense Types'),
     show_expand_all: true,
-    get_tree_nodes: 'expenses.libs.get_type_children',
+    get_tree_nodes: frappe.exp().get_method('get_type_children'),
     onload: function(treeview) {
         frappe.treeview_settings['Expense Type'].treeview = treeview;
         frappe.exp()
@@ -25,7 +28,7 @@ frappe.treeview_settings['Expense Type'] = {
             })
             .on('change', function() {
                 if (!this.is_enabled) treeview.page.clear_primary_action();
-                else frappe.treeview_settings['Expense Type'].post_render(treeview);
+                treeview.refresh();
             });
     },
     post_render: function(treeview) {

@@ -71,12 +71,12 @@ frappe.ui.form.on('Expense Type', {
         frm.events.toggle_disabled_desc(frm);
     },
     validate: function(frm) {
-        if (!cstr(frm.doc.name).length) {
-            frappe.throw(__('A valid name is required.'));
+        if (!frappe.exp().$isStrVal(frm.doc.name)) {
+            frappe.exp().fatal(__(frm.doctype), __('A valid name is required.'));
             return false;
         }
-        if (!cint(frm.doc.is_group) && !cstr(frm.doc.parent_type).length) {
-            frappe.throw(__('A valid parent type is required.'));
+        if (!cint(frm.doc.is_group) && !frappe.exp().$isStrVal(frm.doc.parent_type)) {
+            frappe.exp().fatal(__(frm.doctype), __('A valid parent type is required.'));
             return false;
         }
     },
@@ -98,7 +98,7 @@ frappe.ui.form.on('Expense Type', {
             if (!frm.is_dirty()) frm._type.go_to_tree();
             else {
                 frm._type.tree.pending = 1;
-                frappe.exp().warn(__('The form contains some unsaved changes. Click "Save" in order to proceed.'));
+                frappe.exp().info(__(frm.doctype), __('Form has some unsaved changes, so please "Save" in order to continue.'));
             }
         });
         frm.change_custom_button_type(btn, null, 'info');
@@ -113,47 +113,40 @@ frappe.ui.form.on('Expense Type', {
         }
         if (del) return;
         frm._type.table.ready = 1;
-        grid.add_custom_button(
-            label, frappe.exp().$fn(function(e) {
-                var $btn = $(e.target);
-                $btn.attr('disabled', true);
-                this.disable_table(frm, 'expense_accounts')
-                .request('get_companies_accounts', null, function(ret) {
-                    if (!this.$isArrVal(ret)) {
-                        $btn.attr('disabled', false);
-                        this.enable_table(frm, 'expense_accounts');
-                        frappe.show_alert({
-                            indicator: 'blue',
-                            message: __('There are no companies to import.'),
-                        });
-                        return;
-                    }
-                    let x = 0;
-                    for (let i = 0, l = ret.length, v, c, r; i < l; i++) {
-                        v = ret[i];
-                        c = cstr(v.company);
-                        if (frm._type.table.data.has(c, 1)) continue;
-                        x++;
-                        r = frm.add_child('expense_accounts', {company: c, account: cstr(v.account)});
-                        frm._type.table.data.add(cstr(r.name), cstr(r.company), cstr(r.account));
-                    }
-                    $btn.attr('disabled', false);
-                    this.enable_table(frm, 'expense_accounts');
-                    frappe.show_alert({
-                        indicator: x ? 'green' : 'blue',
-                        message: x ? __('The expense accounts table has been updated successfully.')
-                            : __('The expense accounts table already has all the companies.'),
-                    }); 
-                },
-                function(e) {
-                    $btn.attr('disabled', false);
-                    this.enable_table(frm, 'expense_accounts');
-                    frappe.show_alert({indicator: 'red', message: e.message});
+        grid.add_custom_button(label, frappe.exp().$fn(function(e) {
+            var $btn = $(e.target);
+            $btn.attr('disabled', true);
+            this.request('get_companies_accounts', null, function(ret) {
+                $btn.attr('disabled', false);
+                if (!this.$isArrVal(ret))
+                    return frappe.show_alert({
+                        indicator: 'blue',
+                        message: __('There are no companies and accounts to import.'),
+                    });
+                
+                let x = 0;
+                for (let i = 0, l = ret.length, v, r; i < l; i++) {
+                    v = ret[i];
+                    if (
+                        !this.$isStrVal(v.company) || !this.$isStrVal(v.account)
+                        || frm._type.table.data.has(v.company, 1) || frm._type.table.data.has(v.account, 2)
+                    ) continue;
+                    x++;
+                    r = frm.add_child('expense_accounts', {company: v.company, account: v.account});
+                    frm._type.table.data.add(cstr(r.name), v.company, v.account);
                 }
-            );
-        }))
-        .removeClass('btn-default')
-        .addClass('btn-secondary');
+                frappe.show_alert({
+                    indicator: x ? 'green' : 'blue',
+                    message: x ? __('Companies accounts has been imported successfully.')
+                        : __('Companies and/or accounts already exist.'),
+                }); 
+            },
+            function(e) {
+                $btn.attr('disabled', false);
+                frappe.show_alert({indicator: 'red', message: e.message});
+            }
+        );
+    })).removeClass('btn-default').addClass('btn-secondary');
     },
     toggle_disabled_desc: function(frm) {
         let val = cint(frm.doc.is_group);
@@ -162,7 +155,7 @@ frappe.ui.form.on('Expense Type', {
         frm.events.add_toolbar_buttons(frm, 1);
         frm._type.is_group = val;
         frappe.exp().set_field_desc(frm, 'disabled', !frm._type.is_group ? null
-            : __('Disabling an expense type group will result in disabling all its child types and their linked expense items')
+            : __('Disabling a group will result in disabling all its descendants and linked expense items.')
         );
         frm.events.add_toolbar_buttons(frm);
     },
@@ -177,14 +170,14 @@ frappe.ui.form.on('Expense Type', {
             if (!frm.is_dirty()) frm.events.toolbar_action_handler(frm);
             else {
                 frm._type.toolbar.pending = 1;
-                frappe.exp().error(__('The form contains some unsaved changes. Click "Save" in order to proceed.'));
+                frappe.exp().info(__(frm.doctype), __('Form has some unsaved changes, so please "Save" in order to continue.'));
             }
         });
         frm.change_custom_button_type(btn, null, 'info');
     },
     toolbar_action_handler: function(frm) {
         frm._type.toolbar.pending = 0;
-        if (!frm._type.is_group || cstr(frm.doc.parent_type).length)
+        if (!frm._type.is_group || frappe.exp().$isStrVal(frm.doc.parent_type))
             frm.events.toolbar_action_request(frm);
         else
             frm.events.toolbar_action_prompt(frm);
@@ -197,8 +190,8 @@ frappe.ui.form.on('Expense Type', {
                 parent_type: frappe.exp().$isStrVal(val) ? val : null
             },
             function(ret) {
-                if (!ret) this.error(frm._type.toolbar.list[frm._type.is_group ? 0 : 1][2]);
-                else if (ret.error) this.error(ret.error);
+                if (!ret) this.error(__(frm.doctype), frm._type.toolbar.list[frm._type.is_group ? 0 : 1][2]);
+                else if (ret.error) this.error(__(frm.doctype), ret.error);
                 else frm.reload_doc();
             }
         );
@@ -229,34 +222,51 @@ frappe.ui.form.on('Expense Type', {
 
 frappe.ui.form.on('Expense Type Account', {
     before_expense_accounts_remove: function(frm, cdt, cdn) {
-        frm._type.table.data.del(cstr(cdn));
+        frm._type.table.data.del(cdn);
     },
     company: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn],
-        name = cstr(cdn),
-        company = cstr(row.company),
-        account = cstr(row.account);
-        if (!company.length) {
-            frm._type.table.data.del(name);
-            if (account.length) frappe.model.set_value(cdt, cdn, 'account', '');
+        key = 'company',
+        val = cstr(row[key]),
+        self = frm._type.is_self === key;
+        delete frm._type.is_self;
+        if (self) return;
+        if (!val.length) {
+            frm._type.table.data.del(cdn);
+            if (frappe.exp().$isStrVal(row.account)) frappe.model.set_value(cdt, cdn, 'account', '');
         } else if (
-            !frm._type.table.data.has(name)
-            && frm._type.table.data.has(company, 1)
+            frm._type.table.data.has(val, 1)
+            && frm._type.table.data.idx(cdn) !== frm._type.table.data.idx(val, 1)
         ) {
-            let vals = {company: ''}
-            if (account.length) vals.account = '';
-            frappe.model.set_value(cdt, cdn, vals);
-            frappe.exp().invalid_field(frm, 'expense_accounts', cdn, 'company',
+            frm._type.is_self = key;
+            frappe.model.set_value(cdt, cdn, {company: '', account: ''});
+            frappe.exp().invalid_field(frm, 'expense_accounts', cdn, key,
                 __('Company has already been selected.'))
         } else {
-            frm._type.table.data.add(name, company, null);
-            frappe.exp().valid_field(frm, 'expense_accounts', cdn, 'company');
+            frm._type.table.data.add(name, val, null);
+            frappe.exp().valid_field(frm, 'expense_accounts', cdn, key);
         }
     },
     account: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn],
-        account = cstr(row.account);
-        if (account.length)
-            frm._type.table.data.add(cstr(cdn), cstr(row.company), account);
+        key = 'account',
+        val = cstr(row[key]),
+        self = frm._type.is_self === key;
+        delete frm._type.is_self;
+        if (self) return;
+        frappe.exp().valid_field(frm, 'expense_accounts', cdn, key);
+        if (!val.length && frappe.exp().$isStrVal(row.company)) {
+            frappe.exp().invalid_field(frm, 'expense_accounts', cdn, key,
+                __('A valid company account is required.'))
+        } else if (
+            val.length && frm._type.table.data.has(val, 2)
+            && frm._type.table.data.idx(cdn) !== frm._type.table.data.idx(val, 2)
+        ) {
+            frappe.exp().invalid_field(frm, 'expense_accounts', cdn, key,
+                __('The company account already exist.'));
+            frm._type.is_self = key;
+            frappe.model.set_value(cdt, cdn, key, '');
+        }
+        frm._type.table.data.add(cdn, null, val);
     },
 });

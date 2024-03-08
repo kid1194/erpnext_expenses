@@ -105,42 +105,34 @@ def get_expenses_data(expenses):
 
 # [EXP Request Form]
 @frappe.whitelist()
-def search_company_expenses(
-    doctype, txt, searchfield, start, page_len, filters, as_dict=False
-):
+def search_company_expenses(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+    if filters:
+        filters = parse_json(filters)
+    
     if (
-        not filters or
-        not getattr(filters, "company", "") or
-        not isinstance(filters.get("company"), str)
+        not filters or not isinstance(filters, dict) or
+        not filters.get("company", "") or
+        not isinstance(filters["company"], str)
     ):
         return []
     
-    company = filters.get("company")
-    existing = None
-    date = None
-    if (
-        getattr(filters, "existing", "") and
-        isinstance(filters.get("existing"), (str, list))
-    ):
-        existing = filters.get("existing")
-        existing = parse_json(existing)
-        if existing and isinstance(existing, list):
-            existing = [v for v in existing if v and isinstance(v, str)]
-        else:
-            existing = None
-    
-    if (
-        getattr(filters, "date", "") and
-        isinstance(filters.get("date"), str)
-    ):
-        date = filters.get("date")
+    company = filters["company"]
+    wheres = {}
+    if filters.get("ignored", "") and isinstance(filters["ignored"], (str, list)):
+        ignored = parse_json(filters["ignored"])
+        if ignored and isinstance(ignored, list):
+            wheres["ignored"] = [v for v in ignored if v and isinstance(v, str)]
+    if filters.get("max_date", "") and isinstance(filters["max_date"], str):
+        wheres["max_date"] = filters["max_date"]
+    if filters.get("owner", "") and isinstance(filters["owner"], str):
+        wheres["owner"] = filters["owner"]
     
     if not txt or not isinstance(txt, str):
         txt = None
     
-    return search_expenses_by_company(
-        company, txt, existing, date, as_dict
-    )
+    from .expense import search_expenses_by_company
+    
+    return search_expenses_by_company(company, wheres, txt, as_dict)
 
 
 # [EXP Request Form]
@@ -167,11 +159,11 @@ def reject_request(name, reason):
 
 # [Entry]
 def get_request(name: str):
-    from .expense import get_expenses
-    
     doc = get_cached_doc("Expenses Request", name)
     if not doc or doc.status != RequestStatus.Approved:
         return None
+    
+    from .expense import get_expenses
     
     data = doc.as_dict(
         no_nulls=False,

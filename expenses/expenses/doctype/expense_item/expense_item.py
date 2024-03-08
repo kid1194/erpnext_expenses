@@ -38,7 +38,6 @@ class ExpenseItem(Document):
     
     def before_save(self):
         clear_doc_cache(self.doctype, self.name)
-        
         if not self.is_new():
             for f in self.meta.get("fields", []):
                 if self.has_value_changed(f.fieldname):
@@ -58,6 +57,7 @@ class ExpenseItem(Document):
     
     
     def after_delete(self):
+        clear_doc_cache(self.doctype, self.name)
         self.flags.emit_change = True
         self._emit_change(True)
     
@@ -67,43 +67,43 @@ class ExpenseItem(Document):
             from expenses.libs import get_type_accounts_list
             
             accounts = get_type_accounts_list(self.expense_type)
-            if not self.expense_accounts:
-                for v in accounts:
-                    self.append("expense_accounts", v)
+            if not accounts:
+                self.expense_accounts.clear()
             else:
-                accounts_len = len(accounts)
-                accounts = {v["company"]:v for v in accounts}
-                keys = ["cost", "qty"]
                 exist = []
-                for v in self.expense_accounts:
-                    if v.company not in accounts or v.company in exist:
-                        self.expense_accounts.remove(v)
-                    else:
-                        exist.append(v.company)
-                        if accounts[v.company]["account"] != v.account:
-                            v.account = accounts[v.company]["account"]
-                        for k in keys:
-                            mk = f"min_{k}"
-                            xk = f"max_{k}"
-                            va = flt(v.get(k))
-                            if va != 0:
-                                if va < 0:
-                                    v.set(k, 0)
-                                v.set(mk, 0)
-                                v.set(xk, 0)
-                            else:
-                                mv = flt(v.get(mk))
-                                xv = flt(v.get(xk))
-                                if xv < 0:
-                                    v.set(xk, 0)
-                                if mv < 0 or mv > xv:
+                if self.expense_accounts:
+                    companies = [v["company"] for v in accounts]
+                    keys = ["cost", "qty"]
+                    exist_acc = []
+                    for v in self.expense_accounts:
+                        i = companies.index(v.company)
+                        if i >= 0 and accounts[i]["account"] != v.account:
+                            v.account = accounts[i]["account"]
+                        if i < 0 or v.company in exist or v.account in exist_acc:
+                            self.expense_accounts.remove(v)
+                        else:
+                            exist.append(v.company)
+                            exist_acc.append(v.account)
+                            for k in keys:
+                                mk = f"min_{k}"
+                                xk = f"max_{k}"
+                                va = flt(v.get(k))
+                                if va != 0:
+                                    if va < 0:
+                                        v.set(k, 0)
                                     v.set(mk, 0)
+                                    v.set(xk, 0)
+                                else:
+                                    mv = flt(v.get(mk))
+                                    xv = flt(v.get(xk))
+                                    if xv < 0:
+                                        v.set(xk, 0)
+                                    if mv < 0 or mv > xv:
+                                        v.set(mk, 0)
                 
-                if accounts_len != len(self.expense_accounts):
-                    exist = [v.company for v in self.expense_accounts]
-                    for company in accounts:
-                        if company not in exist:
-                            self.append("expense_accounts", accounts[company])
+                for v in accounts:
+                    if not exist or v["company"] not in exist:
+                        self.append("expense_accounts", v)
     
     
     def _validate_name(self):
@@ -113,8 +113,7 @@ class ExpenseItem(Document):
         from expenses.libs import get_count
         
         count = get_count(self.doctype, {"name": self.name})
-        limit = 1 if not self.is_new() else 0
-        if count != limit:
+        if count != (1 if not self.is_new() else 0):
             self._error(_("The expense item \"{0}\" already exists.").format(self.name))
     
     
@@ -130,7 +129,8 @@ class ExpenseItem(Document):
     
     def _validate_accounts(self):
         if not self.expense_accounts:
-            self._error(_("At least one inherited expense account from expense type is required."))
+            self._error(_("Failed to inherit expense accounts from expense type \"{0}\".")
+                .format(self.expense_type))
     
     
     def _emit_change(self, trash=False):
@@ -145,4 +145,4 @@ class ExpenseItem(Document):
     
     
     def _error(self, msg):
-        error(msg, _("Expense Item Error"))
+        error(msg, _(self.doctype))

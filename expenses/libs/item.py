@@ -47,11 +47,7 @@ def get_type_accounts_list(type_name):
 
 # [Expense]
 def get_item_company_account(item: str, company: str):
-    from .cache import (
-        get_cached_value,
-        get_cache,
-        set_cache
-    )
+    from .cache import get_cache
     
     dt = "Expense Item"
     key = f"{item}-{company}-account-data"
@@ -63,6 +59,8 @@ def get_item_company_account(item: str, company: str):
     
     data = get_item_company_account_data(item, company)
     if not data:
+        from .cache import get_cached_value
+        
         expense_type = get_cached_value(dt, item, "expense_type")
         if not expense_type:
             return {}
@@ -81,6 +79,8 @@ def get_item_company_account(item: str, company: str):
             "min_qty": 0.0,
             "max_qty": 0.0
         })
+    
+    from .cache import set_cache
     
     set_cache(dt, key, data)
     return data

@@ -10,10 +10,12 @@ from frappe.model.document import Document
 from frappe.utils import (
     flt,
     cint,
+    cstr,
     nowdate
 )
 
 from expenses.libs import (
+    error,
     clear_doc_cache,
     get_cached_value
 )
@@ -53,6 +55,8 @@ class ExpensesEntry(Document):
             self.flags.request_status = 1
         
         self._check_change()
+        if not self.is_new() and self.has_value_changed("attachments"):
+            self._process_attachments()
     
     
     def before_submit(self):
@@ -79,17 +83,14 @@ class ExpensesEntry(Document):
     def before_update_after_submit(self):
         clear_doc_cache(self.doctype, self.name)
         for f in self.meta.get("fields", []):
-            if (
-                not cint(f.allow_on_submit) and
-                self.has_value_changed(f.fieldname)
-            ):
-                self._error(_(
-                    "The expenses entry cannot be modified after {0}."
-                ).format(_("submit") if self.docstatus.is_submitted() else _("cancel")))
+            if not cint(f.allow_on_submit) andself.has_value_changed(f.fieldname):
+                self._error(_("The expenses entry cannot be modified after {0}.")
+                    .format(_("submit") if self.docstatus.is_submitted() else _("cancel")))
                 break
     
     
     def before_cancel(self):
+        clear_doc_cache(self.doctype, self.name)
         if self.expenses_request_ref:
             self.flags.request_status = 2
         if self.docstatus.is_submitted():
@@ -97,7 +98,6 @@ class ExpensesEntry(Document):
     
     
     def on_cancel(self):
-        clear_doc_cache(self.doctype, self.name)
         if self.flags.get("request_status", 0):
             self._handle_request()
         
@@ -115,14 +115,9 @@ class ExpensesEntry(Document):
         if self.docstatus.is_submitted():
             self._error(_("A submitted expenses entry cannot be removed."))
         
+        clear_doc_cache(self.doctype, self.name)
         if self.attachments:
-            from expenses.libs import delete_attach_files
-            
-            delete_attach_files(
-                self.doctype,
-                self.name,
-                [v.file for v in self.attachments]
-            )
+            self._delete_attachments([v.file for v in self.attachments])
     
     
     def after_delete(self):
@@ -141,8 +136,7 @@ class ExpensesEntry(Document):
         if (
             insert and (
                 not self.posting_date or (
-                    self.posting_date != now and
-                    not is_moderator
+                    self.posting_date != now and not is_moderator
                 )
             )
         ):
@@ -160,6 +154,7 @@ class ExpensesEntry(Document):
         ):
             self.posting_date = now
         
+        del_refs = []
         if self.docstatus.is_draft():
             if self.company:
                 company_currency = None
@@ -188,6 +183,7 @@ class ExpensesEntry(Document):
                 if self.expenses:
                     for v in self.expenses:
                         if not v.account or flt(v.cost_in_account_currency) < 1:
+                            del_refs.append(cstr(v.name))
                             self.expenses.remove(v)
                             continue
                         
@@ -232,12 +228,23 @@ class ExpensesEntry(Document):
                         self.total_in_account_currency = flt(flt(self.total) / flt(self.exchange_rate))
         
         if self.attachments:
+            del_files = []
             exist = []
             for v in self.attachments:
-                if not v.file or v.file in exist:
+                if (
+                    not v.file or v.file in exist or (
+                        del_refs and v.expenses_entry_row_ref and
+                        v.expenses_entry_row_ref in del_refs
+                    )
+                ):
+                    if v.file:
+                        del_files.append(v.file)
                     self.attachments.remove(v)
                 else:
                     exist.append(v.file)
+            
+            if del_files:
+                self._delete_attachments(del_files)
     
     
     def _validate_expenses(self):
@@ -330,5 +337,28 @@ class ExpensesEntry(Document):
             })
     
     
+    def _process_attachments(self):
+        old = self._get_old_doc()
+        if doc and doc.attachments:
+            if not self.attachments:
+                files = None
+            else:
+                files = [v.file for v in self.attachments]
+            
+            dels = []
+            for v in doc.attachments:
+                if not files or v.file not in files:
+                    dels.append(v.file)
+            
+            if dels:
+                self._delete_attachments(dels)
+    
+    
+    def _delete_attachments(self, files):
+        from expenses.libs import delete_attach_files
+            
+        delete_attach_files(self.doctype, self.name, files)
+    
+    
     def _error(self, msg):
-        error(msg, _("Expenses Entry Error"))
+        error(msg, _(self.doctype))

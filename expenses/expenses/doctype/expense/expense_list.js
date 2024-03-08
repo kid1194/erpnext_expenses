@@ -7,7 +7,6 @@
 
 
 frappe.provide('frappe.listview_settings');
-frappe.provide('frappe.model');
 
 
 frappe.listview_settings['Expense'] = {
@@ -20,31 +19,30 @@ frappe.listview_settings['Expense'] = {
                 if (!this.is_enabled) return list.page.clear_actions_menu();
                 frappe.listview_settings.Expense.action_btn = list.page.add_actions_menu_item(
                     __('Create Request'), function() {
-                        let selected = frappe.listview_settings.Expense.list.get_checked_items(),
-                        company = null,
-                        expenses = [];
-                        if (!selected.length) return frappe.exp().error(
-                            __('Expense List Error'),
-                            __('At least one company expense must be selected in order to create an expense request.')
+                        let data = list.get_checked_items();
+                        if (!data.length) return frappe.exp().error(
+                            __(list.doctype),
+                            __('At least one company expense must be selected to create an expenses request.')
                         );
-                        for (let i = 0, l = selected.length, v; i < l; i++) {
-                            v = selected[i];
+                        var company = null, expenses = [];
+                        for (let i = 0, l = data.length, v; i < l; i++) {
+                            v = data[i];
                             if (cint(v.docstatus) !== 1) return;
                             let comp = cstr(v.company);
-                            if (!company || company === comp) expenses.push(cstr(v.name));
                             if (!company) company = comp;
+                            if (company === comp) expenses.push(cstr(v.name));
                         }
                         function callback() {
-                            frappe.listview_settings.Expense.list.clear_checked_items();
-                            frappe.exp().set_cache('expenses-to-request', expenses, 1, 'minute');
+                            list.clear_checked_items();
+                            frappe.exp().set_cache('expenses-request', expenses, 1, 'minute');
                             frappe.route_options = {company: company};
                             frappe.router.set_route('Form', 'Expenses Request');
                         }
                         if (expenses.length === selected.length) callback();
                         else frappe.confirm(
-                            __('The selected entries can only belong to one company, therefore, only entries for "{0}" will be included in the request.', [company])
-                            + '<p>' + __('Do you want to continue?') + '</p>',
-                            callback, function() { frappe.listview_settings.Expense.list.clear_checked_items(); }
+                            __('An expenses request cannot include expenses of multiple companies so, only expenses of "{0}" will be included.', [__(company)])
+                            + '<br/>' + __('Do you wish to continue?'),
+                            callback, function() { list.clear_checked_items(); }
                         );
                     },
                     true
@@ -62,23 +60,19 @@ frappe.listview_settings['Expense'] = {
         },
         status = cstr(doc.status);
         return [
-            status,
-            opts[status][0],
+            __(status), opts[status][0],
             'status,=,\'' + status + '\'|docstatus,=,' + opts[status][1]
         ];
     },
     formatters: {
         name: function(v, df, doc) {
-            let html = [],
-            party_type = cstr(doc.party_type),
-            party = cstr(doc.party),
-            paid_by = cstr(doc.paid_by);
-            if (party_type.length && party.length)
-                html.push('<strong>' + __(party_type) + ':</strong> ' + party);
-            if (paid_by.length)
-                html.push('<strong>' + __('Paid By') + ':</strong> ' + paid_by);
+            let html = [];
+            if (frappe.exp().$isStrVal(doc.party_type) && frappe.exp().$isStrVal(doc.party))
+                html.push('<strong>' + __(doc.party_type) + ':</strong> ' + doc.party);
+            if (frappe.exp().$isStrVal(doc.paid_by))
+                html.push('<strong>' + __('Paid By') + ':</strong> ' + doc.paid_by);
             return v + (html.length ? '<br/><small class="text-muted">' + html.join(' | ') + '</small>' : '');
         },
-        is_advance: function(v) { return __(cint(v) ? 'Yes' : 'No'); },
+        is_advance: function(v) { return cint(v) ? __('Yes') : __('No'); },
     },
 };

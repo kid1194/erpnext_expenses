@@ -10,13 +10,12 @@ frappe.ui.form.on('Expenses Entry', {
     onload: function(frm) {
         frappe.exp().on('ready change', function() { this.setup_form(frm); });
         frm._entry = {
-            err: __('Expenses Entry Error'),
             is_draft: false,
             is_disabled: false,
             is_moderator: false,
             is_expenses_ready: false,
             base_currency: cstr(frappe.boot.sysdefaults.currency),
-            del_files: frappe.exp().table(1),
+            del_files: frappe.exp().table(),
             qry_fn: function() { return function(doc) { return {company: cstr(doc.company)}; }; },
             get_exchange_rate: function(from, to, fn) {
                 frappe.exp().request(
@@ -27,7 +26,7 @@ frappe.ui.form.on('Expenses Entry', {
                             v = flt(v);
                             if (v < 1) v = 1;
                         }
-                        fn(v);
+                        fn.call(this, v);
                     }
                 );
             },
@@ -48,7 +47,6 @@ frappe.ui.form.on('Expenses Entry', {
             },
             update_totals: function() { frm.events.update_totals(frm); },
         };
-        
         frm._entry.is_draft = !!frm.is_new() || cint(frm.doc.docstatus) < 1;
         frm.add_fetch('mode_of_payment', 'type', 'payment_target', frm.doctype);
         if (!frm._entry.is_draft) {
@@ -62,9 +60,8 @@ frappe.ui.form.on('Expenses Entry', {
             );
             return;
         }
-        
         if (!!frm.is_new()) {
-            let req = frappe.route_options || {};
+            let req = frappe.route_options;
             if (frappe.exp().$isDataObj(req) && frappe.exp().$isStrVal(req.expenses_request_ref)) {
                 req = req.expenses_request_ref;
                 frm.set_value('expenses_request_ref', req);
@@ -73,14 +70,11 @@ frappe.ui.form.on('Expenses Entry', {
                     function(ret) {
                         if (!this.$isDataObjVal(ret))
                             return this.error(
-                                frm._entry.err,
+                                __(frm.doctype),
                                 __('Unable to get the expenses request data for "{0}".', [req])
                             );
                         
-                        frm.set_value({
-                            company: cstr(ret.company),
-                            remarks: cstr(ret.remarks)
-                        });
+                        frm.set_value({company: cstr(ret.company), remarks: cstr(ret.remarks)});
                         let keys = 'description paid_by expense_claim party_type party project'.split(' ');
                         for (let i = 0, l = ret.expenses.length, v, r; i < l; i++) {
                             v = ret.expenses[i];
@@ -96,7 +90,7 @@ frappe.ui.form.on('Expenses Entry', {
                             frm.add_child('expenses', r);
                             if (this.$isArrVal(v.attachments))
                                 for (let x = 0, y = v.attachments.length, a; x < y; x++) {
-                                    a = this.$extend({}, v.attachments[i]);
+                                    a = v.attachments[i];
                                     a.expenses_entry_row_ref = cstr(r.name);
                                     frm.add_child('attachments', a);
                                 }
@@ -110,14 +104,12 @@ frappe.ui.form.on('Expenses Entry', {
                 );
             }
         }
-        
-        frm.set_query('company', {filters: {is_group: 0}});
-        frm.set_query('mode_of_payment', {filters: {type: ['in', ['Cash', 'Bank']]}});
+        frm.set_query('company', function(doc) { return {filters: {is_group: 0}}; });
+        frm.set_query('mode_of_payment', function(doc) { return {filters: {type: ['in', ['Cash', 'Bank']]}}; });
         let keys = ['default_project', 'default_cost_center', 'project', 'cost_center'];
-        for (let i = 0, l = keys.length, fn; i < l; i++) {
-            fn = frm._entry.qry_fn();
-            frm.set_query(k, i > 1 ? 'expenses' : fn, i > 1 ? fn : null);
-        }
+        for (let i = 0, l = keys.length; i < l; i++)
+            frm.set_query(k, i > 1 ? 'expenses' : frm._entry.qry_fn(), i > 1 ? frm._entry.qry_fn() : null);
+        
         frappe.exp().request(
             'entry_form_setup',
             null,
@@ -149,17 +141,16 @@ frappe.ui.form.on('Expenses Entry', {
         frm._entry.is_expenses_ready = true;
         frm.get_field('expenses').grid.add_custom_button(
             __('Update Exchange Rates'), function() {
-                let fields = [],
-                exist = [];
+                let fields = [], exist = [];
                 for (let i = 0, l = frm.doc.expenses.length, v, k; i < l; i++) {
                     v = frm.doc.expenses[i];
                     k = cstr(v.account_currency);
-                    if (exist.indexOf(k) >= 0) continue;
+                    if (exist.includes(k)) continue;
                     exist.push(k);
                     fields.push({
                         fieldname: k + '_ex',
                         fieldtype: 'Float',
-                        label: frappe.scrub(k).toLowerCase(),
+                        label: __(frappe.scrub(k).toLowerCase()),
                         precision: '9',
                         reqd: 1,
                         bold: 1,
@@ -174,8 +165,7 @@ frappe.ui.form.on('Expenses Entry', {
                             v = frm.doc.expenses[i];
                             cdn = cstr(v.name);
                             key = cstr(v.account_currency);
-                            if (ret[key] == null) continue;
-                            frm.model.set_value(
+                            if (ret[key] != null) frm.model.set_value(
                                 'Expenses Entry Details', cdn,
                                 'exchange_rate', flt(ret[key])
                             );
@@ -190,31 +180,26 @@ frappe.ui.form.on('Expenses Entry', {
         );
     },
     company: function(frm) {
-        if (!cstr(frm.doc.company).length) frm.set_value('mode_of_payment', '');
+        if (!frappe.exp().$isStrVal(frm.doc.company)) frm.set_value('mode_of_payment', '');
     },
     mode_of_payment: function(frm) {
-        var mop = cstr(frm.doc.mode_of_payment);
-        if (!mop.length) {
-            frm.set_value({
-                payment_account: '',
-                payment_target: '',
-                payment_currency: frm._entry.base_currency
-            });
-            return;
-        }
+        var val = cstr(frm.doc.mode_of_payment);
+        if (!val.length) return frm.set_value({
+            payment_account: '',
+            payment_target: '',
+            payment_currency: frm._entry.base_currency
+        });
         frappe.exp().request(
             'get_mode_of_payment_data',
             {
-                mode_of_payment: mop,
+                mode_of_payment: val,
                 company: cstr(frm.doc.company),
             },
             function(ret) {
-                if (!this.$isDataObjVal(ret))
-                    return this.error(
-                        frm._entry.err,
-                        __('Unable to get the mode of payment data of {0} for {1}', [mop, cstr(frm.doc.company)])
-                    );
-                
+                if (!this.$isDataObjVal(ret)) return this.error(
+                    __(frm.doctype), __('Unable to get the mode of payment data of {0} for {1}',
+                        [val, cstr(frm.doc.company)])
+                );
                 frm._entry.base_currency = cstr(ret.company_currency);
                 frm.set_value({
                     payment_account: cstr(ret.account),
@@ -230,41 +215,41 @@ frappe.ui.form.on('Expenses Entry', {
         else frm.events.update_totals(frm);
     },
     validat: function(frm) {
-        if (!cstr(frm.doc.company).length) {
+        if (!frappe.exp().$isStrVal(frm.doc.company)) {
             frappe.exp()
                 .focus(frm, 'company')
-                .error(frm._entry.err, __('A valid company is required.'));
+                .error(__(frm.doctype), __('A valid company is required.'));
             return false;
         }
-        if (!cstr(frm.doc.mode_of_payment).length) {
+        if (!frappe.exp().$isStrVal(frm.doc.mode_of_payment)) {
             frappe.exp()
                 .focus(frm, 'mode_of_payment')
-                .error(frm._entry.err, __('A valid mode of payment is required.'));
+                .error(__(frm.doctype), __('A valid mode of payment is required.'));
             return false;
         }
-        if (!cstr(frm.doc.posting_date).length) {
+        if (!frappe.exp().$isStrVal(frm.doc.posting_date)) {
             frappe.exp()
                 .focus(frm, 'posting_date')
-                .error(frm._entry.err, __('A valid posting date is required.'));
+                .error(__(frm.doctype), __('A valid posting date is required.'));
             return false;
         }
-        if (!(frm.doc.expenses || []).length) {
+        if (!frappe.exp().$isArrVal(frm.doc.expenses)) {
             frappe.exp()
                 .focus(frm, 'expenses')
-                .error(frm._entry.err, __('At least on valid expense is required.'));
+                .error(__(frm.doctype), __('At least on valid expense is required.'));
             return false;
         }
         if (cstr(frm.doc.payment_target) === 'Bank') {
-            if (!cstr(frm.doc.payment_reference).length) {
+            if (!frappe.exp().$isStrVal(frm.doc.payment_reference)) {
                 frappe.exp()
                     .focus(frm, 'payment_reference')
-                    .error(frm._entry.err, __('A valid payment reference is required.'));
+                    .error(__(frm.doctype), __('A valid payment reference is required.'));
                 return false;
             }
-            if (!cstr(frm.doc.clearance_date).length) {
+            if (!frappe.exp().$isStrVal(frm.doc.clearance_date)) {
                 frappe.exp()
                     .focus(frm, 'clearance_date')
-                    .error(frm._entry.err, __('A valid reference / clearance date is required.'));
+                    .error(__(frm.doctype), __('A valid reference/clearance date is required.'));
                 return false;
             }
         }
@@ -275,8 +260,8 @@ frappe.ui.form.on('Expenses Entry', {
                 'delete_attach_files',
                 {
                     doctype: cstr(frm.doctype),
-                    name: cstr(frm.doc.name || frm.docname),
-                    files: frm._entry.del_files.col(1),
+                    name: cstr(frm.docname),
+                    files: frm._entry.del_files.col(),
                 },
                 function() { frm._entry.del_files.clear(); }
             );
@@ -297,18 +282,14 @@ frappe.ui.form.on('Expenses Entry', {
                 if (from.indexOf(curr) < 0) from.push(curr);
             }
         }
-        frm._entry.get_exchange_rate(from, base, frappe.exp().$fn(function(rates) {
+        frm._entry.get_exchange_rate(from, base, function(rates) {
             if (!this.$isDataObjVal(rates)) return;
-            
             function setter(vals, rate) {
                 for (let i = 0, l = vals.length, v; i < l; i++) {
                     v = vals[i];
                     if (rate > v[1]) {
                         if (!v[0]) frm.set_value('exchange_rate', rate);
-                        else frm.model.set_value(
-                            'Expenses Entry Details', v[0],
-                            'exchange_rate', rate
-                        );
+                        else frm.model.set_value('Expenses Entry Details', v[0], 'exchange_rate', rate);
                     }
                 }
             }
@@ -321,7 +302,7 @@ frappe.ui.form.on('Expenses Entry', {
                 setter(vals, rate);
             }
             frm.refresh_field('expenses');
-        }));
+        });
     },
     update_totals: function(frm) {
         let total = 0;
@@ -366,14 +347,12 @@ frappe.ui.form.on('Expense Attachment', {
     before_attachments_remove: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn],
         file = cstr(row.file);
-        if (cstr(row.expenses_entry_row_ref).length)
-            frappe.exp().error(frm._entry.err, __('Removing attachments is not allowed.'));
-        else if (file.length)
-            frm._entry.del_files.add(cstr(cdn), file);
+        if (frappe.exp().$isStrVal(row.expenses_entry_row_ref))
+            frappe.exp().error(__(frm.doctype), __('Removing attachments is not allowed.'));
+        else if (file.length) frm._entry.del_files.add(file);
     },
     file: function(frm, cdt, cdn) {
         let file = cstr(locals[cdt][cdn].file);
-        if (file.length)
-            frm._entry.del_files.del(cstr(cdn));
+        if (file.length) frm._entry.del_files.del(file);
     },
 });

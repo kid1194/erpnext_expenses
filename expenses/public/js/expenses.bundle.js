@@ -44,20 +44,6 @@ window.addEventListener('load', function() {
         }
     }());
     (function() {
-        function onload() {
-            window.frappe_get_base_url = frappe.urllib.get_base_url;
-            window.frappe_get_full_url = frappe.urllib.get_full_url;
-        }
-        if (
-            !$isFn(window.cstr) || !$isFn(window.cint)
-            || !$isFn(window.flt) || frappe.urllib == null
-            || typeof frappe.urllib !== 'object'
-            || !$isFn(frappe.urllib.get_base_url)
-            || !$isFn(frappe.urllib.get_full_url)
-        ) frappe.require(['/assets/levelup/js/polyfill/frappe.bundle.js'], onload);
-        else onload();
-    }());
-    (function() {
         Array.prototype.remove = function(v) {
             v = this.indexOf(v);
             if (v >= 0) return this.splice(v, 1);
@@ -209,10 +195,9 @@ class LevelUpBase extends LevelUpCore {
     $alert(t, m, d, i, f) {
         m == null && (m = t) && (t = null);
         if (f) this._err = 1;
-        (f ? frappe.throw : frappe.msgprint)({
-            title: this._pfx + ': ' + (this.$isStrVal(t) ? t : d),
-            indicator: i, message: '' + m,
-        });
+        t = {title: this.$isStrVal(t) ? t : this._mod + ' ' + d, indicator: i};
+        this.$isDataObj(m) ? (t = this.$extend(m, t)) : (t.message = '' + m);
+        (f ? frappe.throw : frappe.msgprint)(t);
         return this;
     }
     debug(t, m, a) { return this._prod ? this : this.$alert(t, m, a, __('Debug'), 'gray'); }
@@ -612,8 +597,6 @@ class LevelUp extends LevelUpBase {
             fs && fs.remove(k);
             let f = frm.get_field(k);
             if (!f || !f.df || !!cint(f.df.hidden) || f.df.fieldtype !== 'Table' || !f.grid) return;
-            f.df.__cannot_delete_rows != null && (f.df.cannot_delete_rows = f.df.__cannot_delete_rows);
-            delete f.df.__cannot_delete_rows;
             f.df.__in_place_edit != null && (f.df.in_place_edit = f.df.__in_place_edit);
             delete f.df.__in_place_edit;
             f = f.grid;
@@ -623,78 +606,94 @@ class LevelUp extends LevelUpBase {
             delete f.__static_rows;
             f.__sortable_status != null && (f.sortable_status = f.__sortable_status);
             delete f.__sortable_status;
-            f.__header_row != null && f.header_row.configure_columns_button.show();
-            delete f.__header_row;
-            f.__header_search != null && f.header_search.wrapper.show();
-            delete f.__header_search;
             this._reload_field(frm, k);
+            f.__header_row != null && f.header_row.configure_columns_button.toggleClass('hidden', 0).children().toggleClass('hidden', 0);
+            delete f.__header_row;
+            f.__header_search != null && f.header_search.wrapper.toggleClass('hidden', 0);
+            delete f.__header_search;
+            if (f.__editable && f.grid_rows && f.grid_rows.length)
+                for (let i = 0, l = f.grid_rows.length; i < l; i++) {
+                    f.grid_rows[i].open_form_button.toggleClass('hidden', 0).children().toggleClass('hidden', 0);
+                    f.grid_rows[i].refresh();
+                }
+            delete f.__header_search;
             f.wrapper && this._toggle_buttons(f, 1, !!fs);
         } catch(_) {}
     }
-    disable_table(frm, key, edit) {
-        (frm = this.get_form(frm)) && this._disable_table(frm, key, edit);
+    disable_table(frm, key, opts) {
+        !this.$isDataObj(opts) && (opts = null);
+        (frm = this.get_form(frm)) && this._disable_table(frm, key, opts);
         return this;
     }
-    _disable_table(frm, k, e) {
+    _disable_table(frm, k, o) {
         try {
-            let fs = this.is_self_form(frm) && (frm[this._tmp] || {}).fields;
-            if (fs && fs.includes(k)) return;
-            let f = frm.get_field(k);
+            let fs = this.is_self_form(frm) && (frm[this._tmp] || {}).fields,
+            f = frm.get_field(k);
             if (!f || !f.df || !!cint(f.df.hidden) || f.df.fieldtype !== 'Table' || !f.grid) return;
-            fs && fs.push(k);
-            f.df.__cannot_delete_rows = f.df.cannot_delete_rows;
-            f.df.cannot_delete_rows = 1;
-            f.df.__in_place_edit = f.df.in_place_edit;
+            fs && !fs.includes(k) && fs.push(k);
+            f.df.__in_place_edit !== f.df.in_place_edit && (f.df.__in_place_edit = f.df.in_place_edit);
             f.df.in_place_edit = false;
             f = f.grid;
             if (f.meta) {
-                f.__editable_grid = f.meta.editable_grid;
+                f.__editable_grid !== f.meta.editable_grid && (f.__editable_grid = f.meta.editable_grid);
                 f.meta.editable_grid = true;
             }
-            if (!e) {
-                f.__static_rows = f.static_rows;
-                f.static_rows = true;
+            f.__static_rows !== f.static_rows && (f.__static_rows = f.static_rows);
+            f.static_rows = true;
+            if (!o || !o.sortable) {
+                f.__sortable_status !== f.sortable_status && (f.__sortable_status = f.sortable_status);
+                f.sortable_status = false;
             }
-            f.__sortable_status = f.sortable_status;
-            f.sortable_status = false;
+            this._reload_field(frm, k);
             if (
-                f.header_row && f.header_row.configure_columns_button
-                && f.header_row.configure_columns_button.is(':visible')
+                (!o || !o.configurable)
+                && f.header_row && f.header_row.configure_columns_button
+                && !f.header_row.configure_columns_button.hasClass('hidden')
             ) {
                 f.__header_row = 1;
-                f.header_row.configure_columns_button.hide();
+                f.header_row.configure_columns_button.toggleClass('hidden', 1).children().toggleClass('hidden', 1);
+                f.header_row.configure_columns_button.off('click');
             }
             if (
                 f.header_search && f.header_search.wrapper
-                && f.header_search.wrapper.is(':visible')
+                && !f.header_search.wrapper.hasClass('hidden')
             ) {
                 f.__header_search = 1;
-                f.header_row.wrapper.hide();
+                f.header_search.wrapper.toggleClass('hidden', 1);
             }
-            this._reload_field(frm, k);
-            f.wrapper && this._toggle_buttons(f, 0, !!fs);
+            if ((!o || !o.editable) && f.grid_rows && f.grid_rows.length) {
+                f.__editable = 1;
+                for (let i = 0, l = f.grid_rows.length, r; i < l; i++) {
+                    r = f.grid_rows[i];
+                    r.open_form_button.toggleClass('hidden', 1).children().toggleClass('hidden', 1);
+                    r.row.off('click') && r.row_index.off('click') && r.open_form_button.off('click') && r.hide_form();
+                }
+            }
+            f.wrapper && this._toggle_buttons(f, 0, !!fs, o && o.buttons);
         } catch(_) {}
     }
-    toggle_table_buttons(frm, key, show) {
+    toggle_table_buttons(frm, key, show, btns) {
         if (!(frm = this.get_form(frm))) return this;
+        !this.$isArrVal(btns) && (btns = null);
         try {
             let f = frm.get_field(key);
             if (!f || !f.df || f.df.fieldtype !== 'Table' || !f.grid) return this;
-            f.wrapper && this._toggle_buttons(f.grid, show);
+            f.wrapper && this._toggle_buttons(f.grid, show, 0, btns);
         } catch(_) {}
         return this;
     }
-    _toggle_buttons(grid, show, self) {
+    _toggle_buttons(g, s, m, o) {
         let d = {
-            __add_row: '.grid-add-row', __add_multi_row: '.grid-add-multiple-rows',
-            __download: '.grid-download', _upload: '.grid-upload',
-        }, b;
+            add: '.grid-add-row', multi_add: '.grid-add-multiple-rows',
+            download: '.grid-download', upload: '.grid-upload',
+        }, x, b;
         for (let k in d) {
-            if (show && self && grid[k] == null) continue;
-            b = grid.wrapper.find(d[k]);
-            if (!b.length) continue;
-            show ? delete grid[k] : (grid[k] = 1);
-            show ? b.show() : b.hide();
+            if (o && !o.includes(k)) continue;
+            x = '__' + k;
+            b = g.wrapper.find(d[k]);
+            if (!b.length || b.hasClass('hidden') === (m && g[x] == s)) continue;
+            s ? delete g[x] : (g[x] = 1);
+            b.toggleClass('hidden', !s);
         }
     }
     _set_field_desc(f, m) {
@@ -762,10 +761,10 @@ class LevelUp extends LevelUpBase {
 }
 
 
-class ExpensesTable {
+class ExpenseTable {
     constructor(n) {
         this._c = [];
-        this._n = (n || 1) + 1;
+        this._n = (n || 0) + 1;
         for (let x = 0; x < this._n; x++) this._c[x] = [];
     }
     get length() { return this._c[0].length; }
@@ -775,8 +774,9 @@ class ExpensesTable {
     add() {
         let a = arguments,
         i = this.idx(a[0]);
-        if (i >= 0) for (let x = 1; x < this._n; x++) { this._c[x][i] = a[x]; }
-        else for (let x = 0; x < this._n; x++) { this._c[x].push(a[x]); }
+        if (i >= 0) for (let x = 1; x < this._n; x++) {
+            (a[x] != null || this._c[x][i] == null) && (this._c[x][i] = a[x]);
+        } else for (let x = 0; x < this._n; x++) { this._c[x].push(a[x]); }
         return this;
     }
     del(v, i) {
@@ -866,7 +866,7 @@ class Expenses extends LevelUp {
         try { sessionStorage.removeItem(this._real + key); } catch(_) {}
         return this;
     }
-    table(cols) { return new ExpensesTable(cols); }
+    table(cols) { return new ExpenseTable(cols); }
 }
 
 

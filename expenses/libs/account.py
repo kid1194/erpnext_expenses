@@ -16,26 +16,21 @@ __FIELD__ = "expense_accounts"
 
 # [Type]
 def filter_types_with_accounts(qry, doc):
-    from pypika.functions import IfNull
-    
-    from frappe.query_builder.functions import Count
-    
     dt = "Expense Type"
     pdoc = frappe.qb.DocType(dt)
     adoc = frappe.qb.DocType(f"{dt} Account")
     fqry = (
         frappe.qb.from_(adoc)
-        .select(Count(adoc.parent))
-        .where(adoc.parent == pdoc.name)
+        .select(adoc.parent)
+        .distinct()
         .where(adoc.parenttype == dt)
         .where(adoc.parentfield == __FIELD__)
-        .limit(1)
     )
     data = (
         frappe.qb.from_(pdoc)
         .select(pdoc.lft, pdoc.rgt)
         .where(pdoc.disabled == 0)
-        .where(IfNull(fqry, 0) > 0)
+        .where(pdoc.name.isin(fqry))
     ).run(as_dict=True)
     if not data or not isinstance(data, list):
         return qry
@@ -84,11 +79,7 @@ def get_types_with_accounts():
 
 # [Item]
 def get_type_accounts(type_name: str, defs: dict=None):
-    from .cache import (
-        get_cached_value,
-        get_cache,
-        set_cache
-    )
+    from .cache import get_cache
     
     dt = "Expense Type"
     key = f"{type_name}-expense-accounts"
@@ -96,7 +87,11 @@ def get_type_accounts(type_name: str, defs: dict=None):
     if data and isinstance(data, list):
         return data
     
+    from .cache import get_cached_value
+    
     type_data = get_cached_value(dt, type_name, ["lft", "rgt"])
+    if not type_data:
+        return None
     
     fdoc = frappe.qb.DocType(dt).as_("parent")
     fqry = (
@@ -128,6 +123,8 @@ def get_type_accounts(type_name: str, defs: dict=None):
     if not data or not isinstance(data, list):
         return None
     
+    from .cache import set_cache
+    
     exists = []
     for v in data:
         if v["company"] in exists:
@@ -147,6 +144,8 @@ def get_type_company_account_data(parent: str, company: str):
     
     dt = "Expense Type"
     type_data = get_cached_value(dt, parent, ["lft", "rgt"])
+    if not type_data:
+        return None
     
     fdoc = frappe.qb.DocType(dt).as_("parent")
     fqry = (
@@ -184,7 +183,7 @@ def get_type_company_account_data(parent: str, company: str):
 
 
 # [Item]
-def get_items_with_company_account_query(company):
+def get_items_with_company_account_query(company: str):
     dt = "Expense Item"
     doc = frappe.qb.DocType(f"{dt} Account")
     pdoc = frappe.qb.DocType(dt).as_("parent")

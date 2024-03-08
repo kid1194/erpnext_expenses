@@ -96,6 +96,7 @@ class ExpenseType(NestedSet):
     
     
     def after_delete(self):
+        clear_doc_cache(self.doctype, self.name)
         self._emit_change()
     
     
@@ -225,4 +226,4 @@ class ExpenseType(NestedSet):
     
     
     def _error(self, msg):
-        error(msg, _("Expense Type Error"))
+        error(msg, _(self.doctype))

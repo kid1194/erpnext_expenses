@@ -141,10 +141,7 @@ def get_expenses(names: list):
             doc.project
         )
         .where(doc.name.isin(names))
-        .where(Criterion.any([
-            doc.status == ExpenseStatus.Pending,
-            doc.status == ExpenseStatus.Requested
-        ]))
+        .where(doc.status.isin([ExpenseStatus.Pending, ExpenseStatus.Requested]))
         #.where(doc.owner == frappe.session.user)
         .where(doc.docstatus == 1)
     ).run(as_dict=True)
@@ -163,10 +160,7 @@ def get_expenses(names: list):
 
 
 # [Request]
-def search_expenses_by_company(
-    company: str, search: str=None, existing: list=None,
-    date: str=None, as_dict=False
-):
+def search_expenses_by_company(company, filters, search=None, as_dict=False):
     from .search import filter_search, prepare_data
     
     dt = "Expense"
@@ -183,16 +177,15 @@ def search_expenses_by_company(
         )
         .where(doc.company == company)
         .where(doc.status == ExpenseStatus.Pending)
-        .where(doc.owner == frappe.session.user)
         .where(doc.docstatus == 1)
     )
     qry = filter_search(doc, qry, dt, search, doc.name, "name")
-    
-    if existing:
-        qry = qry.where(doc.name.notin(existing))
-    if date:
-        qry = qry.where(doc.required_by.lte(date))
-    
+    if "ignored" in filters:
+        qry = qry.where(doc.name.notin(filters["ignored"]))
+    if "max_date" in filters:
+        qry = qry.where(doc.required_by.lte(filters["max_date"]))
+    if "owner" in filters:
+        qry = qry.where(doc.owner == filters["owner"])
     data = qry.run(as_dict=as_dict)
     data = prepare_data(data, dt, "name", search, as_dict)
     return data
