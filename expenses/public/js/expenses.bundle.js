@@ -51,10 +51,10 @@
                 v = this.indexOf(v);
                 if (v >= 0) return this.splice(v, 1);
             };
-            Array.prototype._clear = function() {
+            /*Array.prototype._clear = function() {
                 if (this.length) this.splice(0, this.length);
                 return this;
-            };
+            };*/
             XMLHttpRequest.prototype._clear = function() {
                 this.onload = this.onerror = this.onabort = this.ontimeout = null;
             };
