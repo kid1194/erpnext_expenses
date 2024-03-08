@@ -47,15 +47,15 @@
             }
         }());
         (function() {
-            /*Array.prototype._remove = function(v) {
+            Array.prototype.del = function(v) {
                 v = this.indexOf(v);
-                if (v >= 0) return this.splice(v, 1);
-            };*/
-            /*Array.prototype._clear = function() {
+                if (v >= 0) this.splice(v, 1);
+            };
+            Array.prototype.clear = function() {
                 if (this.length) this.splice(0, this.length);
                 return this;
-            };*/
-            XMLHttpRequest.prototype._clear = function() {
+            };
+            XMLHttpRequest.prototype.clear = function() {
                 this.onload = this.onerror = this.onabort = this.ontimeout = null;
             };
         }());
@@ -239,7 +239,7 @@ class LevelUpBase extends LevelUpCore {
         !opts.crossDomain && xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         for (let k in opts.headers) this.$hasProp(k, opts.headers) && xhr.setRequestHeader(k, opts.headers[k]);
         xhr.onload = this.$fn(function() {
-            xhr._clear();
+            xhr.clear();
             let c = xhr.status === 0 ? 200 : xhr.status;
             if (c < 200 || c >= 300) return xhr.throw();
             success && success(this.$parseJson(xhr.responseText, xhr.responseText), c);
@@ -248,7 +248,7 @@ class LevelUpBase extends LevelUpCore {
             let m = this.$isStrVal(xhr.statusText) ? __(xhr.statusText) : __('The ajax request sent failed.');
             error ? error({message: m, code: xhr.status === 0 ? 200 : xhr.status}) : this.error(m);
         });
-        xhr.onabort = xhr.onerror = xhr.ontimeout = function() { xhr._clear(); xhr.abort(); xhr.throw(); };
+        xhr.onabort = xhr.onerror = xhr.ontimeout = function() { xhr.clear(); xhr.abort(); xhr.throw(); };
         try { xhr.send(this._ajax_data(opts.data, obj)); } catch(e) {
             error ? error(e) : this.error(e.message);
             if (this._err) throw e;
@@ -562,7 +562,7 @@ class LevelUp extends LevelUpBase {
             if (o && !o.fields.includes(fk)) return;
             let f = this._get_field(frm, k, n, ck);
             if (!f || !f.df || !!cint(f.df.hidden) || !this._is_field(f.df.fieldtype)) return;
-            o && o.fields._remove(fk);
+            o && o.fields.del(fk);
             n == null && frm.set_df_property(k, 'read_only', 0);
             if (n == null) return this._toggle_translatable(f, 1);
             f = this._get_field(frm, k, n);
@@ -600,7 +600,7 @@ class LevelUp extends LevelUpBase {
         try {
             let fs = this.is_self_form(frm) && (frm[this._tmp] || {}).fields;
             if (fs && !fs.includes(k)) return;
-            fs && fs._remove(k);
+            fs && fs.del(k);
             let f = frm.get_field(k);
             if (!f || !f.df || !!cint(f.df.hidden) || f.df.fieldtype !== 'Table' || !f.grid) return;
             f.df.__in_place_edit != null && (f.df.in_place_edit = f.df.__in_place_edit);
@@ -796,7 +796,7 @@ class ExpenseTable {
         return r;
     }
     clear() {
-        for (let x = 0; x < this._n; x++) this._c[x] && this._c[x]._clear();
+        for (let x = 0; x < this._n; x++) this._c[x] && this._c[x].clear();
         return this;
     }
 }
