@@ -21,20 +21,35 @@ def filter_types_with_accounts(qry, doc):
     from frappe.query_builder.functions import Count
     
     dt = "Expense Type"
+    pdoc = frappe.qb.DocType(dt)
     adoc = frappe.qb.DocType(f"{dt} Account")
-    pdoc = frappe.qb.DocType(dt).as_("parent")
     fqry = (
         frappe.qb.from_(adoc)
-        .select(Count(adoc.parent).distinct())
-        .left_join(pdoc)
-        .on(pdoc.name == adoc.parent)
+        .select(Count(adoc.parent))
+        .where(adoc.parent == pdoc.name)
         .where(adoc.parenttype == dt)
         .where(adoc.parentfield == __FIELD__)
-        .where(pdoc.lft.lte(doc.lft))
-        .where(pdoc.rgt.gte(doc.rgt))
         .limit(1)
     )
-    return qry.where(IfNull(fqry, 0) > 0)
+    data = (
+        frappe.qb.from_(pdoc)
+        .select(pdoc.lft, pdoc.rgt)
+        .where(pdoc.disabled == 0)
+        .where(IfNull(fqry, 0) > 0)
+    ).run(as_dict=True)
+    if not data or not isinstance(data, list):
+        return qry
+    
+    from pypika.terms import Criterion
+        
+    filters = []
+    for v in data:
+        filters.append(Criterion.all([
+            doc.lft.gte(v["lft"]),
+            doc.rgt.lte(v["rgt"])
+        ]))
+    
+    return qry.where(Criterion.any(filters))
 
 
 # []
