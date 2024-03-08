@@ -135,6 +135,7 @@ frappe.ui.form.on('Expense Type', {
                     r = frm.add_child('expense_accounts', {company: v.company, account: v.account});
                     frm._type.table.data.add(cstr(r.name), v.company, v.account);
                 }
+                if (x) frm.refresh_field('expense_accounts');
                 frappe.show_alert({
                     indicator: x ? 'green' : 'blue',
                     message: x ? __('Companies accounts has been imported successfully.')

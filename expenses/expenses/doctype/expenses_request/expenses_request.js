@@ -112,7 +112,10 @@ frappe.ui.form.on('Expenses Request', {
         let val = cstr(frm.doc.company);
         if (val !== frm._request.company) {
             frm._request.company = val;
-            frappe.exp().$isArrVal(frm.doc.expenses) && frm.clear_table('expenses');
+            if (frappe.exp().$isArrVal(frm.doc.expenses)) {
+                frm.clear_table('expenses');
+                frm.refresh_field('expenses');
+            }
         }
     },
     posting_date: function(frm) {

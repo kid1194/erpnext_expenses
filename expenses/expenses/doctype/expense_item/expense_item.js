@@ -75,6 +75,7 @@ frappe.ui.form.on('Expense Item', {
                     v = frm.add_child('expense_accounts', ret[i]);
                     frm._item.table.add(cstr(v.name), cstr(v.company), cstr(v.account));
                 }
+                frm.refresh_field('expense_accounts');
             },
             function(e) {
                 this.error(
