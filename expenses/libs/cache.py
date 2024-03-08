@@ -60,7 +60,7 @@ def get_cached_value(dt: str, name: str, field):
     values = {}
     for f in field:
         if f and isinstance(f, str):
-            values[f] = data.get(f)
+            values[f] = doc.get(f)
     
     if not values:
         return None
