@@ -14,7 +14,9 @@ frappe.ui.form.on('Expense Item', {
             old_type: null,
             sync_timeout: null,
         };
-        frm.set_query('expense_type', {query: frappe.exp().get_method('search_item_types')});
+        frm.set_query('expense_type', function(doc) {
+            return {query: frappe.exp().get_method('search_item_types')};
+        });
         frappe.exp().disable_table(frm, 'expense_accounts', 1);
         if (!!frm.is_new()) return;
         frm._item.old_type = cstr(frm.doc.expense_type);
@@ -26,7 +28,7 @@ frappe.ui.form.on('Expense Item', {
         if (!type.length) return frm.events.enqueue_accounts_sync(frm, 1);
         if (frm._item.old_type === type) return;
         frm._item.old_type = type;
-        frm.events.enqueue_accounts_sync();
+        frm.events.enqueue_accounts_sync(frm);
     },
     validate: function(frm) {
         frm.events.update_expense_accounts(frm);
