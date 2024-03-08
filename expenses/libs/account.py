@@ -19,12 +19,11 @@ def filter_types_with_accounts(qry, doc):
     from pypika.functions import IfNull
     
     from frappe.query_builder.functions import Count
-    from frappe.query_builder.terms import SubQuery
     
     dt = "Expense Type"
     adoc = frappe.qb.DocType(f"{dt} Account")
     pdoc = frappe.qb.DocType(dt).as_("parent")
-    fqry = SubQuery(
+    fqry = (
         frappe.qb.from_(adoc)
         .select(Count(adoc.parent).distinct())
         .left_join(pdoc)
@@ -33,6 +32,7 @@ def filter_types_with_accounts(qry, doc):
         .where(adoc.parentfield == __FIELD__)
         .where(pdoc.lft.lte(doc.lft))
         .where(pdoc.rgt.gte(doc.rgt))
+        .limit(1)
     )
     return qry.where(IfNull(fqry, 0) > 0)
 
