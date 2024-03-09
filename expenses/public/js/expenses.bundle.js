@@ -6,65 +6,55 @@
 */
 
 
-(function() {
-    function onload() {
-        //window.removeEventListener('load', onload);
-        //$(document).off('ready', onload);
-        function $isFn(v) { return typeof v === 'function'; }
-        (function() {
-            let id = 'core-polyfill';
-            function onload() {
-                Promise.wait = function(ms) {
-                    return new Promise(function(resolve) {
-                        window.setTimeout(resolve, ms);
-                    });
-                };
-                Promise.prototype.timeout = function(ms) {
-                    return Promise.race([
-                        this,
-                        Promise.wait(ms).then(function() { throw new Error('Time out'); })
-                    ]);
-                };
-            }
-            if (
-                $isFn(String.prototype.trim) && $isFn(String.prototype.includes)
-                && $isFn(String.prototype.startsWith) && $isFn(String.prototype.endsWith)
-                && $isFn(Array.prototype.includes) && $isFn(Function.prototype.bind)
-                && $isFn(window.Promise)
-            ) onload();
+$(document).ready(function() {
+    function $isFn(v) { return typeof v === 'function'; }
+    try {
+        let id = 'core-polyfill';
+        function onload() {
+            Promise.wait = function(ms) {
+                return new Promise(function(resolve) {
+                    window.setTimeout(resolve, ms);
+                });
+            };
+            Promise.prototype.timeout = function(ms) {
+                return Promise.race([
+                    this,
+                    Promise.wait(ms).then(function() { throw new Error('Time out'); })
+                ]);
+            };
+        }
+        if (
+            $isFn(String.prototype.trim) && $isFn(String.prototype.includes)
+            && $isFn(String.prototype.startsWith) && $isFn(String.prototype.endsWith)
+            && $isFn(Array.prototype.includes) && $isFn(Function.prototype.bind)
+            && $isFn(window.Promise)
+        ) onload();
+        else {
+            let $el = document.getElementById(id);
+            if (!!$el) onload();
             else {
-                let $el = document.getElementById(id);
-                if (!!$el) onload();
-                else {
-                    $el = document.createElement('script');
-                    $el.id = id;
-                    $el.src = 'https://polyfill.io/v3/polyfill.min.js?features=String.prototype.trim%2CString.prototype.includes%2CString.prototype.startsWith%2CString.prototype.endsWith%2CArray.prototype.includes%2CFunction.prototype.bind%2CPromise';
-                    $el.type = 'text/javascript';
-                    $el.async = true;
-                    $el.onload = onload;
-                    document.getElementsByTagName('head')[0].appendChild($el);
-                }
+                $el = document.createElement('script');
+                $el.id = id;
+                $el.src = 'https://polyfill.io/v3/polyfill.min.js?features=String.prototype.trim%2CString.prototype.includes%2CString.prototype.startsWith%2CString.prototype.endsWith%2CArray.prototype.includes%2CFunction.prototype.bind%2CPromise';
+                $el.type = 'text/javascript';
+                $el.async = true;
+                $el.onload = onload;
+                document.getElementsByTagName('head')[0].appendChild($el);
             }
-        }());
-        (function() {
-            try {
-                Array.prototype.remove = function(v) {
-                    v = this.indexOf(v);
-                    if (v >= 0) return this.splice(v, 1);
-                };
-                Array.prototype.clear = function() {
-                    if (this.length) this.splice(0, this.length);
-                    return this;
-                };
-                XMLHttpRequest.prototype.clear = function() {
-                    this.onload = this.onerror = this.onabort = this.ontimeout = null;
-                };
-            } catch(e) { console.error(e.message); }
-        }());
-    }
-    //window.addEventListener('load', onload, {capture: true, once: true, passive: true});
-    $(document).ready(onload);
-}());
+        }
+        Array.prototype.remove = function(v) {
+            v = this.indexOf(v);
+            if (v >= 0) return this.splice(v, 1);
+        };
+        Array.prototype.clear = function() {
+            if (this.length) this.splice(0, this.length);
+            return this;
+        };
+        XMLHttpRequest.prototype.clear = function() {
+            this.onload = this.onerror = this.onabort = this.ontimeout = null;
+        };
+    } catch(e) { alert(e.message); }
+});
 
 
 class LevelUpCore {
