@@ -860,14 +860,6 @@ $(document).ready(function() {
                 document.getElementsByTagName('head')[0].appendChild($el);
             }
         }
-        Array.prototype.remove = function(v) {
-            v = this.indexOf(v);
-            if (v >= 0) return this.splice(v, 1);
-        };
-        Array.prototype.clear = function() {
-            if (this.length) this.splice(0, this.length);
-            return this;
-        };
         XMLHttpRequest.prototype.clear = function() {
             this.onload = this.onerror = this.onabort = this.ontimeout = null;
         };
