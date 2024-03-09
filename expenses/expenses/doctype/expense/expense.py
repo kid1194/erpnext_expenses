@@ -43,13 +43,13 @@ class Expense(Document):
         if not self.required_by or not getdate(self.required_by):
             self._error(_("A valid required by date is required."))
         
+        from expenses.libs import is_expense_moderator
+        
         if (
             (self.is_new() or self.has_value_changed("required_by")) and
             not is_expense_moderator()
         ):
             from frappe.utils import date_diff
-            
-            from expenses.libs import is_expense_moderator
             
             min_dt = self.get("creation", "")
             min_dt = getdate(min_dt) if min_dt else getdate()
