@@ -10,11 +10,11 @@ frappe.provide('frappe.listview_settings');
 
 
 frappe.listview_settings['Expense'] = {
-    add_fields: ['party_type', 'party', 'is_paid', 'paid_by'],
+    //add_fields: ['party_type', 'party', 'is_paid', 'paid_by'],
     onload: function(list) {
         frappe.listview_settings.Expense.list = list;
         frappe.exp()
-            .on('ready change', function() { this.setup_list(list); })
+            //.on('ready change', function() { this.setup_list(list); })
             .on('ready', function() {
                 if (!this.is_enabled) return list.page.clear_actions_menu();
                 frappe.listview_settings.Expense.action_btn = list.page.add_actions_menu_item(
