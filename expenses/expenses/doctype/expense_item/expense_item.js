@@ -72,18 +72,7 @@ frappe.ui.form.on('Expense Item', {
                 !up && frm._item.table.clear();
                 for (let i = 0, l = ret.length, v; i < l; i++) {
                     if (up && frm._item.table.has(cstr(ret[i].company), 1)) continue;
-                    v = ret[i];
-                    v = frm.add_child('expense_accounts', {
-                        company: v.company,
-                        account: v.account,
-                        currency: v.currency,
-                        cost: v.cost,
-                        min_cost: v.min_cost,
-                        max_cost: v.max_cost,
-                        qty: v.qty,
-                        min_qty: v.min_qty,
-                        max_qty: v.max_qty,
-                    });
+                    v = frm.add_child('expense_accounts', ret[i]);
                     frm._item.table.add(cstr(v.name), cstr(v.company), cstr(v.account));
                 }
                 frm.refresh_field('expense_accounts');

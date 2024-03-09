@@ -132,6 +132,7 @@ class LevelUpBase extends LevelUpCore {
         this._pfx = '[' + this._key.toUpperCase() + ']';
         this._ns = ns + (ns.slice(-1) !== '.' ? '.' : '');
         this._prod = !!prod;
+        this.$xdef({is_ready: true});
         this._events = {
             sock: !!frappe.socketio.socket,
             list: {},
@@ -265,7 +266,7 @@ class LevelUpBase extends LevelUpCore {
         fn = this.$fn(fn);
         for (let es = this._events, i = 0, l = ev.length, e; i < l; i++) {
             e = (rl ? this._real : '') + ev[i];
-            if (e === es.once[0] && this.is_ready) {
+            if (e === es.once[0] && this._is_ready) {
                 fn();
                 continue;
             }
@@ -318,6 +319,7 @@ class LevelUpBase extends LevelUpCore {
 class LevelUp extends LevelUpBase {
     constructor(mod, key, doc, ns, prod) {
         super(mod, key, doc, ns, prod);
+        this.$xdef({is_enabled: true});
         this._router = {obj: null, old: 0, val: ['app']};
         this._win = {
             e: {
@@ -376,7 +378,7 @@ class LevelUp extends LevelUpBase {
         if (!(o = this.get_list(o)) || !this.is_self_list(o)) return this;
         o[this._tmp] = {disabled: 0};
         let k = 'toggle_actions_menu_button';
-        if (this.is_enabled) {
+        if (this._is_enabled) {
             o[this._tmp].disabled = 0;
             o['_' + k] && (o[k] = o['_' + k]);
             delete o['_' + k];
@@ -410,7 +412,7 @@ class LevelUp extends LevelUpBase {
         if (!(frm = this.get_form(frm)) || !this.is_self_form(frm)) return this;
         frm[this._tmp] = {disabled: 0, intro: 0, fields: []};
         try {
-            if (this.is_enabled) this.enable_form(frm, wf);
+            if (this._is_enabled) this.enable_form(frm, wf);
             else this.disable_form(frm, __('{0} app is disabled.', [this._mod]), wf);
         } catch(e) { this._error('Setup form error', e.message, e.stack); }
         return this;

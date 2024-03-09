@@ -1,5 +1,7 @@
 # ERPNext Expenses
 
+![v1.0.0-Alpha3](https://img.shields.io/badge/v1.0.0-Alpha3-blue?style=plastic)
+
 An expenses management module for ERPNext.
 
 ⚠️ **This plugin is in ALPHA stage so it is not PRODUCTION ready.** ⚠️

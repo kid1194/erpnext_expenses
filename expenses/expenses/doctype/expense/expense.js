@@ -114,7 +114,7 @@ frappe.ui.form.on('Expense', {
             frm.set_value('required_by', frm._expense.min_date_str);
     },
     cost: function(frm) {
-        if (!frm._expense.is_draft || !frm._expense.cost) return;
+        if (!frm._expense.is_draft || !frm._expense.cost) return frm.events.update_total(frm);
         let key = 'cost',
         val = flt(frm.doc[key]),
         nval = val <= 0 ? 1 : val;
@@ -124,7 +124,7 @@ frappe.ui.form.on('Expense', {
         frm.events.update_total(frm);
     },
     qty: function(frm) {
-        if (!frm._expense.is_draft || !frm._expense.qty) return;
+        if (!frm._expense.is_draft || !frm._expense.qty) return frm.events.update_total(frm);
         let key = 'qty',
         val = flt(frm.doc[key]),
         nval = val <= 0 ? 1 : val;
