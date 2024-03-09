@@ -503,7 +503,7 @@ class LevelUp extends LevelUpBase {
             if (o && !o.fields.includes(fk)) return;
             let f = this._get_field(frm, k, n, ck);
             if (!f || !f.df || !!cint(f.df.hidden) || !this._is_field(f.df.fieldtype)) return;
-            o && o.fields.remove(fk);
+            o && (fk = o.fields.indexOf(fk)) >= 0 && o.fields.splice(fk, 1);
             n == null && frm.set_df_property(k, 'read_only', 0);
             if (n == null) return this._toggle_translatable(f, 1);
             f = this._get_field(frm, k, n);
@@ -539,9 +539,9 @@ class LevelUp extends LevelUpBase {
     }
     _enable_table(frm, k) {
         try {
-            let fs = this.is_self_form(frm) && (frm[this._tmp] || {}).fields;
+            let fs = this.is_self_form(frm) && (frm[this._tmp] || {}).fields, t;
             if (fs && !fs.includes(k)) return;
-            fs && fs.remove(k);
+            fs && (t = fs.indexOf(k)) >= 0 && fs.splice(t, 1);
             let f = frm.get_field(k);
             if (!f || !f.df || !!cint(f.df.hidden) || f.df.fieldtype !== 'Table' || !f.grid) return;
             f.df.__in_place_edit != null && (f.df.in_place_edit = f.df.__in_place_edit);
@@ -737,7 +737,7 @@ class ExpenseTable {
         return r;
     }
     clear() {
-        for (let x = 0; x < this._n; x++) this._c[x] && this._c[x].clear();
+        for (let x = 0; x < this._n; x++) this._c[x].length && this._c[x].splice(0, this._c[x].length);
         return this;
     }
 }
@@ -826,42 +826,40 @@ frappe.exp = function(opts) {
 
 $(document).ready(function() {
     function $isFn(v) { return typeof v === 'function'; }
-    try {
-        let id = 'core-polyfill',
-        onload = function() {
-            Promise.wait = function(ms) {
-                return new Promise(function(resolve) {
-                    window.setTimeout(resolve, ms);
-                });
-            };
-            Promise.prototype.timeout = function(ms) {
-                return Promise.race([
-                    this,
-                    Promise.wait(ms).then(function() { throw new Error('Time out'); })
-                ]);
-            };
+    let id = 'core-polyfill',
+    onload = function() {
+        Promise.wait = function(ms) {
+            return new Promise(function(resolve) {
+                window.setTimeout(resolve, ms);
+            });
         };
-        if (
-            $isFn(String.prototype.trim) && $isFn(String.prototype.includes)
-            && $isFn(String.prototype.startsWith) && $isFn(String.prototype.endsWith)
-            && $isFn(Array.prototype.includes) && $isFn(Function.prototype.bind)
-            && $isFn(window.Promise)
-        ) onload();
+        Promise.prototype.timeout = function(ms) {
+            return Promise.race([
+                this,
+                Promise.wait(ms).then(function() { throw new Error('Time out'); })
+            ]);
+        };
+    };
+    if (
+        $isFn(String.prototype.trim) && $isFn(String.prototype.includes)
+        && $isFn(String.prototype.startsWith) && $isFn(String.prototype.endsWith)
+        && $isFn(Array.prototype.includes) && $isFn(Function.prototype.bind)
+        && $isFn(window.Promise)
+    ) onload();
+    else {
+        let $el = document.getElementById(id);
+        if (!!$el) onload();
         else {
-            let $el = document.getElementById(id);
-            if (!!$el) onload();
-            else {
-                $el = document.createElement('script');
-                $el.id = id;
-                $el.src = 'https://polyfill.io/v3/polyfill.min.js?features=String.prototype.trim%2CString.prototype.includes%2CString.prototype.startsWith%2CString.prototype.endsWith%2CArray.prototype.includes%2CFunction.prototype.bind%2CPromise';
-                $el.type = 'text/javascript';
-                $el.async = true;
-                $el.onload = onload;
-                document.getElementsByTagName('head')[0].appendChild($el);
-            }
+            $el = document.createElement('script');
+            $el.id = id;
+            $el.src = 'https://polyfill.io/v3/polyfill.min.js?features=String.prototype.trim%2CString.prototype.includes%2CString.prototype.startsWith%2CString.prototype.endsWith%2CArray.prototype.includes%2CFunction.prototype.bind%2CPromise';
+            $el.type = 'text/javascript';
+            $el.async = true;
+            $el.onload = onload;
+            document.getElementsByTagName('head')[0].appendChild($el);
         }
-        XMLHttpRequest.prototype.clear = function() {
-            this.onload = this.onerror = this.onabort = this.ontimeout = null;
-        };
-    } catch(e) { alert(e.message); }
+    }
+    XMLHttpRequest.prototype.clear = function() {
+        this.onload = this.onerror = this.onabort = this.ontimeout = null;
+    };
 });
