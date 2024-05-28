@@ -4,77 +4,7 @@
 # Licence: Please refer to LICENSE file
 
 
-from pypika.enums import Order
-
 import frappe
-from frappe.utils import flt
-
-
-# [Internal]
-__FIELD__ = "expense_accounts"
-
-
-# [Type]
-def filter_types_with_accounts(qry, doc):
-    dt = "Expense Type"
-    pdoc = frappe.qb.DocType(dt)
-    adoc = frappe.qb.DocType(f"{dt} Account")
-    fqry = (
-        frappe.qb.from_(adoc)
-        .select(adoc.parent)
-        .distinct()
-        .where(adoc.parenttype == dt)
-        .where(adoc.parentfield == __FIELD__)
-    )
-    data = (
-        frappe.qb.from_(pdoc)
-        .select(pdoc.lft, pdoc.rgt)
-        .where(pdoc.disabled == 0)
-        .where(pdoc.name.isin(fqry))
-    ).run(as_dict=True)
-    if not data or not isinstance(data, list):
-        return qry
-    
-    from pypika.terms import Criterion
-        
-    filters = []
-    for v in data:
-        filters.append(Criterion.all([
-            doc.lft.gte(v["lft"]),
-            doc.rgt.lte(v["rgt"])
-        ]))
-    
-    return qry.where(Criterion.any(filters))
-
-
-# []
-def get_types_with_accounts():
-    from .cache import get_cache, set_cache
-    
-    dt = "Expense Type"
-    key = "types-with-expense-accounts"
-    data = get_cache(dt, key)
-    if data and isinstance(data, list):
-        return data
-    
-    doc = frappe.qb.DocType(f"{dt} Account")
-    pdoc = frappe.qb.DocType(dt)
-    data = (
-        frappe.qb.from_(doc)
-        .select(doc.parent)
-        .distinct()
-        .left_join(pdoc)
-        .on(pdoc.name == doc.parent)
-        .where(doc.parenttype == dt)
-        .where(doc.parentfield == __FIELD__)
-        .where(pdoc.disabled == 0)
-    ).run(as_dict=True)
-    if not data or not isinstance(data, list):
-        return None
-    
-    data = [v["parent"] for v in data]
-    set_cache(dt, key, data)
-    return data
 
 
 # [Item]
@@ -84,106 +14,78 @@ def get_type_accounts(type_name: str, defs: dict=None):
     dt = "Expense Type"
     key = f"{type_name}-expense-accounts"
     data = get_cache(dt, key)
-    if data and isinstance(data, list):
+    if data:
         return data
     
+    raw = get_type_accounts_data(type_name)
+    if not raw:
+        return raw
+    
+    from .cache import set_cache
+    
+    data = []
+    exists = []
+    for i in range(len(raw)):
+        v = raw.pop(0)
+        if v["company"] in exists:
+            continue
+        
+        exists.append(v["company"])
+        if defs:
+            v.update(defs)
+        
+        data.append(v)
+    
+    exists.clear()
+    set_cache(dt, key, data)
+    return data
+
+
+# [Internal]
+def get_type_accounts_data(type_name: str, company: str=None):
     from .cache import get_cached_value
     
-    type_data = get_cached_value(dt, type_name, ["lft", "rgt"])
-    if not type_data:
+    dt = "Expense Type"
+    parent = get_cached_value(dt, type_name, ["lft", "rgt"])
+    if not parent:
         return None
     
-    fdoc = frappe.qb.DocType(dt).as_("parent")
-    fqry = (
-        frappe.qb.from_(fdoc)
-        .select(fdoc.name)
-        .where(fdoc.lft.lte(type_data.lft))
-        .where(fdoc.rgt.gte(type_data.rgt))
-    )
+    from pypika.enums import Order
     
     doc = frappe.qb.DocType(f"{dt} Account")
     pdoc = frappe.qb.DocType(dt)
     adoc = frappe.qb.DocType("Account")
-    data = (
+    qry = (
         frappe.qb.from_(doc)
         .select(
             doc.company,
             doc.account,
             adoc.account_currency.as_("currency")
         )
-        .left_join(pdoc)
+        .inner_join(pdoc)
         .on(pdoc.name == doc.parent)
-        .inner_join(adoc)
+        .left_join(adoc)
         .on(adoc.name == doc.account)
-        .where(doc.parent.isin(fqry))
         .where(doc.parenttype == dt)
-        .where(doc.parentfield == __FIELD__)
-        .orderby(pdoc.rgt - pdoc.lft, order=Order.desc)
-    ).run(as_dict=True)
-    if not data or not isinstance(data, list):
-        return None
-    
-    from .cache import set_cache
-    
-    exists = []
-    for v in data:
-        if v["company"] in exists:
-            data.remove(v)
-        else:
-            if defs:
-                v.update(defs)
-            exists.append(v["company"])
-    
-    set_cache(dt, key, data)
-    return data
-
-
-# [Type]
-def get_type_company_account_data(parent: str, company: str):
-    from .cache import get_cached_value
-    
-    dt = "Expense Type"
-    type_data = get_cached_value(dt, parent, ["lft", "rgt"])
-    if not type_data:
-        return None
-    
-    fdoc = frappe.qb.DocType(dt).as_("parent")
-    fqry = (
-        frappe.qb.from_(fdoc)
-        .select(fdoc.name)
-        .where(fdoc.disabled == 0)
-        .where(fdoc.lft.lte(type_data.lft))
-        .where(fdoc.rgt.gte(type_data.rgt))
+        .where(doc.parentfield == "expense_accounts")
+        .where(pdoc.disabled == 0)
+        .where(pdoc.lft.lte(parent.lft))
+        .where(pdoc.rgt.gte(parent.rgt))
+        .orderby(pdoc.rgt - pdoc.lft, order=Order.asc)
     )
+    if company:
+        qry = qry.where(doc.company == company)
+        qry = qry.limit(1)
     
-    doc = frappe.qb.DocType(f"{dt} Account")
-    pdoc = frappe.qb.DocType(dt)
-    adoc = frappe.qb.DocType("Account")
-    data = (
-        frappe.qb.from_(doc)
-        .select(
-            doc.account,
-            adoc.account_currency.as_("currency")
-        )
-        .left_join(pdoc)
-        .on(pdoc.name == doc.parent)
-        .inner_join(adoc)
-        .on(adoc.name == doc.account)
-        .where(doc.parent.isin(fqry))
-        .where(doc.company == company)
-        .where(doc.parenttype == dt)
-        .where(doc.parentfield == __FIELD__)
-        .orderby(pdoc.lft, order=Order.desc)
-        .limit(1)
-    ).run(as_dict=True)
+    data = qry.run(as_dict=True)
     if not data or not isinstance(data, list):
-        return None
+        return None if company else []
     
-    return data.pop(0)
+    return data.pop(0) if company else data
 
 
 # [Item]
-def get_items_with_company_account_query(company: str):
+def query_items_with_company_account(company: str):
     dt = "Expense Item"
     doc = frappe.qb.DocType(f"{dt} Account")
     pdoc = frappe.qb.DocType(dt).as_("parent")
@@ -191,10 +93,10 @@ def get_items_with_company_account_query(company: str):
         frappe.qb.from_(doc)
         .select(doc.parent)
         .distinct()
-        .left_join(pdoc)
+        .inner_join(pdoc)
         .on(pdoc.name == doc.parent)
         .where(doc.parenttype == dt)
-        .where(doc.parentfield == __FIELD__)
+        .where(doc.parentfield == "expense_accounts")
         .where(doc.company == company)
         .where(pdoc.disabled == 0)
     )
@@ -204,10 +106,12 @@ def get_items_with_company_account_query(company: str):
 def get_item_company_account_data(parent: str, company: str):
     dt = "Expense Item"
     doc = frappe.qb.DocType(f"{dt} Account")
+    pdoc = frappe.qb.DocType(dt)
     adoc = frappe.qb.DocType("Account")
     data = (
         frappe.qb.from_(doc)
         .select(
+            pdoc.uom,
             doc.account,
             adoc.account_currency.as_("currency"),
             doc.cost,
@@ -217,21 +121,52 @@ def get_item_company_account_data(parent: str, company: str):
             doc.min_qty,
             doc.max_qty
         )
+        .inner_join(pdoc)
+        .on(pdoc.name == doc.parent)
         .inner_join(adoc)
         .on(adoc.name == doc.account)
+        .where(doc.parenttype == dt)
+        .where(doc.parentfield == "expense_accounts")
         .where(doc.parent == parent)
         .where(doc.company == company)
-        .where(doc.parenttype == dt)
-        .where(doc.parentfield == __FIELD__)
         .limit(1)
     ).run(as_dict=True)
     if not data or not isinstance(data, list):
         return None
     
+    from frappe.utils import flt
+    
     data = data.pop(0)
-    for k in ("cost", "qty"):
-        data[k] = flt(data[k])
-        data["min_" + k] = flt(data["min_" + k])
-        data["max_" + k] = flt(data["max_" + k])
+    for k in ["cost", "qty"]:
+        for x in [k, f"min_{k}", f"max_{k}"]:
+            data[x] = flt(data[x])
+            if data[x] < 0.0:
+                data[x] = 0.0
     
     return data
+
+
+# [E Entry, Entry]
+def get_account_currency(account: str):
+    return frappe.db.get_value("Account", account, "account_currency")
+
+
+# [E Entry, Internal]
+def get_accounts_currencies(accounts: list):
+    doc = frappe.qb.DocType("Account")
+    cdoc = frappe.qb.DocType("Currency")
+    data = (
+        frappe.qb.from_(doc)
+        .select(
+            doc.name,
+            doc.account_currency
+        )
+        .inner_join(cdoc)
+        .on(cdoc.name == doc.account_currency)
+        .where(doc.name.isin(accounts))
+        .where(cdoc.enabled == 1)
+    ).run(as_dict=True)
+    if not data or not isinstance(data, list):
+        return None
+    
+    return {v["name"]:v["account_currency"] for v in data}

@@ -1,5 +1,5 @@
 {
- "allow_copy": 1,
+ "allow_copy": 0,
  "allow_import": 1,
  "editable_grid": 1,
  "autoname": "hash",
@@ -20,7 +20,8 @@
   "expense_column",
   "qty",
   "min_qty",
-  "max_qty"
+  "max_qty",
+  "inherited"
  ],
  "fields": [
   {
@@ -32,9 +33,11 @@
    "fieldtype": "Link",
    "label": "Company",
    "options": "Company",
-   "read_only": 1,
+   "reqd": 1,
    "bold": 1,
-   "in_list_view": 1
+   "read_only_depends_on": "eval:doc.inherited",
+   "in_list_view": 1,
+   "ignore_user_permissions": 1
   },
   {
    "fieldname": "main_column",
@@ -45,8 +48,9 @@
    "fieldtype": "Link",
    "label": "Expense Account",
    "options": "Account",
-   "read_only": 1,
+   "reqd": 1,
    "bold": 1,
+   "read_only_depends_on": "eval:!doc.company || doc.inherited",
    "in_list_view": 1,
    "ignore_user_permissions": 1
   },
@@ -54,10 +58,11 @@
    "fieldname": "currency",
    "fieldtype": "Read Only",
    "label": "Currency",
-   "options": "Currency",
    "fetch_from": "account.account_currency",
-   "read_only": 1,
    "hidden": 1,
+   "read_only": 1,
+   "print_hide": 1,
+   "report_hide": 1,
    "ignore_user_permissions": 1
   },
   {
@@ -68,31 +73,32 @@
    "fieldname": "cost",
    "fieldtype": "Currency",
    "label": "Cost",
-   "description": "Use to set a fixed expense cost",
+   "description": "Use to set a fixed expense cost.",
    "options": "currency",
    "default": "0",
    "non_negative": 1,
+   "read_only_depends_on": "eval:!doc.account || doc.min_cost > 0 || doc.max_cost > 0",
    "in_list_view": 1
   },
   {
    "fieldname": "min_cost",
    "fieldtype": "Currency",
    "label": "Minimum Cost",
-   "description": "Use to set a minimum expense cost but will be ignored if a fixed expense cost is set",
+   "description": "Use to set a minimum expense cost but will be ignored if a fixed expense cost is set.",
    "options": "currency",
    "default": "0",
    "non_negative": 1,
-   "read_only_depends_on": "eval:doc.cost"
+   "read_only_depends_on": "eval:!doc.account || doc.cost > 0"
   },
   {
    "fieldname": "max_cost",
    "fieldtype": "Currency",
    "label": "Maximum Cost",
-   "description": "Use to set a maximum expense cost but will be ignored if a fixed expense cost is set",
+   "description": "Use to set a maximum expense cost but will be ignored if a fixed expense cost is set.",
    "options": "currency",
    "default": "0",
    "non_negative": 1,
-   "read_only_depends_on": "eval:doc.cost"
+   "read_only_depends_on": "eval:!doc.account || doc.cost > 0"
   },
   {
    "fieldname": "expense_column",
@@ -102,35 +108,46 @@
    "fieldname": "qty",
    "fieldtype": "Float",
    "label": "Quantity",
-   "description": "Use to set a fixed expense quantity",
+   "description": "Use to set a fixed expense quantity.",
    "default": "0",
    "precision": "4",
    "non_negative": 1,
+   "read_only_depends_on": "eval:doc.min_qty > 0 || doc.max_qty > 0",
    "in_list_view": 1
   },
   {
    "fieldname": "min_qty",
    "fieldtype": "Float",
    "label": "Minimum Quantity",
-   "description": "Use to set a minimum expense quantity but will be ignored if a fixed expense quantity is set",
+   "description": "Use to set a minimum expense quantity but will be ignored if a fixed expense quantity is set.",
    "default": "0",
    "precision": "4",
    "non_negative": 1,
-   "read_only_depends_on": "eval:doc.qty"
+   "read_only_depends_on": "eval:doc.qty > 0"
   },
   {
    "fieldname": "max_qty",
    "fieldtype": "Float",
    "label": "Maximum Quantity",
-   "description": "Use to set a maximum expense quantity but will be ignored if a fixed expense quantity is set",
+   "description": "Use to set a maximum expense quantity but will be ignored if a fixed expense quantity is set.",
    "default": "0",
    "precision": "4",
    "non_negative": 1,
-   "read_only_depends_on": "eval:doc.qty"
+   "read_only_depends_on": "eval:doc.qty > 0"
+  },
+  {
+   "fieldname": "inherited",
+   "fieldtype": "Check",
+   "label": "Inherited",
+   "default": "0",
+   "hidden": 1,
+   "read_only": 1,
+   "print_hide": 1,
+   "report_hide": 1
   }
  ],
  "istable": 1,
- "modified": "2024-03-05 04:04:04",
+ "modified": "2024-05-12 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense Item Account",

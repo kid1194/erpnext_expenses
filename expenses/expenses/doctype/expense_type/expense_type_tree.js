@@ -6,9 +6,6 @@
 */
 
 
-frappe.require(['/assets/expenses/js/expenses.bundle.js']);
-
-
 frappe.provide('frappe.treeview_settings');
 
 
@@ -21,22 +18,13 @@ frappe.treeview_settings['Expense Type'] = {
     show_expand_all: true,
     get_tree_nodes: frappe.exp().get_method('get_type_children'),
     onload: function(treeview) {
-        frappe.treeview_settings['Expense Type'].treeview = treeview;
-        frappe.exp()
-            .on('ready', function() {
-                if (!this.is_enabled) treeview.page.clear_primary_action();
-            })
-            .on('change', function() {
-                if (!this.is_enabled) treeview.page.clear_primary_action();
-                treeview.refresh();
-            });
+        frappe.exp().on('ready change', function() { this.setup_tree(treeview); });
     },
     post_render: function(treeview) {
-        if (!frappe.exp().is_enabled) return;
         treeview.page.clear_primary_action();
+        if (!frappe.exp().is_enabled) return;
         treeview.page.set_primary_action(__('New'), function() {
-            frappe.route_options = {from_tree: 1};
-            frappe.set_route('Form', 'Expense Type');
+            frappe.new_doc(frappe.exp().tree.doctype, {from_tree: 1});
         }, 'add');
     },
     toolbar: [
@@ -45,46 +33,16 @@ frappe.treeview_settings['Expense Type'] = {
             condition: function(node) {
                 return frappe.exp().is_enabled
                     && frappe.boot.user.can_create.includes('Expense Type')
-                    && !node.hide_add;
-            },
-            click: function() {
-                if (!frappe.exp().is_enabled) return;
-                let dt = 'Expense Type',
-                args = frappe.treeview_settings[d].treeview.args;
-                frappe.route_options = {
-                    from_tree: 1,
-                    is_group: cint(args.expandable),
-                    parent_type: cstr(args.parent),
-                };
-                frappe.set_route('Form', dt);
-            },
-            btnClass: 'hidden-xs'
-        },
-        {
-            label: __('Convert To Item'),
-            condition: function(node) {
-                return frappe.exp().is_enabled
-                    && frappe.boot.user.can_write.includes('Expense Type')
+                    && !node.hide_add
                     && node.expandable;
             },
             click: function() {
                 if (!frappe.exp().is_enabled) return;
-                let args = frappe.treeview_settings['Expense Type'].treeview.args;
-                frappe.exp().request(
-                    'convert_group_to_item',
-                    {name: cstr(args.value)},
-                    function(ret) {
-                        if (!ret) this.error(__('Unable to convert the expense type group to an item.'));
-                        else if (ret.error) this.error(ret.error);
-                        else {
-                            frappe.show_alert({
-                                indicator: 'green',
-                                message: __('Expense type has been converted successfully.'),
-                            });
-                            frappe.treeview_settings['Expense Type'].treeview.make_tree();
-                        }
-                    }
-                );
+                frappe.new_doc(frappe.exp().tree.doctype, {
+                    from_tree: 1,
+                    is_group: cint(frappe.exp().tree.args.expandable),
+                    parent_type: cstr(frappe.exp().tree.args.parent),
+                });
             },
             btnClass: 'hidden-xs'
         },
@@ -97,20 +55,46 @@ frappe.treeview_settings['Expense Type'] = {
             },
             click: function() {
                 if (!frappe.exp().is_enabled) return;
-                let args = frappe.treeview_settings['Expense Type'].treeview.args;
                 frappe.exp().request(
                     'convert_item_to_group',
-                    {name: cstr(args.value)},
+                    {name: cstr(frappe.exp().tree.args.value)},
                     function(ret) {
-                        if (!ret) this.error(__('Unable to convert the expense type item to a group.'));
-                        else if (ret.error) this.error(ret.error);
+                        if (!ret) this.error_(__('Unable to convert expense type item to a group.'));
+                        else if (ret.error) this.error_(ret.error);
                         else {
-                            frappe.show_alert({
-                                indicator: 'green',
-                                message: __('Expense type has been converted successfully.'),
-                            });
-                            frappe.treeview_settings['Expense Type'].treeview.make_tree();
+                            this.success_(__('Expense type converted successfully.'));
+                            this.tree.make_tree();
                         }
+                    },
+                    function(e) {
+                        this.error_(e.self ? e.message : __('Unable to convert expense type item to a group.'));
+                    }
+                );
+            },
+            btnClass: 'hidden-xs'
+        },
+        {
+            label: __('Convert To Item'),
+            condition: function(node) {
+                return frappe.exp().is_enabled
+                    && frappe.boot.user.can_write.includes('Expense Type')
+                    && node.expandable;
+            },
+            click: function() {
+                if (!frappe.exp().is_enabled) return;
+                frappe.exp().request(
+                    'convert_group_to_item',
+                    {name: cstr(frappe.exp().tree.args.value)},
+                    function(ret) {
+                        if (!ret) this.error_(__('Unable to convert expense type group to an item.'));
+                        else if (ret.error) this.error_(ret.error);
+                        else {
+                            this.success_(__('Expense type converted successfully.'));
+                            this.tree.make_tree();
+                        }
+                    },
+                    function(e) {
+                        this.error_(e.self ? e.message : __('Unable to convert expense type item to a group.'));
                     }
                 );
             },

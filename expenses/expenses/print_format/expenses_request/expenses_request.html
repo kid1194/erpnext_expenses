@@ -1,28 +1,4 @@
 {%- from "templates/print_formats/standard_macros.html" import add_header -%}
-<style>
-    .table {
-        table-layout: auto;
-        margin-bottom: 0;
-    }
-    .table th,
-    .table td {
-        vertical-align: middle;
-        white-space: nowrap;
-        text-align: center;
-        width: auto;
-    }
-    .table th.w-15,
-    .table td.w-15 {
-        width: 15%;
-    }
-    .table th.fit,
-    .table td.fit {
-        width: 1%;
-    }
-    .subheader {
-        font-size: 1.1rem;
-    }
-</style>
 <div class="page-break">
     {%- if not doc.get("print_heading") and not doc.get("select_print_heading")
         and doc.set("select_print_heading", _("Expenses Request")) -%}{%- endif -%}
@@ -35,10 +11,10 @@
                     ((_("Company"), doc.company), (_("Status"),  _(doc.status))),
                 ) -%}
                 <tr>
-                    <td scope="row" class="fit text-left font-weight-bold">{{ fcol[0] }}</td>
+                    <td scope="row" class="fit text-start font-weight-bold">{{ fcol[0] }}</td>
                     <td class="fit">:</td>
                     <td>{{ fcol[1] }}</td>
-                    <td class="fit text-left font-weight-bold">{{ scol[0] }}</td>
+                    <td class="fit text-start font-weight-bold">{{ scol[0] }}</td>
                     <td class="fit">:</td>
                     <td>{{ scol[1] }}</td>
                 </tr>
@@ -54,8 +30,8 @@
         <div class="col-12">
             <table class="table table-sm table-bordered table-condensed">
                 <tr>
-                    <th scope="col" class="font-weight-bold text-left">{{ _("Expense") }}</th>
-                    <th scope="col" class="font-weight-bold text-left">{{ _("Expense Item") }}</th>
+                    <th scope="col" class="font-weight-bold text-start">{{ _("Expense") }}</th>
+                    <th scope="col" class="font-weight-bold text-start">{{ _("Expense Item") }}</th>
                     <th scope="col" class="font-weight-bold">{{ _("Description") }}</th>
                     <th scope="col" class="fit font-weight-bold">{{ _("Total") }}</th>
                     <th scope="col" class="fit font-weight-bold">{{ _("Is Advance") }}</th>
@@ -65,8 +41,8 @@
                 {% for exp in expenses %}
                 
                 <tr>
-                    <td scope="row" class="text-left">{{ exp.name }}</td>
-                    <td class="text-left">{{ exp.expense_item }}</td>
+                    <td scope="row" class="text-start">{{ exp.name }}</td>
+                    <td class="text-start">{{ exp.expense_item }}</td>
                     <td class="text-justify">{{ exp.description }}</td>
                     <td class="fit">{{ exp.get_formatted("total") }}</td>
                     <td class="fit">{{ _("Yes") if exp.is_advance else _("No") }}</td>

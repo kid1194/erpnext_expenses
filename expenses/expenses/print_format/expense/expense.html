@@ -1,28 +1,4 @@
 {%- from "templates/print_formats/standard_macros.html" import add_header -%}
-<style>
-    .table {
-        table-layout: auto;
-        margin-bottom: 0;
-    }
-    .table th,
-    .table td {
-        vertical-align: middle;
-        white-space: nowrap;
-        text-align: center;
-        width: auto;
-    }
-    .table th.w-15,
-    .table td.w-15 {
-        width: 15%;
-    }
-    .table th.fit,
-    .table td.fit {
-        width: 1%;
-    }
-    .subheader {
-        font-size: 1.1rem;
-    }
-</style>
 <div class="page-break">
     {%- if not doc.get("print_heading") and not doc.get("select_print_heading")
         and doc.set("select_print_heading", _("Expense")) -%}{%- endif -%}
@@ -32,17 +8,17 @@
             <table class="table table-sm table-borderless table-condensed">
                 {%- for fcol, scol in (
                     ((_("Name"), doc.name), (_("Date"), frappe.format_date(doc.creation))),
-                    ((_("Company"), doc.company), (_("Status"), _("Cancelled") if cint(doc.docstatus) == 2 else (_("Approved) if cint(doc.is_approved) else (_("Requested") if cint(doc.is_requested) else _("Pending"))))),
+                    ((_("Company"), doc.company), (_("Status"), _(doc.status))),
                     ((_("Expense Item"), doc.expense_item), (_("Required By"), frappe.format_date(doc.required_by))),
                     ((_("Expense Account"), doc.expense_account), (_("Project"), doc.project if doc.project else _("N/A"))),
                     ((_("Party Type"), doc.party_type if doc.party_type else _("N/A")), (_("Party"), doc.party if doc.party else _("N/A"))),
                     ((_("Is Paid"), _("Yes") if cint(doc.is_paid) else _("No")), (_("Paid By"), doc.paid_by if doc.paid_by else _("N/A"))),
                 ) -%}
                 <tr>
-                    <td scope="row" class="fit text-left font-weight-bold">{{ fcol[0] }}</td>
+                    <td scope="row" class="fit text-start font-weight-bold">{{ fcol[0] }}</td>
                     <td class="fit">:</td>
                     <td>{{ fcol[1] }}</td>
-                    <td class="fit text-left font-weight-bold">{{ scol[0] }}</td>
+                    <td class="fit text-start font-weight-bold">{{ scol[0] }}</td>
                     <td class="fit">:</td>
                     <td>{{ scol[1] }}</td>
                 </tr>

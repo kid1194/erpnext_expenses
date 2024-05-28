@@ -29,11 +29,11 @@ def get_logger(logType):
         pass
 
     logfile = "{}-{}.log".format(__abbr__, logType)
-    log_filename = os.path.join("..", "logs", logfile)
+    logfile = os.path.join("..", "logs", logfile)
     logger = logging.getLogger(logger_name)
     logger.setLevel(getattr(logging, logType.upper(), None) or logging.ERROR)
     logger.propagate = False
-    handler = RotatingFileHandler(log_filename, maxBytes=100_000, backupCount=20)
+    handler = RotatingFileHandler(logfile, maxBytes=100_000, backupCount=20)
     handler.setLevel(getattr(logging, logType.upper(), None) or logging.ERROR)
     handler.setFormatter(LoggingCustomFormatter())
     logger.addHandler(handler)

@@ -7,34 +7,9 @@
 import frappe
 
 
-# [EXP Settings]
-def emit_app_status_changed(data=None):
-    emit_event("exp_app_status_changed", data)
-
-
-# [EXP Type]
-def emit_type_changed(data=None):
-    emit_event("exp_type_changed", data)
-
-
-# [EXP Item]
-def emit_item_changed(data=None):
-    emit_event("exp_item_changed", data)
-
-
-# [EXP Expense]
-def emit_expense_changed(data=None):
-    emit_event("exp_expense_changed", data)
-
-
-# [EXP Request]
-def emit_request_changed(data=None):
-    emit_event("exp_expenses_request_changed", data)
-
-
-# [EXP Entry]
-def emit_entry_changed(data=None):
-    emit_event("exp_expenses_entry_changed", data)
+# [E Settings]
+def emit_settings_changed(data=None):
+    emit_event("exp_settings_changed", data)
 
 
 # [Internal]

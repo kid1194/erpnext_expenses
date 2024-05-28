@@ -7,46 +7,36 @@
 import frappe
 
 
-# [Account, Item, Type]
+# [Account, Expense, Item, Type]
 def get_cache(dt: str, key: str, expires=False):
     return frappe.cache().get_value(f"{dt}-{key}", expires=expires)
 
 
-# [Account, Item, Type]
+# [Account, Expense, Item, Type]
 def set_cache(dt: str, key: str, data, expiry: int=None):
     frappe.cache().set_value(f"{dt}-{key}", data, expires_in_sec=expiry)
 
 
-# []
-def del_cache(dt: str, key: str):
-    frappe.cache().delete_key(f"{dt}-{key}")
-
-
-# [EXP Type, Entry, Request, Settings, Type, Internal]
-def get_cached_doc(dt: str, name: str=None, for_update: bool=False):
+# [Entry, Request, Settings, Type, Internal]
+def get_cached_doc(dt: str, name: str=None):
     if name is None:
         name = dt
-    
-    if for_update:
-        clear_doc_cache(dt, name)
     
     if dt != name and not frappe.db.exists(dt, name):
         return None
     
-    return frappe.get_cached_doc(dt, name, for_update=for_update)
+    return frappe.get_cached_doc(dt, name)
 
 
-# [EXP Entry, EXP Expense, EXP Item, EXP Request, EXP Settings, EXP Type, Internal]
+# [E Entry, E Expense, E Item, E Request, E Settings, E Type]
 def clear_doc_cache(dt: str, name: str=None):
     frappe.cache().delete_keys(dt)
     frappe.clear_cache(doctype=dt)
-    if name is None:
-        name = dt
-    frappe.clear_document_cache(dt, name)
+    frappe.clear_document_cache(dt, name or dt)
 
 
-# [Account, EXP Entry, Entry, Item]
-def get_cached_value(dt: str, name: str, field):
+# []
+def get_cached_value(dt: str, name: str, field, raw: bool=False):
     if not field or not isinstance(field, (str, list)):
         return None
     
@@ -60,9 +50,9 @@ def get_cached_value(dt: str, name: str, field):
     values = {}
     for f in field:
         if f and isinstance(f, str):
-            values[f] = doc.get(f)
+            values[f] = doc.get(f, None)
     
     if not values:
         return None
     
-    return frappe._dict(values)
+    return values if raw else frappe._dict(values)

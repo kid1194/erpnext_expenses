@@ -7,44 +7,49 @@
 import frappe
 
 
-# [EXP Settings]
-def users_exists(names: list, attrs: dict=None, enabled: bool=None):
-    return _all_exists("User", "name", names, attrs, enabled, "enabled", 1)
-
-
-# [EXP Settings, Update]
+# [E Settings, Update]
 def user_exists(name: str, attrs: dict=None, enabled: bool=None):
     return _exists("User", name, attrs, enabled, "enabled", 1)
 
 
-# [EXP Item, EXP Type]
-def type_exists(name: str, attrs: dict=None, enabled: bool=None):
-    return _exists("Expense Type", name, attrs, enabled)
-
-
-# [EXP Type]
+# [E Type]
 def type_children_exists(parent: str):
     return _has("Expense Type", {"parent_type": parent})
 
 
-# [EXP Type]
-def items_of_type_exists(expense_type: str):
+# [E Type]
+def type_items_exists(expense_type: str):
     return _has("Expense Item", {"expense_type": expense_type})
 
 
-# [EXP Entry, EXP Type]
-def account_exists(name: str, attrs: dict=None, enabled: bool=None):
-    return _exists("Account", name, attrs, enabled)
+# [E Item, E Type]
+def type_exists(name: str, attrs: dict=None, enabled: bool=None):
+    return _exists("Expense Type", name, attrs, enabled)
 
 
-# [EXP Item]
+# [E Expense]
+def item_exists(name: str, attrs: dict=None, enabled: bool=None):
+    return _exists("Expense Item", name, attrs, enabled)
+
+
+# [E Item]
+def uom_exists(name: str, attrs: dict=None):
+    return _exists("UOM", name, attrs)
+
+
+# [E Item]
 def has_item_expenses(expense_item: str):
     return _has("Expense", {"expense_item": expense_item})
 
 
-# [EXP Item, Request, Internal]
-def get_count(dt: str, filters: dict):
-    return frappe.db.count(dt, filters)
+# [E Entry, E Expense, E Request]
+def company_exists(name: str, attrs: dict=None):
+    return _exists("Company", name, attrs)
+
+
+# [E Entry, E Expense]
+def party_exists(dt: str, name: str, attrs: dict=None, enabled: bool=None):
+    return _exists(dt, name, attrs, enabled)
 
 
 # [Entry, Expense]
@@ -62,6 +67,26 @@ def expense_exists(name: str, attrs: dict=None):
     return _exists("Expense", name, attrs)
 
 
+# [E Entry]
+def mode_of_payment_exists(name: str, attrs: dict=None, enabled: bool=None):
+    return _exists("Mode of Payment", name, attrs, enabled, "enabled", 1)
+
+
+# [E Entry]
+def project_exists(name: str, attrs: dict=None):
+    return _exists("Project", name, attrs)
+
+
+# [E Entry]
+def cost_center_exists(name: str, attrs: dict=None, enabled: bool=None):
+    return _exists("Cost Center", name, attrs, enabled, "disabled", 0)
+
+
+# [Request, Internal]
+def get_count(dt: str, filters: dict):
+    return frappe.db.count(dt, filters)
+
+
 # [Internal]
 def _has(dt: str, filters: dict):
     return get_count(dt, filters) > 0
@@ -70,20 +95,17 @@ def _has(dt: str, filters: dict):
 # [Internal]
 def _exists(
     dt: str, name: str, attrs: dict=None, enabled: bool=None,
-    status_col: str="disabled", enabled_val: int=0
+    status_col: str="disabled", status_val: str|int=0
 ):
     params = {"doctype": dt}
-    
     if name:
         params["name"] = name
-    
     if attrs:
         params.update(attrs)
-    
     if enabled == True:
-        params[status_col] = ["=", enabled_val]
+        params[status_col] = ["=", status_val]
     elif enabled == False:
-        params[status_col] = ["!=", enabled_val]
+        params[status_col] = ["!=", status_val]
     
     return frappe.db.exists(params) != None
 
@@ -91,11 +113,11 @@ def _exists(
 # [Internal]
 def _all_exists(
     dt: str, field: str, names: list, attrs: dict=None,
-    enabled: bool=None, status_col: str="disabled", enabled_val: int=0
+    enabled: bool=None, status_col: str="disabled", status_val: int=0
 ):
     from .filter import all_filter
     
-    data = all_filter(dt, field, names, attrs, enabled, status_col, enabled_val)
+    data = all_filter(dt, field, names, attrs, enabled, status_col, status_val)
     if not data or len(data) != len(names):
         return False
     

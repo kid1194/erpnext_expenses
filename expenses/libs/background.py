@@ -9,7 +9,7 @@ import frappe
 from expenses.version import is_version_gt
 
 
-# [Expense]
+# [Attachment, Expense, Item]
 def uuid_key(args):
     import hashlib
     import uuid
@@ -23,7 +23,7 @@ def uuid_key(args):
     ).hexdigest()[::2]))
 
 
-# [Expense, Journal, Update]
+# [Attachment, Expense, Item, Journal, Update]
 def is_job_running(name: str):
     if is_version_gt(14):
         from frappe.utils.background_jobs import is_job_enqueued
@@ -37,8 +37,16 @@ def is_job_running(name: str):
         return True if name in jobs else False
 
 
-# [Attachment, Expense, Journal, Update]
+# [Attachment, Expense, Item, Journal, Update]
 def enqueue_job(method: str, job_name: str, **kwargs):
+    if "timeout" in kwargs and "queue" not in kwargs:
+        from frappe.utils import cint
+        
+        if cint(kwargs["timeout"]) >= 1500:
+            kwargs["queue"] = "long"
+        else:
+            kwargs["queue"] = "short"
+    
     if is_version_gt(14):
         frappe.enqueue(
             method,
@@ -46,6 +54,7 @@ def enqueue_job(method: str, job_name: str, **kwargs):
             is_async=True,
             **kwargs
         )
+    
     else:
         frappe.enqueue(
             method,

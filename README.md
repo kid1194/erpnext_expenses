@@ -1,6 +1,6 @@
 # ERPNext Expenses
 
-![v1.0.0-Alpha3](https://img.shields.io/badge/v1.0.0-Alpha3-blue?style=plastic)
+![v1.0.0-Alpha4](https://img.shields.io/badge/v1.0.0-Alpha4-blue?style=plastic)
 
 An expenses management module for ERPNext.
 
@@ -51,19 +51,29 @@ cd ~/frappe-bench
 
 2. Get plugin from Github
 
-*(Required only once)*
-
 ```
 bench get-app https://github.com/kid1194/erpnext_expenses
 ```
 
-3. Install plugin on your site
+3. Build plugin
+
+```
+bench build --app expenses
+```
+
+4. Install plugin on your site
 
 ```
 bench --site [sitename] install-app expenses
 ```
 
-4. Read the [Usage](#usage) section below
+5. Restart bench to clear cache
+
+```
+bench restart
+```
+
+6. Read the [Usage](#usage) section below
 
 #### Update
 1. Go to app directory
@@ -84,13 +94,19 @@ git pull
 cd ~/frappe-bench
 ```
 
-4. Update your site
+4. Build plugin
+
+```
+bench build --app expenses
+```
+
+5. Update your site
 
 ```
 bench --site [sitename] migrate
 ```
 
-5. Restart bench
+5. Restart bench to clear cache
 
 ```
 bench restart
@@ -115,7 +131,7 @@ bench --site [sitename] uninstall-app expenses
 bench remove-app expenses
 ```
 
-4. Restart bench
+4. Restart bench to clear cache
 
 ```
 bench restart
@@ -126,21 +142,21 @@ bench restart
 ### Usage
 1. **Expense Type**
   - Create the hierarchy of expense types based on your needs
-  - Under each type, add the expense account for each company
+  - Add an expense account for each company so it gets inherited by all new expense items
 
-ℹ️ *Note: Expense accounts are inherited from parents, if not set.*
-
-ℹ️ *Note: Only expense types with self and/or inherited expense accounts can be linked to expense items.*
+ℹ️ *Note: Expense accounts are inherited from parents.*
 
 2. **Expense Item**
   - Create the expense items that reflect your expenses
   - Add each expense item to the expense type that it belongs to
-  - Change the expense account for each company and/or set the expense defaults (cost, quantity, etc..)
+  - Add an expense account for each company and/or set the expense defaults (cost, quantity, etc..)
+  - Modify the expense defaults (cost, quantity, etc..) of the inherited expense accounts, if exist
 
-ℹ️ *Note: Expense accounts are inherited from linked expense type and are not modifiable except for cost and quantity related fields.*
+ℹ️ *Note: Expense accounts will be inherited from linked expense type and they are not modifiable except for cost and quantity related fields.*
 
 3. **Expense**
-  - Create a company expense and fill the cost, quantity, etc..
+  - Create a company expense and select the expense item
+  - Fill the cost, quantity, etc.. if not fixed for the expense item
   - Attachments can be added or removed even after submit, but before adding the expense to an expenses request
 
 4. **Expenses Request**
@@ -154,6 +170,7 @@ bench restart
 
 6. **Expenses Settings**
   - Enable the module (Enabled by default)
+  - Modify the expense settings
   - Modify the update notification settings
   - Check for update manually
 

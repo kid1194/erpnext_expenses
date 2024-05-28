@@ -7,6 +7,10 @@
   "general_section",
   "is_enabled",
   "general_column",
+  "general_note",
+  "expense_section",
+  "reqd_expense_claim_if_paid",
+  "expense_column",
   "update_section",
   "auto_check_for_update",
   "send_update_notification",
@@ -37,6 +41,27 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "general_note",
+   "fieldtype": "HTML",
+   "label": "",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expense_section",
+   "fieldtype": "Section Break",
+   "label": "Expense Settings"
+  },
+  {
+   "fieldname": "reqd_expense_claim_if_paid",
+   "fieldtype": "Check",
+   "label": "Require Expense Claim If Paid",
+   "description": "Require <strong>Expense Claim</strong> when <strong>Is Paid</strong> field is checked."
+  },
+  {
+   "fieldname": "expense_column",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "update_section",
    "fieldtype": "Section Break",
    "label": "Update Settings"
@@ -45,15 +70,13 @@
    "fieldname": "auto_check_for_update",
    "fieldtype": "Check",
    "label": "Auto Check For Update",
-   "default": "1",
-   "read_only_depends_on": "eval:!doc.is_enabled"
+   "default": "1"
   },
   {
    "fieldname": "send_update_notification",
    "fieldtype": "Check",
    "label": "Send Update Notification",
-   "default": "1",
-   "read_only_depends_on": "eval:!doc.is_enabled"
+   "default": "1"
   },
   {
    "fieldname": "update_notification_sender",
@@ -61,8 +84,8 @@
    "label": "Update Notification Sender",
    "options": "User",
    "bold": 1,
-   "read_only_depends_on": "eval:!doc.is_enabled || !doc.send_update_notification",
-   "mandatory_depends_on": "eval:doc.is_enabled && doc.send_update_notification",
+   "read_only_depends_on": "eval:!doc.send_update_notification",
+   "mandatory_depends_on": "eval:doc.send_update_notification",
    "ignore_user_permissions": 1
   },
   {
@@ -71,8 +94,8 @@
    "label": "Update Notification Receivers",
    "options": "Expenses Update Receiver",
    "bold": 1,
-   "read_only_depends_on": "eval:!doc.is_enabled || !doc.send_update_notification",
-   "mandatory_depends_on": "eval:doc.is_enabled && doc.send_update_notification"
+   "read_only_depends_on": "eval:!doc.send_update_notification",
+   "mandatory_depends_on": "eval:doc.send_update_notification"
   },
   {
    "fieldname": "update_column",
@@ -121,12 +144,29 @@
  ],
  "icon": "fa fa-cog",
  "issingle": 1,
- "modified": "2023-04-04 04:04:04",
+ "modified": "2024-05-22 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Settings",
  "owner": "Administrator",
  "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Expense Manager",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
   {
    "amend": 1,
    "cancel": 1,

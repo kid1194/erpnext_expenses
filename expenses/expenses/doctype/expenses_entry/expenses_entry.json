@@ -12,6 +12,7 @@
   "mode_of_payment",
   "main_column",
   "posting_date",
+  "custom_exchange_rate",
   "dimensions_section",
   "default_project",
   "dimensions_column",
@@ -62,9 +63,9 @@
    "fieldtype": "Link",
    "label": "Mode of Payment",
    "options": "Mode of Payment",
+   "reqd": 1,
    "bold": 1,
    "read_only_depends_on": "eval:!doc.company",
-   "mandatory_depends_on": "eval:doc.company",
    "remember_last_selected_value": 1,
    "in_list_view": 1,
    "in_filter": 1,
@@ -89,6 +90,12 @@
    "search_index": 1
   },
   {
+   "fieldname": "custom_exchange_rate",
+   "fieldtype": "Check",
+   "label": "Custom Exchange Rate",
+   "default": "0"
+  },
+  {
    "fieldname": "dimensions_section",
    "fieldtype": "Section Break",
    "label": "Accounting Dimensions",
@@ -99,7 +106,7 @@
    "fieldname": "default_project",
    "fieldtype": "Link",
    "label": "Default Project",
-   "description": "Use only if expenses are project related. Applies to all listed expenses, unless specified differently",
+   "description": "Use only if expenses are project related. Applies to all listed expenses, unless specified differently.",
    "options": "Project",
    "in_preview": 1,
    "remember_last_selected_value": 1
@@ -112,7 +119,7 @@
    "fieldname": "default_cost_center",
    "fieldtype": "Link",
    "label": "Default Cost Center",
-   "description": "Applies to all listed expenses, unless specified differently",
+   "description": "Applies to all listed expenses, unless specified differently.",
    "options": "Cost Center",
    "default": ":Company",
    "in_preview": 1,
@@ -192,6 +199,7 @@
    "default": "1",
    "precision": "9",
    "non_negative": 1,
+   "read_only": 1,
    "in_preview": 1
   },
   {
@@ -207,14 +215,14 @@
   {
    "fieldname": "info_section",
    "fieldtype": "Section Break",
-   "collapsible_depends_on": "eval:doc.payment_target == 'Cash'"
+   "depends_on": "eval:doc.payment_target === 'Bank'"
   },
   {
    "fieldname": "payment_reference",
    "fieldtype": "Data",
    "label": "Payment Reference",
-   "read_only_depends_on": "eval:doc.payment_target == 'Cash'",
-   "mandatory_depends_on": "eval:doc.payment_target != 'Cash'",
+   "bold": 1,
+   "mandatory_depends_on": "eval:doc.payment_target == 'Bank'",
    "in_list_view": 1,
    "in_preview": 1
   },
@@ -226,8 +234,8 @@
    "fieldname": "clearance_date",
    "fieldtype": "Date",
    "label": "Reference / Clearance Date",
-   "read_only_depends_on": "eval:doc.payment_target == 'Cash'",
-   "mandatory_depends_on": "eval:doc.payment_target != 'Cash'",
+   "bold": 1,
+   "mandatory_depends_on": "eval:doc.payment_target == 'Bank'",
    "in_list_view": 1,
    "in_preview": 1
   },
@@ -272,7 +280,7 @@
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
- "modified": "2023-04-04 04:04:04",
+ "modified": "2024-05-19 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expenses Entry",
@@ -280,14 +288,19 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 0,
+   "cancel": 0,
    "create": 1,
-   "delete": 1,
+   "delete": 0,
    "email": 1,
+   "export": 0,
    "if_owner": 1,
+   "import": 0,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Expenses Request Reviewer",
+   "set_user_permissions": 0,
    "share": 1,
    "submit": 1,
    "write": 1
@@ -299,6 +312,25 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "if_owner": 0,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Expense Manager",
+   "set_user_permissions": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "if_owner": 0,
    "import": 1,
    "print": 1,
    "read": 1,
@@ -316,6 +348,7 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "if_owner": 0,
    "import": 1,
    "print": 1,
    "read": 1,
@@ -333,6 +366,7 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "if_owner": 0,
    "import": 1,
    "print": 1,
    "read": 1,

@@ -8,10 +8,7 @@ import json
 
 import frappe
 
-from expenses import (
-    __module__,
-    __production__
-)
+from expenses import __production__
 
 
 # [Internal]
@@ -26,48 +23,47 @@ else:
 
 
 # [Entry, Journal, Update]
-def log_error(data):
+def store_error(data):
     if _LOGGER_ERROR:
         _LOGGER_ERROR.error(data)
-    else:
-        error_log({"error log": data})
 
 
 # [Update]
-def log_info(data):
+def store_info(data):
     if _LOGGER_INFO:
         _LOGGER_INFO.info(data)
-    else:
-        error_log({"info log": data})
 
 
-# [Internal]
-def error_log(text):
+# [Entry, Journal]
+def log_error(text):
     text = get_str(text)
-    if text:
-        from expenses.version import is_version_lt
-        
-        if is_version_lt(14):
-            frappe.log_error(text, __module__)
-        else:
-            frappe.log_error(__module__, text)
-
-
-# [EXP Entry, EXP Expense, EXP Item, EXP Request, EXP Type, Entry, Journal, System]
-def error(text, title=None):
-    text = to_str(text)
     if not text:
-        text = "Unable to throw a non-string error."
-    if title:
-        title = to_str(title)
+        return 0
+    
+    from expenses import __module__
+    
+    from expenses.version import is_version_lt
+    
+    if is_version_lt(14):
+        frappe.log_error(text, __module__)
+    else:
+        frappe.log_error(__module__, text)
+
+
+# [E Entry, E Expense, E Item, E Request, E Settings, E Type, Entry, Journal, System]
+def error(text: str|list, title: str= None):
+    as_list = True if isinstance(text, list) else False
     if not title:
+        from expenses import __module__
+        
         title = __module__
-    frappe.throw(text, title=title)
+    
+    frappe.throw(text, title=title, as_list=as_list)
 
 
-# [Attachment, Item, Request, Type, Update]
+# [Item, Request, Type, Update, Internal]
 def parse_json(data, default=None):
-    if not isinstance(data, str):
+    if isinstance(data, (list, dict)):
         return data
     try:
         return json.loads(data)
@@ -77,7 +73,12 @@ def parse_json(data, default=None):
 
 # [Background, Expense, Internal]
 def to_json(data, default=None):
-    if isinstance(data, str):
+    if (
+        data and isinstance(data, str) and (
+            (data.startswith("{") and data.endswith("}")) or
+            (data.startswith("[") and data.endswith("]"))
+        )
+    ):
         return data
     try:
         return json.dumps(data)
@@ -103,3 +104,14 @@ def get_str(data, default=None):
     if val is None:
         return default
     return val
+
+
+# [Attachment, Exchange, Request]
+def json_to_list(data):
+    if data:
+        tmp = parse_json(data)
+        if isinstance(tmp, list):
+            return tmp
+        if isinstance(data, str):
+            return [data]
+    return None

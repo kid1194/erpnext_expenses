@@ -7,4 +7,5 @@
 __module__ = "Expenses"
 __abbr__ = "EXP"
 __version__ = "1.0.0"
+__api__ = "https://api.github.com/repos/kid1194/erpnext_expenses/releases/latest"
 __production__ = False

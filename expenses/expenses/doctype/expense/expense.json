@@ -1,5 +1,5 @@
 {
- "allow_copy": 1,
+ "allow_copy": 0,
  "allow_import": 1,
  "autoname": "format:EXP-{YY}{MM}{DD}-{###}",
  "creation": "2023-04-04 04:04:04",
@@ -11,6 +11,7 @@
   "company",
   "expense_item",
   "expense_account",
+  "currency",
   "main_column",
   "required_by",
   "description",
@@ -18,8 +19,8 @@
   "project",
   "dimensions_column",
   "expense_section",
-  "currency",
   "cost",
+  "uom",
   "expense_column",
   "qty",
   "total",
@@ -83,6 +84,18 @@
    "ignore_user_permissions": 1
   },
   {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "fetch_from": "expense_account.account_currency",
+   "hidden": 1,
+   "read_only": 1,
+   "report_hide": 1,
+   "print_hide": 1,
+   "ignore_user_permissions": 1
+  },
+  {
    "fieldname": "main_column",
    "fieldtype": "Column Break"
   },
@@ -90,6 +103,7 @@
    "fieldname": "required_by",
    "fieldtype": "Date",
    "label": "Required By",
+   "default": "Today",
    "reqd": 1,
    "bold": 1,
    "in_list_view": 1,
@@ -113,7 +127,7 @@
    "fieldname": "project",
    "fieldtype": "Link",
    "label": "Project",
-   "description": "Use only if expense is project related",
+   "description": "Use only if expense is project related.",
    "options": "Project",
    "remember_last_selected_value": 1,
    "ignore_user_permissions": 1,
@@ -128,16 +142,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency",
-   "fetch_from": "expense_account.account_currency",
-   "read_only": 1,
-   "report_hide": 1,
-   "ignore_user_permissions": 1
-  },
-  {
    "fieldname": "cost",
    "fieldtype": "Currency",
    "label": "Cost",
@@ -145,6 +149,16 @@
    "reqd": 1,
    "bold": 1,
    "non_negative": 1
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "label": "Unit Of Measure",
+   "options": "UOM",
+   "fetch_from": "expense_item.uom",
+   "read_only": 1,
+   "in_preview": 1,
+   "ignore_user_permissions": 1
   },
   {
    "fieldname": "expense_column",
@@ -223,7 +237,7 @@
    "fieldname": "party_type",
    "fieldtype": "Link",
    "label": "Party Type",
-   "description": "Use only if expense is party related",
+   "description": "Use only if expense is party related.",
    "options": "DocType",
    "ignore_user_permissions": 1,
    "search_index": 1
@@ -236,7 +250,7 @@
    "fieldname": "party",
    "fieldtype": "Dynamic Link",
    "label": "Party",
-   "description": "Use only if expense is party related",
+   "description": "Use only if expense is party related.",
    "options": "party_type",
    "read_only_depends_on": "eval:!doc.party_type",
    "mandatory_depends_on": "eval:doc.party_type",
@@ -283,7 +297,7 @@
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
- "modified": "2024-03-06 04:04:04",
+ "modified": "2024-05-27 04:04:04",
  "modified_by": "Administrator",
  "module": "Expenses",
  "name": "Expense",
@@ -294,7 +308,7 @@
    "amend": 0,
    "cancel": 1,
    "create":1,
-   "delete": 1,
+   "delete": 0,
    "email": 0,
    "export": 0,
    "if_owner": 1,
@@ -305,6 +319,25 @@
    "report": 0,
    "role": "Accounts User",
    "share": 0,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "if_owner": 0,
+   "import": 1,
+   "permlevel": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Expense Manager",
+   "set_user_permissions": 1,
+   "share": 1,
    "submit": 1,
    "write": 1
   },

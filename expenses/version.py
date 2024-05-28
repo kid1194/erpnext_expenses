@@ -7,6 +7,7 @@
 from frappe import __version__
 
 
+# [Internal]
 __frappe_version__ = int(__version__.split(".")[0])
 
 

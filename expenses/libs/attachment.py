@@ -7,7 +7,7 @@
 import frappe
 
 
-# [EXP Entry, EXP Entry Form, EXP Expense, EXP Expense Form]
+# [E Entry, E Entry Form, E Expense, E Expense Form]
 @frappe.whitelist(methods=["POST"])
 def delete_attach_files(doctype, name, files):
     if (
@@ -17,13 +17,24 @@ def delete_attach_files(doctype, name, files):
     ):
         return 0
     
-    from .common import parse_json
+    from .common import json_to_list
     
-    files = parse_json(files)
+    files = json_to_list(files)
+    
     if not files or not isinstance(files, list):
         return 0
     
-    file_names = frappe.get_all(
+    from .background import (
+        uuid_key,
+        is_job_running
+    )
+    
+    job_id = uuid_key([doctype, files])
+    job_id = f"exp-files-delete-{job_id}"
+    if is_job_running(job_id):
+        return 1
+    
+    files = frappe.get_all(
         "File",
         fields=["name"],
         filters=[
@@ -35,28 +46,32 @@ def delete_attach_files(doctype, name, files):
         ignore_permissions=True,
         strict=False
     )
-    if file_names and isinstance(file_names, list):
-        from .background import enqueue_job
+    if not files or not isinstance(files, list):
+        return 0
+    
+    from .background import enqueue_job
         
-        enqueue_job(
-            "expenses.libs.attachment.files_delete",
-            f"exp-files-delete-{name}",
-            files=file_names
-        )
+    enqueue_job(
+        "expenses.libs.attachment.files_delete",
+        job_id,
+        timeout=len(files) * 3,
+        files=files
+    )
     
     return 1
 
 
 # [Internal]
 def files_delete(files: list):
-    for file in files:
-        frappe.get_doc("File", file).delete(ignore_permissions=True)
+    files = list(set(files))
+    for i in range(len(files)):
+        frappe.get_doc("File", files.pop(0)).delete(ignore_permissions=True)
 
 
 # [Expense]
 def get_files_by_parents(parents: list, parent_type: str, parent_field: str):
     dt = "Expense Attachment"
-    data = frappe.get_all(
+    raw = frappe.get_all(
         dt,
         fields=["parent", "file", "description"],
         filters=[
@@ -67,18 +82,16 @@ def get_files_by_parents(parents: list, parent_type: str, parent_field: str):
         ignore_permissions=True,
         strict=False
     )
-    if not data or not isinstance(data, list):
+    if not raw or not isinstance(raw, list):
         return None
     
-    groups = {}
-    for v in data:
-        k = v["parent"]
-        if k not in groups:
-            groups[k] = []
+    data = {}
+    for i in range(len(raw)):
+        v = raw.pop(0)
+        k = v.pop("parent")
+        if k not in data:
+            data[k] = []
         
-        groups[k].append({
-            "file": v["file"],
-            "description": v["description"]
-        })
+        data[k].append(v)
     
-    return groups
+    return data

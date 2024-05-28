@@ -22,11 +22,10 @@ frappe.listview_settings['Expenses Request'] = {
             return __('Create Entry');
         },
         get_description: function(doc) {
-            return __('Create expenses entry for "{0}"', [cstr(doc.name)]);
+            return __('Create expenses entry for "{0}".', [cstr(doc.name)]);
         },
         action: function(doc) {
-            frappe.route_options = {expenses_request_ref: cstr(doc.name)};
-            frappe.set_route('Form', 'Expenses Entry');
+            frappe.new_doc('Expenses Entry', {expenses_request_ref: cstr(doc.name)});
         },
     },
     formatters: {

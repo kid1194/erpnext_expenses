@@ -53,12 +53,13 @@ def _workspace_uninstall(doctypes):
             return 0
         
         doc = frappe.get_doc(dt, name)
-        found = 0
+        remove = []
         for v in doc.links:
-            if v.type == "Link" and v.label in doctypes:
-                doc.links.remove(v)
-                found = 1
-        if found:
+            if v.link_to and v.link_to in doctypes:
+                remove.append(v)
+        if remove:
+            for i in range(len(remove)):
+                doc.links.remove(remove.pop(0))
             doc.save(ignore_permissions=True)
     except Exception:
         pass

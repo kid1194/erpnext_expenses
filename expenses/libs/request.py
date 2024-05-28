@@ -5,70 +5,73 @@
 
 
 import frappe
-from frappe.utils import has_common
-
-from .cache import get_cached_doc
-from .common import parse_json
 
 
-# [EXP Request, Internal]
+# [E Request, Internal]
 RequestStatus = frappe._dict({
-    "Draft": "Draft",
-    "Pending": "Pending",
-    "Cancelled": "Cancelled",
-    "Approved": "Approved",
-    "Rejected": "Rejected",
-    "Processed": "Processed"
+    "d": "Draft",
+    "p": "Pending",
+    "c": "Cancelled",
+    "a": "Approved",
+    "r": "Rejected",
+    "e": "Processed"
 })
 
 
-# [EXP Request]
-def is_company_expenses(expenses: list, company: str):
+# [Internal]
+def get_request_doc(name: str):
+    from .cache import get_cached_doc
+    
+    return get_cached_doc("Expenses Request", name)
+
+
+# [E Request, Internal]
+def get_filtered_company_expenses(company: str, expenses: list):
     from .expense import get_expenses_for_company
     
     data = get_expenses_for_company(expenses, company)
-    if not data or len(data) != len(expenses):
-        return False
+    if not data or not isinstance(data, list):
+        return []
     
-    return True
+    return data
 
 
-# [EXP Request]
+# [E Request]
 def is_request_amended(name: str):
     from .check import get_count
     
     return get_count("Expenses Request", {"amended_from": name}) > 0
 
 
-# [EXP Request]
+# [E Request]
 def restore_expenses(expenses: list):
     from .expense import set_expenses_restored
     
     set_expenses_restored(expenses)
 
 
-# [EXP Request]
+# [E Request]
 def request_expenses(expenses: list):
     from .expense import set_expenses_requested
     
     set_expenses_requested(expenses)
 
 
-# [EXP Request]
+# [E Request]
 def approve_expenses(expenses: list):
     from .expense import set_expenses_approved
     
     set_expenses_approved(expenses)
 
 
-# [EXP Request]
+# [E Request]
 def reject_expenses(expenses: list):
     from .expense import set_expenses_rejected
     
     set_expenses_rejected(expenses)
 
 
-# [EXP Request Form]
+# [E Request Form]
 @frappe.whitelist()
 def request_form_setup():
     return {
@@ -77,24 +80,30 @@ def request_form_setup():
     }
 
 
-# [EXP Request, Internal]
+# [E Request, Internal]
 def is_request_moderator():
     return 1 if "Expenses Request Moderator" in frappe.get_roles() else 0
 
 
-# [EXP Request, Internal]
+# [E Request, Internal]
 def is_request_reviewer():
     return 1 if "Expenses Request Reviewer" in frappe.get_roles() else 0
 
 
-# [EXP Request Form]
+# [E Request Form]
 @frappe.whitelist(methods=["POST"])
 def get_expenses_data(expenses):
-    expenses = parse_json(expenses)
+    from .common import json_to_list
+    
+    expenses = json_to_list(expenses)
     if not expenses or not isinstance(expenses, list):
         return []
     
-    expense = [v for v in expenses if v and isinstance(v, str)]
+    tmp = expenses.copy()
+    for i in range(len(tmp)):
+        v = tmp.pop(0)
+        if not v or not isinstance(v, str):
+            expenses.remove(v)
     if not expenses:
         return []
     
@@ -103,10 +112,12 @@ def get_expenses_data(expenses):
     return get_expenses(expenses)
 
 
-# [EXP Request Form]
+# [E Request Form]
 @frappe.whitelist()
 def search_company_expenses(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
     if filters:
+        from .common import parse_json
+        
         filters = parse_json(filters)
     
     if (
@@ -116,35 +127,77 @@ def search_company_expenses(doctype, txt, searchfield, start, page_len, filters,
     ):
         return []
     
-    company = filters["company"]
-    wheres = {}
-    if filters.get("ignored", "") and isinstance(filters["ignored"], (str, list)):
-        ignored = parse_json(filters["ignored"])
-        if ignored and isinstance(ignored, list):
-            wheres["ignored"] = [v for v in ignored if v and isinstance(v, str)]
-    if filters.get("max_date", "") and isinstance(filters["max_date"], str):
-        wheres["max_date"] = filters["max_date"]
-    if filters.get("owner", "") and isinstance(filters["owner"], str):
-        wheres["owner"] = filters["owner"]
+    company = filters.pop("company")
+    if "ignored" in filters:
+        tmp = filters.pop("ignored")
+        if tmp and isinstance(tmp, (str, list)):
+            from .common import json_to_list
+            
+            tmp = json_to_list(tmp)
+            if tmp and isinstance(tmp, list):
+                xtmp = []
+                for i in range(len(tmp)):
+                    v = tmp.pop(0)
+                    if v and isinstance(v, str):
+                        xtmp.append(v)
+                
+                if xtmp:
+                    filters["ignored"] = xtmp
+    if "max_date" in filters:
+        tmp = filters.pop("max_date")
+        if tmp and isinstance(tmp, str):
+            filters["max_date"] = tmp
+    if "owner" in filters:
+        tmp = filters.pop("owner")
+        if tmp and isinstance(tmp, str):
+            filters["owner"] = tmp
     
     if not txt or not isinstance(txt, str):
         txt = None
     
     from .expense import search_expenses_by_company
     
-    return search_expenses_by_company(company, wheres, txt, as_dict)
+    return search_expenses_by_company(company, filters, txt, as_dict)
 
 
-# [EXP Request Form]
+# [E Request Form]
 @frappe.whitelist(methods=["POST"])
-def reject_request(name, reason):
+def filter_company_expenses(company, expenses):
+    from .common import json_to_list
+    
+    expenses = json_to_list(expenses)
     if (
-        not name or not isinstance(name, str) or
-        not isinstance(reason, str)
+        not company or not isinstance(company, str) or
+        not expenses or not isinstance(expenses, list)
     ):
         return 0
     
-    doc = get_cached_doc("Expenses Request", name)
+    tmp = expenses.copy()
+    for i in range(len(tmp)):
+        v = tmp.pop(0)
+        if not v or not isinstance(v, str):
+            expenses.remove(v)
+    
+    if not expenses:
+        return 0
+    
+    data = get_filtered_company_expenses(company, expenses)
+    if not data:
+        return 0
+    
+    return data
+
+
+# [E Request Form]
+@frappe.whitelist(methods=["POST"])
+def reject_request_reason(name, reason):
+    if (
+        not name or not isinstance(name, str) or
+        not reason or not isinstance(reason, str)
+    ):
+        return 0
+    
+    doc = get_request_doc(name)
     if not doc:
         return 0
     
@@ -159,8 +212,8 @@ def reject_request(name, reason):
 
 # [Entry]
 def get_request(name: str):
-    doc = get_cached_doc("Expenses Request", name)
-    if not doc or doc.status != RequestStatus.Approved:
+    doc = get_request_doc(name)
+    if not doc or doc.status != RequestStatus.a:
         return None
     
     from .expense import get_expenses
@@ -175,11 +228,11 @@ def get_request(name: str):
     return data
 
 
-# [EXP Entry]
+# [E Entry]
 def process_request(name: str):
-    get_cached_doc("Expenses Request", name).process(ignore_permissions=True)
+    get_request_doc(name).process(ignore_permissions=True)
 
 
-# [EXP Entry]
+# [E Entry]
 def reject_request(name: str):
-    get_cached_doc("Expenses Request", name).reject(ignore_permissions=True)
+    get_request_doc(name).reject(ignore_permissions=True)

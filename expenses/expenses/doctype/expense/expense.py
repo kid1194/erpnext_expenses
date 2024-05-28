@@ -7,14 +7,11 @@
 from frappe import _
 from frappe.utils import (
     cint,
-    flt,
-    getdate
+    flt
 )
 from frappe.model.document import Document
-from frappe.model.docstatus import DocStatus
 
 from expenses.libs import (
-    error,
     clear_doc_cache,
     ExpenseStatus
 )
@@ -22,133 +19,101 @@ from expenses.libs import (
 
 class Expense(Document):
     def before_insert(self):
+        self._check_app_status()
         self._set_defaults()
-        self._clean_files()
     
     
     def before_validate(self):
-        if self.docstatus.is_draft():
+        self._check_app_status()
+        if cint(self.docstatus) == 0:
             self._set_defaults()
-            self._clean_files()
     
     
     def validate(self):
-        from expenses.libs import check_app_status
-        
-        check_app_status()
-        if not self.company:
-            self._error(_("A valid company is required."))
-        if not self.expense_item:
-            self._error(_("A valid expense item is required."))
-        if not self.required_by or not getdate(self.required_by):
-            self._error(_("A valid required by date is required."))
-        
-        from expenses.libs import is_expense_moderator
-        
-        if (
-            (self.is_new() or self.has_value_changed("required_by")) and
-            not is_expense_moderator()
-        ):
-            from frappe.utils import date_diff
-            
-            min_dt = self.get("creation", "")
-            min_dt = getdate(min_dt) if min_dt else getdate()
-            if cint(date_diff(getdate(self.required_by), min_dt)) < 0:
-                self._error(_("The required by date must be of {0} or later.").format(_("today") if self.is_new() else _("expense creation")))
-        
-        if flt(self.cost) <= 0:
-            self._error(_("A valid cost is required."))
-        if flt(self.qty) <= 0:
-            self._error(_("A valid quantity is required."))
-        if cint(self.is_paid):
-            if not self.paid_by:
-                self._error(_("A valid paid by employee is required."))
-            
-            from expenses.libs import has_expense_claim
-            
-            if has_expense_claim():
-                if not self.expense_claim:
-                    self._error(_("A valid expense claim reference is required."))
-                
-                from expenses.libs import is_valid_claim
-                
-                if not is_valid_claim(self.expense_claim, self.paid_by, self.company):
-                    self._error(_("The expense claim \"{0}\" has not been submitted, is not paid, does not belong to company, not paid by the employee or does not exist.")
-                        .format(self.expense_claim))
-        
-        if self.party_type and not self.party:
-            self._error(_("A valid party reference is required."))
+        self._check_app_status()
+        self.flags.error_list = []
+        self.flags.def_cost = {"eq": 0.0, "min": 0.0, "max": 0.0}
+        self.flags.def_qty = {"eq": 0.0, "min": 0.0, "max": 0.0}
+        self._validate_company()
+        self._validate_expense_item()
+        self._validate_expense_data()
+        self._validate_date()
+        self._validate_cost_qty()
+        self._validate_paid()
+        self._validate_party()
+        self._validate_attachments()
+        if self.flags.error_list:
+            self._error(self.flags.error_list)
+        else:
+            self._update_total()
     
     
     def before_save(self):
         clear_doc_cache(self.doctype, self.name)
         if not self.status:
-            self.status = ExpenseStatus.Draft
-        
-        self._check_change()
+            self.status = ExpenseStatus.d
         if not self.is_new() and self.has_value_changed("attachments"):
             self._process_attachments()
     
     
     def before_submit(self):
+        self._check_app_status()
         clear_doc_cache(self.doctype, self.name)
-        self.flags.emit_change = True
-        if self.status != ExpenseStatus.Pending:
-            self.status = ExpenseStatus.Pending
+        self._clean_flags()
+        self.status = ExpenseStatus.p
     
     
     def on_update(self):
-        self._emit_change()
+        self._clean_flags()
     
     
     def before_update_after_submit(self):
+        self._check_app_status()
         if (
-            not self.docstatus.is_cancelled() and
-            self.status in (ExpenseStatus.Rejected, ExpenseStatus.Cancelled)
+            not self._is_cancelled and
+            self.status in (ExpenseStatus.j, ExpenseStatus.c)
         ):
-            self._check_links(str(self.status).lower())
-            self.docstatus = DocStatus.cancelled()
+            self._check_links(_(str(self.status).lower()))
+            self.docstatus = 2
         
         clear_doc_cache(self.doctype, self.name)
-        self._check_change()
         if (
-            self.status in (ExpenseStatus.Pending, ExpenseStatus.Requested) and
+            self.status in (ExpenseStatus.p, ExpenseStatus.r) and
             self.has_value_changed("attachments")
         ):
             self._process_attachments()
     
     
     def on_update_after_submit(self):
-        self._emit_change()
+        self._clean_flags()
     
     
     def before_cancel(self):
-        if not self.flags.get("by_request", False):
-            self._check_links("cancelled")
+        self._check_app_status()
+        if not self.flags.get("by_request", 0):
+            self._check_links(_("cancelled"))
+            if self.status == ExpenseStatus.r:
+                self._error(_("Requested expense can't be cancelled."))
+            elif self.status == ExpenseStatus.a:
+                self._error(_("Approved expense can't be cancelled."))
+            elif self.status == ExpenseStatus.j:
+                self._error(_("Rejected expense can't be cancelled."))
+            elif self.status != ExpenseStatus.c:
+                self._error(_("Only pending expenses can be cancelled."))
             
-            if self.status != ExpenseStatus.Pending:
-                if self.status == ExpenseStatus.Requested:
-                    self._error(_("A requested expense cannot be cancelled."))
-                elif self.status == ExpenseStatus.Approved:
-                    self._error(_("An approved expense cannot be cancelled."))
-                elif self.status == ExpenseStatus.Rejected:
-                    self._error(_("A rejected expense cannot be cancelled."))
-                else:
-                    self._error(_("Only pending expenses can be cancelled."))
-            
-            self.status = ExpenseStatus.Cancelled
+            self.status = ExpenseStatus.c
         
         clear_doc_cache(self.doctype, self.name)
     
     
     def on_cancel(self):
-        self.flags.emit_change = True
-        self._emit_change()
+        self._clean_flags()
     
     
     def on_trash(self):
-        if self.docstatus.is_submitted():
-            self._error(_("A submitted expense cannot be removed."))
+        self._check_app_status()
+        if self._is_submitted:
+            self._error(_("Submitted expense can't be removed."))
         
         clear_doc_cache(self.doctype, self.name)
         if self.attachments:
@@ -156,156 +121,285 @@ class Expense(Document):
     
     
     def after_delete(self):
-        self.flags.emit_change = True
-        self._emit_change("trash")
+        self._clean_flags()
+    
+    
+    @property
+    def _is_paid(self):
+        return cint(self.is_paid) > 0
+    
+    
+    @property
+    def _has_expense_claim(self):
+        if not isinstance(self.flags.get("has_expense_claim", 0), int):
+            from expenses.libs import has_expense_claim
+            
+            self.flags.has_expense_claim = has_expense_claim()
+        
+        return self.flags.has_expense_claim > 0
+    
+    
+    @property
+    def _expense_claim_reqd(self):
+        if not isinstance(self.flags.get("expense_claim_reqd", 0), int):
+            if not self._has_expense_claim:
+                self.flags.expense_claim_reqd = 0
+            else:
+                from expenses.libs import expense_claim_reqd_if_paid
+                
+                self.flags.expense_claim_reqd = expense_claim_reqd_if_paid()
+        
+        return self.flags.expense_claim_reqd > 0
+    
+    
+    @property
+    def _is_submitted(self):
+        return cint(self.docstatus) == 1
+    
+    
+    @property
+    def _is_cancelled(self):
+        return cint(self.docstatus) == 2
     
     
     def request(self):
-        if self.docstatus.is_submitted() and self.status == ExpenseStatus.Pending:
-            self.status = ExpenseStatus.Requested
-            self.save()
+        if self._is_submitted and self.status == ExpenseStatus.p:
+            self.status = ExpenseStatus.r
+            self.save(ignore_permissions=True)
         else:
             self._error(_("Only pending expenses can be requested."))
     
     
     def approve(self):
-        if self.docstatus.is_submitted() and self.status == ExpenseStatus.Requested:
-            self.status = ExpenseStatus.Approved
-            self.save()
+        if self._is_submitted and self.status == ExpenseStatus.r:
+            self.status = ExpenseStatus.a
+            self.save(ignore_permissions=True)
         else:
             self._error(_("Only requested expenses can be approved."))
     
     
     def reject(self):
-        if self.docstatus.is_submitted() and self.status == ExpenseStatus.Requested:
-            self.flags.by_request = True
-            self.status = ExpenseStatus.Rejected
-            self.cancel()
+        if self._is_submitted and self.status == ExpenseStatus.r:
+            self.flags.by_request = 1
+            self.status = ExpenseStatus.j
+            self.docstatus = 2
+            self.save(ignore_permissions=True)
         else:
             self._error(_("Only requested expenses can be rejected."))
     
     
     def restore(self):
-        if self.docstatus.is_cancelled() and self.status == ExpenseStatus.Rejected:
-            self.status = ExpenseStatus.Pending
+        if self._is_cancelled and self.status == ExpenseStatus.j:
+            self.status = ExpenseStatus.p
             self.is_restored = 1
-            self.docstatus = DocStatus.submitted()
-            self.save()
+            self.docstatus = 1
+            self.save(ignore_permissions=True)
         else:
             self._error(_("Only rejected expenses can be restored."))
     
     
     def _set_defaults(self):
-        self._set_item_defaults()
-            
-        if cint(self.is_paid):
-            if not self.paid_by and not self.expense_claim:
-                self.is_paid = 0
-        else:
+        if not self._is_paid:
             if self.paid_by:
                 self.paid_by = None
             if self.expense_claim:
                 self.expense_claim = None
+        else:
+            if self.expense_claim and not self._has_expense_claim:
+                self.expense_claim = None
         
-        if self.party and not self.party_type:
-            self.party = None
-        elif not self.party and self.party_type:
+        if not self.party and self.party_type:
             self.party_type = None
     
     
-    def _set_item_defaults(self):
-        if self.expense_item and self.company:
+    def _validate_company(self):
+        if not self.company:
+            self._add_error(_("A valid company is required."))
+        elif self.is_new() or self.has_value_changed("company"):
+            from expenses.libs import company_exists
+            
+            self.flags.company_changed = 1
+            if not company_exists(self.company, {"is_group": 0}):
+                self._add_error(_("Company \"{0}\" is a group or doesn't exist.").format(self.company))
+                self.flags.no_company = 1
+    
+    
+    def _validate_expense_item(self):
+        if not self.expense_item:
+            self._add_error(_("A valid expense item is required."))
+        elif self.is_new() or self.has_value_changed("expense_item"):
+            from expenses.libs import item_exists
+            
+            self.flags.expense_item_changed = 1
+            if not item_exists(self.expense_item, enabled=True):
+                self._add_error(_("Expense item \"{0}\" is disabled or doesn't exist.").format(self.expense_item))
+                self.no_expense_item = 1
+    
+    
+    def _validate_expense_data(self):
+        if (
+            (self.flags.get("company_changed", 0) or self.flags.get("expense_item_changed", 0)) and
+            not self.flags.get("no_company", 0) and not self.flags.get("no_expense_item", 0)
+        ):
             from expenses.libs import item_expense_data
             
             tmp = item_expense_data(self.expense_item, self.company)
             if not tmp:
-                self._error(_("Failed to get the expense data for expense item \"{0}\" of company \"{1}\".")
-                    .format(self.expense_item, self.company))
+                self.uom = None
+                self.expense_account = None
+                self.currency = None
+                self._add_error(
+                    _("Expense item \"{0}\" doesn't have an expense account linked to company \"{1}\".")
+                    .format(self.expense_item, self.company)
+                )
             else:
-                if self.expense_account != tmp["account"]:
-                    self.expense_account = tmp["account"]
-                if self.currency != tmp["currency"]:
-                    self.currency = tmp["currency"]
-                
-                change = 0
+                self.uom = tmp["uom"]
+                self.expense_account = tmp["account"]
+                self.currency = tmp["currency"]
                 for k in ["cost", "qty"]:
-                    if tmp[k] and flt(self.get(k)) != tmp[k]:
-                        self.set(k, tmp[k])
-                        change += 1
-                    else:
-                        mk = f"min_{k}"
-                        xk = f"max_{k}"
-                        if tmp[mk] and flt(self.get(k)) < tmp[mk]:
-                            self.set(k, tmp[mk])
-                            change += 1
-                        if tmp[xk] and flt(self.get(k)) > tmp[xk]:
-                            self.set(k, tmp[xk])
-                            change += 1
+                    f = self.flags.get(f"def_{k}")
+                    if flt(tmp[k]) > 0:
+                        f["eq"] = flt(tmp[k])
+                    tk = f"min_{k}"
+                    if flt(tmp[tk]) > 0:
+                        f["min"] = flt(tmp[tk])
+                    tk = f"max_{k}"
+                    if flt(tmp[tk]) > 0:
+                        f["max"] = flt(tmp[tk])
+    
+    
+    def _validate_date(self):
+        if not self.required_by:
+            self._add_error(_("A valid required by date is required."))
+        elif self.is_new() or self.has_value_changed("required_by"):
+            from frappe.utils import getdate
+            
+            if not getdate(self.required_by):
+                self._add_error(_("A valid required by date is required."))
+            else:
+                from expenses.libs import is_expense_moderator
                 
-                if change:
-                    self.total = flt(flt(self.cost) * flt(self.qty))
+                if not is_expense_moderator():
+                    from frappe.utils import date_diff
+                    
+                    creation_dt = self.get("creation")
+                    min_dt = getdate(creation_dt)
+                    if cint(date_diff(getdate(self.required_by), min_dt)) < 0:
+                        if creation_dt:
+                            from frappe.utils import DATE_FORMAT
+                            
+                            creation_dt = min_dt.strftime(DATE_FORMAT)
+                        
+                        self._add_error(
+                            _("Required by date must be equals to {0} or later.")
+                            .format(creation_dt or _("today"))
+                        )
     
     
-    def _clean_files(self):
+    def _validate_cost_qty(self):
+        fields = []
+        if flt(self.cost) <= 0:
+            self._add_error(_("A valid cost is required."))
+        else:
+            fields.append(["cost", _("Cost")])
+        
+        if flt(self.qty) <= 0:
+            self._add_error(_("A valid quantity is required."))
+        else:
+            fields.append(["qty", _("Quantity")])
+        
+        if fields:
+            for i in range(len(fields)):
+                k = fields.pop(0)
+                v = flt(self.get(k[0]))
+                f = self.flags.get(f"def_{k[0]}")
+                if f["eq"] > 0 and f["eq"] != v:
+                    self._add_error(_("{0} must be equals to {1}.").format(k[1], f["eq"]))
+                elif f["min"] > 0 and f["min"] > v:
+                    self._add_error(_("{0} must be greater than or equals to {1}.").format(k[1], f["min"]))
+                elif f["max"] > 0 and f["max"] < v:
+                    self._add_error(_("{0} must be less than or equals to {1}.").format(k[1], f["max"]))
+    
+    
+    def _validate_paid(self):
+        if self._is_paid:
+            if not self.paid_by:
+                self._add_error(_("A valid paid by employee is required."))
+            elif self.is_new() or self.has_value_changed("paid_by"):
+                from expenses.libs import employee_exists
+                
+                if not employee_exists(self.paid_by, {"company": self.company}, True):
+                    self._add_error(_("Paid by employee isn't active or isn't working for company \"{0}\".").format(self.company))
+            
+            if not self.expense_claim:
+                if self._expense_claim_reqd:
+                    self._add_error(_("A valid expense claim reference is required."))
+            elif self.is_new() or self.has_value_changed("expense_claim"):
+                from expenses.libs import is_valid_claim
+                
+                if not is_valid_claim(self.expense_claim, self.paid_by, self.company):
+                    self._add_error(
+                        _("Expense claim \"{0}\" hasn't been submitted, not paid, not linked to company, not paid by employee or doesn't exist.")
+                        .format(self.expense_claim)
+                    )
+    
+    
+    def _validate_party(self):
+        if self.party_type:
+            if not self.party:
+                self._add_error(_("A valid party reference is required."))
+            elif self.is_new() or self.has_value_changed("party"):
+                from expenses.libs import party_exists
+                
+                if not party_exists(self.party_type, self.party, enabled=True):
+                    self._add_error(
+                        _("{0} \"{1}\" is disabled or doesn't exist.")
+                        .format(self.party_type, self.party)
+                    )
+    
+    
+    def _validate_attachments(self):
         if self.attachments:
+            table = _("Attachments")
             exist = []
-            for v in self.attachments:
-                if not v.file or v.file in exist:
-                    self.attachments.remove(v)
+            for i, v in enumerate(self.attachments):
+                if not v.file:
+                    self._add_error(_("{0} - #{1}: A valid attachment file is required.").format(table, i))
+                elif v.file in exist:
+                    self._add_error(_("{0} - #{1}: Attachment file \"{2}\" already exist.").format(table, i, v.file))
                 else:
                     exist.append(v.file)
     
     
+    def _update_total(self):
+        if self.has_value_changed("cost") or self.has_value_changed("qty"):
+            self.total = flt(flt(self.cost) * flt(self.qty))
+    
+    
     def _check_links(self, action: str):
-        from expenses.libs import (
-            expense_requests_exists,
-            expense_entries_exists
-        )
+        if self.status in (ExpenseStatus.d, ExpenseStatus.p):
+            return 0
         
-        if (
-            self.status not in (ExpenseStatus.Draft, ExpenseStatus.Pending) and (
-                expense_requests_exists(self.name) or expense_entries_exists(self.name)
-            )
-        ):
-            self._error(_("An expense with a linked expenses request cannot be {0}.").format(_(action)))
-    
-    
-    def _check_change(self):
-        if not self.is_new():
-            ignore = ["status", "is_restored"]
-            for f in self.meta.get("fields"):
-                if (
-                    f.fieldname not in ignore and
-                    self.has_value_changed(f.fieldname)
-                ):
-                    self.flags.emit_change = True
-                    break
-    
-    
-    def _emit_change(self, action="change"):
-        if self.flags.get("emit_change", False):
-            from expenses.libs import emit_expense_changed
-            
-            self.flags.pop("emit_change")
-            emit_expense_changed({
-                "action": action,
-                "expense": self.name
-            })
+        from expenses.libs import expense_requests_exists
+        
+        if expense_requests_exists(self.name):
+            self._error(_("Expense with linked expenses request can't be {0}.").format(action))
+        
+        from expenses.libs import expense_entries_exists
+        
+        if expense_entries_exists(self.name):
+            self._error(_("Expense with linked expenses entry can't be {0}.").format(action))
     
     
     def _process_attachments(self):
         old = self.get_doc_before_save()
-        if not doc:
+        if not old:
             self.load_doc_before_save()
             old = self.get_doc_before_save()
-        if doc and doc.attachments:
-            if not self.attachments:
-                files = None
-            else:
-                files = [v.file for v in self.attachments]
-            
+        if old and old.attachments:
+            files = [v.file for v in self.attachments] if self.attachments else None
             dels = []
-            for v in doc.attachments:
+            for v in old.attachments:
                 if not files or v.file not in files:
                     dels.append(v.file)
             
@@ -319,5 +413,44 @@ class Expense(Document):
         delete_attach_files(self.doctype, self.name, files)
     
     
+    def _check_app_status(self):
+        if not self.flags.get("status_checked", 0):
+            from expenses.libs import check_app_status
+            
+            check_app_status()
+            self.flags.status_checked = 1
+    
+    
+    def _clean_flags(self):
+        keys = [
+            "by_request",
+            "error_list",
+            "def_cost",
+            "def_qty",
+            "company_changed",
+            "no_company",
+            "expense_item_changed",
+            "no_expense_item",
+            "has_expense_claim",
+            "expense_claim_reqd",
+            "status_checked"
+        ]
+        for i in range(len(keys)):
+            self.flags.pop(keys.pop(0), None)
+    
+    
+    def _add_error(self, msg):
+        self.flags.error_list.append(msg)
+    
+    
     def _error(self, msg):
+        from expenses.libs import error
+        
+        if isinstance(msg, list):
+            if len(msg) == 1:
+                msg = msg.pop(0)
+            else:
+                msg = msg.copy()
+        
+        self._clean_flags()
         error(msg, _(self.doctype))

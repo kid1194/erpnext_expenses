@@ -6,28 +6,19 @@
 
 import frappe
 from frappe import _
-from frappe.utils import (
-    cint,
-    flt,
-    cstr
-)
-
-from .common import (
-    log_error,
-    error_log
-)
 
 
-# [EXP Entry]
+# [E Entry]
 def enqueue_journal_entry(entry: str):
-    from .background import is_job_running, enqueue_job
+    from .background import is_job_running
     
     job_name = f"exp-make-journal-entry-{entry}"
     if not is_job_running(job_name):
+        from .background import enqueue_job
+        
         enqueue_job(
             "expenses.libs.journal.make_journal_entry",
             job_name,
-            enqueue_after_commit=True,
             entry=entry
         )
 
@@ -38,38 +29,32 @@ def make_journal_entry(entry: str):
     
     doc = get_entry_data(entry)
     if not doc:
-        error_log(_(
-            "The expenses entry \"{0}\" does not exist."
-        ).format(entry))
         return 0
     
-    if cint(doc.docstatus) != 1:
-        error_log(_(
-            "The expenses entry \"{0}\" has not been submitted."
-        ).format(entry))
+    if not doc.is_submitted:
         return 0
     
     dt = "Journal Entry"
     if frappe.db.exists(dt, {"bill_no": entry}):
-        error_log(_(
-            "The expenses entry \"{0}\" has already been added to journal."
-        ).format(entry))
+        _log_error(_("Expenses entry \"{0}\" has already been added to journal.").format(entry))
         return 0
     
     if not doc.payment_account:
-        error_log(_(
-            "The Mode of Payment of expenses entry \"{0}\" has no linked account."
-        ).format(entry))
+        _log_error(_("The Mode of Payment of expenses entry \"{0}\" has no linked account.").format(entry))
         return 0
     
     if (
         doc.payment_target == "Bank" and
         (not doc.payment_reference or not doc.clearance_date)
     ):
-        error_log(_(
-            "The payment reference and/or payment / clearance date for expenses entry \"{0}\" has not been set."
-        ).format(entry))
+        _log_error(_("The payment reference and/or payment / clearance date for expenses entry \"{0}\" hasn't been set.").format(entry))
         return 0
+    
+    from frappe.utils import (
+        cint,
+        flt,
+        cstr
+    )
     
     multi_currency = 0
     accounts = []
@@ -124,13 +109,13 @@ def make_journal_entry(entry: str):
             .insert(ignore_permissions=True, ignore_mandatory=True)
             .submit())
     except Exception as exc:
-        log_error(exc)
-        error_log(_(
-            "Unable to create a journal entry for expenses entry \"{0}\"."
-        ).format(entry))
+        from .common import store_error
+        
+        store_error(exc)
+        _log_error(_("Unable to create a journal entry for expenses entry \"{0}\".").format(entry))
 
 
-# [EXP Entry]
+# [E Entry]
 def cancel_journal_entry(entry: str):
     dt = "Journal Entry"
     filters = {"bill_no": entry}
@@ -138,7 +123,14 @@ def cancel_journal_entry(entry: str):
         try:
             frappe.get_doc(dt, filters).cancel()
         except Exception as exc:
-            log_error(exc)
-            error_log(_(
-                "Unable to cancel the journal entry for expenses entry \"{0}\"."
-            ).format(entry))
+            from .common import store_error
+            
+            store_error(exc)
+            _log_error(_("Unable to cancel the journal entry for expenses entry \"{0}\".").format(entry))
+
+
+# [Internal]
+def _log_error(msg: str):
+    from .common import log_error
+    
+    log_error(msg)

@@ -12,79 +12,43 @@ frappe.provide('frappe.perm');
 
 frappe.ui.form.on('Expense', {
     onload: function(frm) {
-        frappe.exp().on('ready change', function() { this.setup_form(frm); });
-        frm._expense = {
-            status: {
-                pending: ['is_submitted', __('Pending'), 'orange'],
-                requested: ['is_submitted', __('Requested'), 'blue'],
-                approved: ['is_submitted', __('Approved'), 'green'],
-                rejected: ['is_cancelled', __('Rejected'), 'red'],
-                cancelled: ['is_cancelled', __('Cancelled'), 'red'],
-            },
-            is_new: !!frm.is_new(),
-            is_draft: false,
-            is_submitted: false,
-            is_cancelled: false,
-            doc_status: null,
-            doc_status_color: null,
-            is_pending: false,
-            is_requested: false,
-            is_approved: false,
-            is_rejected: false,
-            is_table_disabled: false,
-            is_moderator: true,
+        frappe.exp()
+            .on('ready change', function() { this.setup_form(frm); })
+            .on('on_alert', function(d, t) {
+                frm._exp.errs.includes(t) && (d.title = __(frm.doctype));
+            })
+            .on('form_enabled form_disabled', function() { frm.events.update_doc_form(frm); });
+        frm._exp = {
+            errs: ['fatal', 'error'],
+            ignore: 0,
+            is_draft: 1,
+            is_submitted: 0,
+            is_cancelled: 0,
+            is_pending: 0,
+            is_requested: 0,
+            is_approved: 0,
+            is_rejected: 0,
+            form: null,
+            is_moderator: false,
             has_expense_claim: false,
-            min_date: null,
-            min_date_str: null,
-            min_date_dt: null,
-            cost: null,
-            qty: null,
-            files: frappe.exp().table(),
-            toMoment: function(v) {
-                return moment(cstr(v), t ? frappe.defaultDatetimeFormat : frappe.defaultDateFormat);
+            expense_claim_reqd: false,
+            date: {obj: moment(), str: null, dt: null},
+            cost: {eq: 0, min: 0, max: 0},
+            qty: {eq: 0, min: 0, max: 0},
+            table: {status: 1, data: frappe.exp().table(), lock: null},
+            moment: function(v, t) {
+                return moment(cstr(v), frappe['defaultDate' + (t ? 'time' : '') + 'Format']);
             }
         };
-        if (!!frm.is_new()) frm._expense.min_date = moment();
-        else frm._expense.min_date = cstr(frm.doc.creation).length
-            ? frm._expense.toMoment(frm.doc.creation, 1) : moment();
-        frm._expense.min_date_str = frm._expense.min_date.format(frappe.defaultDateFormat);
-        frm._expense.min_date_dt = frappe.datetime.moment_to_date_obj(frm._expense.min_date);
+        if (!frm.is_new() && frappe.exp().$isStrVal(frm.doc.creation))
+            frm._exp.date.obj = frm._exp.moment(frm.doc.creation, 1);
+        frm._exp.date.str = frm._exp.date.obj.format(frappe.defaultDateFormat);
+        frm._exp.date.dt = frappe.datetime.moment_to_date_obj(frm._exp.date.obj);
         frm.events.update_doc_status(frm);
-        frappe.exp().request(
-            'expense_form_setup',
-            null,
-            function(ret) {
-                if (!this.$isDataObjVal(ret)) return;
-                frm._expense.is_moderator = !!ret.is_moderator;
-                if (frm._expense.is_moderator) frm._expense.min_date_dt = null;
-                else {
-                    frm.set_df_property('required_by', 'options', {
-                        startDate: frm._expense.min_date_dt,
-                        minDate: frm._expense.min_date_dt
-                    });
-                    let field = frm.get_field('required_by');
-                    if (field.datepicker && field.datepicker.opts) {
-                        field.datepicker.opts.startDate = frm._expense.min_date_dt;
-                        field.datepicker.opts.minDate = frm._expense.min_date_dt;
-                    }
-                    frm.refresh_field('required_by');
-                }
-                frm._expense.has_expense_claim = !!ret.has_expense_claim;
-                if (frm._expense.has_expense_claim) {
-                    frm.set_df_property('expense_claim', {options: 'Expense Claim', hidden: 0});
-                    frm.set_query('expense_claim', function(doc) {
-                        return {filters: {
-                            employee: cstr(doc.paid_by),
-                            company: cstr(doc.company),
-                            is_paid: 1,
-                            status: 'Paid',
-                            docstatus: 1,
-                        }};
-                    });
-                }
-            }
-        );
-        if (frm._expense.is_draft) {
+        if (!frm._exp.is_draft) {
+            frm.events.update_doc_form(frm);
+            frm._exp.table.status && frm.events.update_attachments(frm, 1);
+        } else {
             frm.set_query('company', function(doc) { return {filters: {is_group: 0}}; });
             frm.set_query('expense_item', function(doc) {
                 return {
@@ -92,141 +56,185 @@ frappe.ui.form.on('Expense', {
                     filters: {company: cstr(doc.company)}
                 };
             });
-            return;
+            frm.add_fetch('expense_item', 'uom', 'uom', frm.doctype);
+            frm.add_fetch('expense_account', 'account_currency', 'currency', frm.doctype);
+            frm.events.update_attachments(frm, 1);
         }
-        frm.events.update_doc_form(frm);
+        frappe.exp().request(
+            'expense_form_setup',
+            null,
+            function(ret) {
+                if (!this.$isDataObjVal(ret))
+                    return this._error('Expense setup data received is invalid.', ret);
+                
+                frm._exp.is_moderator = !!ret.is_moderator;
+                if (!frm._exp.is_moderator) {
+                    let field = frm.get_field('required_by');
+                    if (field.df) {
+                        field.df.options = field.df.options || {};
+                        field.df.options.startDate = frm._exp.date.dt;
+                        field.df.options.minDate = frm._exp.date.dt;
+                    }
+                    if (field.datepicker && field.datepicker.opts) {
+                        field.datepicker.opts.startDate = frm._exp.date.dt;
+                        field.datepicker.opts.minDate = frm._exp.date.dt;
+                    }
+                    frm.refresh_field('required_by');
+                }
+                frm._exp.has_expense_claim = !!ret.has_expense_claim;
+                frm._exp.expense_claim_reqd = !!ret.expense_claim_reqd;
+                if (!frm._exp.has_expense_claim) return;
+                frm.set_df_property('expense_claim', {options: 'Expense Claim', hidden: 0});
+                if (frm._exp.expense_claim_reqd)
+                    frm.set_df_property('expense_claim', {
+                        bold: 1,
+                        mandatory_depends_on: 'eval:doc.is_paid && doc.paid_by',
+                        read_only_depends_on: 'eval:!doc.is_paid || !doc.paid_by'
+                    });
+                frm.set_query('expense_claim', function(doc) {
+                    return {filters: {
+                        employee: cstr(doc.paid_by),
+                        company: cstr(doc.company),
+                        is_paid: 1,
+                        status: 'Paid',
+                        docstatus: 1,
+                    }};
+                });
+            }
+        );
     },
-    refresh: function(frm) { frm.events.add_toolbar_button(frm); },
+    refresh: function(frm) { frm.events.setup_toolbar(frm); },
     company: function(frm) {
         let val = cstr(frm.doc.company);
-        if (!val.length) frm.set_value('expense_item', '');
+        !val.length && frm.set_value('expense_item', '');
     },
     expense_item: function(frm) {
         let val = cstr(frm.doc.expense_item);
         frm.events.enqueue_update_expense_data(frm, !val.length);
     },
     required_by: function(frm) {
-        if (frm._expense.is_moderator) return;
+        if (frm._exp.is_moderator || frm._exp.ignore) return;
         let val = cstr(frm.doc.required_by);
-        if (!val.length || !frm._expense.min_date_dt) return;
-        val = frm._expense.toMoment(val);
-        if (cint(val.diff(frm._expense.min_date, 'days')) < 0)
-            frm.set_value('required_by', frm._expense.min_date_str);
+        val = val.length ? frm._exp.moment(val) : null;
+        if (!val || cint(val.diff(frm._exp.date.obj, 'days')) < 0) {
+            frm._exp.ignore++;
+            frm.set_value('required_by', frm._exp.date.str);
+            frm._exp.ignore--;
+        }
     },
     cost: function(frm) {
-        if (!frm._expense.is_draft || !frm._expense.cost) return frm.events.update_total(frm);
+        if (frm._exp.ignore) return;
+        if (!frm._exp.cost) return frm.events.update_total(frm);
         let key = 'cost',
         val = flt(frm.doc[key]),
         nval = val <= 0 ? 1 : val;
-        if (frm._expense[key].min && val < frm._expense[key].min) nval = frm._expense[key].min;
-        else if (frm._expense[key].max && val > frm._expense[key].max) nval = frm._expense[key].max;
-        if (nval !== val) frm.set_value(key, nval);
+        if (frm._exp[key].eq && frm._exp[key].eq !== nval) nval = frm._exp[key].eq;
+        else if (0 < frm._exp[key].min > nval) nval = frm._exp[key].min;
+        else if (0 < frm._exp[key].max < nval) nval = frm._exp[key].max;
+        if (nval !== val) {
+            frm._exp.ignore++;
+            frm.set_value(key, nval);
+            frm._exp.ignore--;
+        }
         frm.events.update_total(frm);
     },
     qty: function(frm) {
-        if (!frm._expense.is_draft || !frm._expense.qty) return frm.events.update_total(frm);
+        if (frm._exp.ignore) return;
+        if (!frm._exp.qty) return frm.events.update_total(frm);
         let key = 'qty',
         val = flt(frm.doc[key]),
         nval = val <= 0 ? 1 : val;
-        if (frm._expense[key].min && val < frm._expense[key].min) nval = frm._expense[key].min;
-        else if (frm._expense[key].max && val > frm._expense[key].max) nval = frm._expense[key].max;
-        if (nval !== val) frm.set_value(key, nval);
-        frm.events.update_total(frm);
-    },
-    is_paid: function(frm) {
-        let val = cint(frm.doc.is_paid);
-        if (!val && frappe.exp().$isStrVal(frm.doc.paid_by)) frm.set_value('paid_by', '');
-        if (frm._expense.has_expense_claim) {
-            frm.toggle_reqd('expense_claim', !!val);
-            frm.toggle_enable('expense_claim', !!val);
+        if (frm._exp[key].eq && frm._exp[key].eq !== nval) nval = frm._exp[key].eq;
+        else if (0 < frm._exp[key].min > nval) nval = frm._exp[key].min;
+        else if (0 < frm._exp[key].max < nval) nval = frm._exp[key].max;
+        if (nval !== val) {
+            frm._exp.ignore++;
+            frm.set_value(key, nval);
+            frm._exp.ignore--;
         }
-    },
-    paid_by: function(frm) {
-        if (!frappe.exp().$isStrVal(frm.doc.paid_by)) frm.set_value('expense_claim', '');
-    },
-    expense_claim: function(frm) {
-        if (frappe.exp().$isStrVal(frm.doc.expense_claim) && !frm._expense.has_expense_claim)
-            frm.set_value('expense_claim', '');
-    },
-    party_type: function(frm) {
-        if (!frappe.exp().$isStrVal(frm.doc.party_type)) frm.set_value('party', '');
+        frm.events.update_total(frm);
     },
     validate: function(frm) {
         if (!frappe.exp().$isStrVal(frm.doc.company)) {
-            frappe.exp()
-                .focus(frm, 'company')
-                .error(__(frm.doctype), __('A valid company is required.'));
+            frappe.exp().fatal(__('A valid company is required.'));
             return false;
         }
         if (!frappe.exp().$isStrVal(frm.doc.expense_item)) {
-            frappe.exp()
-                .focus(frm, 'expense_item')
-                .error(__(frm.doctype), __('A valid expense item is required.'));
+            frappe.exp().fatal(__('A valid expense item is required.'));
             return false;
         }
         if (!frappe.exp().$isStrVal(frm.doc.required_by)) {
-            frappe.exp()
-                .focus(frm, 'required_by')
-                .error(__(frm.doctype), __('A valid required by date is required.'));
+            frappe.exp().fatal(__('A valid required by date is required.'));
             return false;
         }
-        if (!frm._expense.is_moderator) {
-            required_by = frm._expense.toMoment(frm.doc.required_by);
-            if (cint(required_by.diff(frm._expense.min_date, 'days')) < 0) {
-                frappe.exp()
-                    .focus(frm, 'required_by')
-                    .error(__(frm.doctype), __('The required by date must be of {0} or later.',
-                        [!!frm.is_new() ? __('today') : __('expense creation')]));
+        if (!frm._exp.is_moderator) {
+            let val = frm._exp.moment(frm.doc.required_by);
+            if (cint(val.diff(frm._exp.date.obj, 'days')) < 0) {
+                let dur = !frappe.exp().$isStrVal(frm.doc.creation) ? __('today') : frm._exp.date.str;
+                frappe.exp().fatal(__('The required by date must be equals to {0} or later.', [dur]));
                 return false;
             }
         }
-        if (flt(frm.doc.cost) <= 0) {
-            frappe.exp()
-                .focus(frm, 'cost')
-                .error(__(frm.doctype), __('A valid expense cost is required.'));
+        let val = flt(frm.doc.cost);
+        if (val <= 0) {
+            frappe.exp().fatal(__('A valid cost is required.'));
             return false;
         }
-        if (flt(frm.doc.qty) <= 0) {
-            frappe.exp()
-                .focus(frm, 'qty')
-                .error(__(frm.doctype), __('A valid expense quantity is required.'));
+        let label = __('Cost');
+        if (frm._exp.cost.eq && frm._exp.cost.eq !== val) {
+            frappe.exp().fatal(__('{0} must be equals to {1}.', [label, frm._exp.cost.eq]));
+            return false;
+        }
+        if (0 < frm._exp.cost.min > val) {
+            frappe.exp().fatal(__('{0} must be greater than or equals to {1}.', [label, frm._exp.cost.min]));
+            return false;
+        }
+        if (0 < frm._exp.cost.max < val) {
+            frappe.exp().fatal(__('{0} must be less than or equals to {1}.', [label, frm._exp.cost.max]));
+            return false;
+        }
+        val = flt(frm.doc.qty);
+        if (val <= 0) {
+            frappe.exp().fatal(__('A valid quantity is required.'));
+            return false;
+        }
+        label = __('Quantity');
+        if (frm._exp.qty.eq && frm._exp.qty.eq !== val) {
+            frappe.exp().fatal(__('{0} must be equals to {1}.', [label, frm._exp.qty.eq]));
+            return false;
+        }
+        if (0 < frm._exp.qty.min > val) {
+            frappe.exp().fatal(__('{0} must be greater than or equals to {1}.', [label, frm._exp.qty.min]));
+            return false;
+        }
+        if (0 < frm._exp.qty.max < val) {
+            frappe.exp().fatal(__('{0} must be less than or equals to {1}.', [label, frm._exp.qty.max]));
             return false;
         }
         if (cint(frm.doc.is_paid)) {
             if (!frappe.exp().$isStrVal(frm.doc.paid_by)) {
-                frappe.exp()
-                    .focus(frm, 'paid_by')
-                    .error(__(frm.doctype), __('A valid paid by employee is required.'));
+                frappe.exp().fatal(__('A valid paid by employee is required.'));
                 return false;
             }
-            if (frm._expense.has_expense_claim && !frappe.exp().$isStrVal(frm.doc.expense_claim)) {
-                frappe.exp()
-                    .focus(frm, 'expense_claim')
-                    .error(__(frm.doctype), __('A valid expense claim reference is required.'));
+            if (
+                frm._exp.expense_claim_reqd
+                && !frappe.exp().$isStrVal(frm.doc.expense_claim)
+            ) {
+                frappe.exp().fatal(__('A valid expense claim reference is required.'));
                 return false;
             }
         }
-        if (frappe.exp().$isStrVal(frm.doc.party_type) && !frappe.exp().$isStrVal(frm.doc.party)) {
-            frappe.exp()
-                .focus(frm, 'party')
-                .error(__(frm.doctype), __('A valid party reference is required.'));
+        if (
+            frappe.exp().$isStrVal(frm.doc.party_type)
+            && !frappe.exp().$isStrVal(frm.doc.party)
+        ) {
+            frappe.exp().fatal(__('A valid party reference is required.'));
             return false;
         }
+        frm.events.update_attachments(frm);
     },
     after_save: function(frm) {
-        if (
-            !frm._expense.is_approved && !frm._expense.is_rejected
-            && frm._expense.files.length
-        )
-            frappe.exp().request(
-                'delete_attach_files',
-                {
-                    doctype: cstr(frm.doctype),
-                    name: cstr(frm.docname),
-                    files: frm._expense.files.col(),
-                },
-                function() { frm._expense.files.clear(); }
-            );
+        frm.events.clean_attachments(frm);
         frm.events.update_doc_status(frm);
         frm.events.update_doc_form(frm);
     },
@@ -234,124 +242,195 @@ frappe.ui.form.on('Expense', {
         frm.events.update_doc_status(frm);
         frm.events.update_doc_form(frm);
     },
+    after_cancel: function(frm) {
+        frm.events.update_doc_status(frm);
+        frm.events.update_doc_form(frm);
+    },
     update_doc_status: function(frm) {
-        let status = cint(frm.doc.docstatus);
-        frm._expense.is_draft = !!frm.is_new() || status === 0;
-        frm._expense.is_submitted = !frm.is_new() && status === 1;
-        frm._expense.is_cancelled = !frm.is_new() && status === 2;
+        let is_new = !!frm.is_new(),
+        status = cint(frm.doc.docstatus);
+        frm._exp.is_draft = is_new || status === 0;
+        frm._exp.is_submitted = !is_new && status === 1;
+        frm._exp.is_cancelled = !is_new && status === 2;
         status = cstr(frm.doc.status).toLowerCase();
-        for (let k in frm._expense.status) {
-            let v = frm._expense.status[k];
-            frm._expense['is_' + k] = frm._expense[v[0]] && status === k;
-            frm._expense.status[k] = v[1];
-            if (frm._expense['is_' + k]) {
-                frm._expense.doc_status = v[1];
-                frm._expense.doc_status_color = v[2];
-            }
+        let data = {
+            pending: ['is_submitted', __('Pending'), 'orange'],
+            requested: ['is_submitted', __('Requested'), 'blue'],
+            approved: ['is_submitted', __('Approved'), 'green'],
+            rejected: ['is_cancelled', __('Rejected'), 'red'],
+            cancelled: ['is_cancelled', __('Cancelled'), 'red'],
+        };
+        for (let k in data) {
+            frm._exp['is_' + k] = frm._exp[data[k][0]] && status === k;
+            if (frm._exp['is_' + k]) frm._exp.form = {
+                message: __('Expense has been {0}.', [data[k][1]]),
+                color: data[k][2],
+            };
         }
     },
     update_doc_form: function(frm) {
-        if (frm._expense.is_draft || frm._expense.is_pending || frm._expense.is_requested) {
-            if (frm._expense.is_table_disabled) {
-                frm._expense.is_table_disabled = 0;
-                frappe.exp().enable_table(frm, 'attachments');
-            }
+        if (!frappe.exp().is_enabled || frm._exp.is_draft) return;
+        if (frm._exp.is_pending) {
+            frm._exp.table.status = 1;
+            frm._exp.form.ignore = ['attachments'];
+        } if (frm._exp.is_requested) {
+            frm._exp.table.status = 1;
+            frm._exp.form.ignore = ['attachments'];
+            frm._exp.table.lock = frappe.exp().table();
+            frm.events.update_attachments(frm, 0, 1);
         } else {
-            if (!frm._expense.is_table_disabled) {
-                frm._expense.is_table_disabled = 1;
-                frappe.exp().disable_table(frm, 'attachments');
-            }
+            frm._exp.table.status = 0;
         }
-        if (!frm._expense.is_draft) frappe.exp().disable_form(
-            frm, __('The expense has been {0}.', [frm._expense.doc_status]),
-            frm._expense.doc_status_color
-        );
+        frappe.exp().disable_form(frm, frm._exp.form);
     },
-    add_toolbar_button: function(frm) {
-        let btn = __('Create Request');
-        if (frm.custom_buttons[btn]) {
-            if (!frm._expense.is_pending) {
-                frm.custom_buttons[btn].remove();
-                delete frm.custom_buttons[btn];
+    update_attachments: function(frm, load, lock) {
+        let tkey = 'attachments';
+        if (!frappe.exp().$isArrVal(frm.doc[tkey])) return;
+        let keep = !lock && !load ? [] : null;
+        for (let i = 0, x = 0, l = frm.doc[tkey].length, f; i < l; i++) {
+            f = frm.doc[tkey][i];
+            if (!frappe.exp().$isStrVal(f.file)) continue;
+            if (load || !lock) {
+                if (!load) keep[x++] = f;
+                frm._exp.table.data.add(f.file);
+            } else {
+                f = cstr(f.name);
+                frm._exp.table.lock.add(f);
+                frappe.exp().toggle_rfield(frm, tkey, f, 'file', 0);
+                f = frappe.exp().get_row(frm, tkey, f);
+                if (f && f.wrapper) {
+                    f.wrapper.find('.grid-row-check').prop('disabled', true);
+                    f.wrapper.find('.grid-duplicate-row, .grid-delete-row').prop('disabled', true);
+                    if (f.grid_form)
+                        f.grid_form.wrapper.find('.grid-duplicate-row .grid-delete-row').prop('disabled', true);
+                }
             }
-            return;
         }
-        if (!frm._expense.is_pending) return;
-        frm.add_custom_button(btn, function() {
-            frappe.route_options = {
+        if (!keep || keep.length === frm.doc[tkey].length) return;
+        frm._exp.ignore++;
+        frm.set_value(tkey, keep);
+        frm._exp.ignore--;
+    },
+    setup_toolbar: function(frm) {
+        frm.events.setup_save_add_button(frm);
+        frm.events.setup_request_button(frm);
+    },
+    setup_save_add_button: function(frm) {
+        let label = __('Save & Add');
+        if (frm.custom_buttons[label]) {
+            if (frm._exp.is_draft) return;
+            frm.custom_buttons[label].remove();
+            delete frm.custom_buttons[label];
+        }
+        if (!frm._exp.is_draft) return;
+        frm.add_custom_button(label, function() {
+            if (frm.save_disabled) return;
+            frm.save().then(function() {
+                frappe.new_doc(frm.doctype, {company: cstr(frm.doc.company)});
+            });
+        });
+        frm.change_custom_button_type(label, null, 'success');
+    },
+    setup_request_button: function(frm) {
+        let label = __('Request');
+        if (frm.custom_buttons[label]) {
+            if (frm._exp.is_pending) return;
+            frm.custom_buttons[label].remove();
+            delete frm.custom_buttons[label];
+        }
+        if (!frm._exp.is_pending) return;
+        frm.add_custom_button(label, function() {
+            frappe.new_doc('Expenses Request', {
                 company: cstr(frm.doc.company),
                 expense: cstr(frm.docname),
-            };
-            frappe.set_route('Form', 'Expenses Request');
+            });
         });
-        frm.change_custom_button_type(btn, null, 'success');
+        frm.change_custom_button_type(label, null, 'success');
     },
     enqueue_update_expense_data: function(frm, clear) {
-        frappe.exp().$timeout(frm._expense.expense_data_ts);
-        frm._expense.expense_data_ts = null;
+        frm._exp.timeout && frappe.exp().$timeout(frm._exp.timeout);
+        if (clear || !frm._exp.is_draft) {
+            delete frm._exp.timeout;
+            return;
+        }
         frm.set_value('expense_account', '');
         frm.set_value('currency', '');
-        frm._expense.cost = frm._expense.qty = null;
-        !clear && (frm._expense.expense_data_ts = frappe.exp().$timeout(function() {
-            frm._expense.expense_data_ts = null;
+        frm.set_value('uom', '');
+        for (let k in frm._exp.cost) frm._exp.cost[k] = 0.0;
+        for (let k in frm._exp.qty) frm._exp.qty[k] = 0.0;
+        frm._exp.timeout = frappe.exp().$timeout(function() {
+            delete frm._exp.timeout;
             frm.events.update_expense_data(frm);
-        }, 1000));
+        }, 2000);
     },
     update_expense_data: function(frm) {
-        if (!frm._expense.is_draft) return;
         var company = cstr(frm.doc.company),
         item = cstr(frm.doc.expense_item);
         frappe.exp().request(
             'item_expense_data',
             {item: item, company: company},
             function(ret) {
-                if (!this.$isDataObj(ret) || !this.$isStrVal(ret.account) || !this.$isStrVal(ret.currency))
-                    return this.error(
-                        __(frm.doctype),
-                        __('Unable to get the expense data for item "{0}".', [item])
-                    );
+                if (!this.$isBaseObj(ret) || !this.$isStrVal(ret.account) || !this.$isStrVal(ret.currency))
+                    return this.error(__('Expense item "{0}" doesn\'t have an expense account linked to company "{1}".', [item, company]));
+                
                 frm.set_value('expense_account', ret.account);
                 frm.set_value('currency', ret.currency);
-                if (flt(ret.cost) > 0) {
-                    frm.set_value('cost', flt(ret.cost));
+                frm.set_value('uom', ret.uom);
+                frm._exp.cost.eq = flt(ret.cost);
+                frm._exp.cost.min = flt(ret.min_cost);
+                frm._exp.cost.max = flt(ret.max_cost);
+                if (frm._exp.cost.eq > 0) {
+                    frm.set_value('cost', frm._exp.cost.eq);
                     frm.toggle_enable('cost', 0);
-                } else if (flt(ret.min_cost) > 0 || flt(ret.max_cost) > 0) {
-                    frm._expense.cost = {min: flt(ret.min_cost), max: flt(ret.max_cost)};
                 }
-                if (flt(ret.qty) > 0) {
-                    frm.set_value('qty', flt(ret.qty));
+                frm._exp.qty.eq = flt(ret.qty);
+                frm._exp.qty.min = flt(ret.min_qty);
+                frm._exp.qty.max = flt(ret.max_qty);
+                if (frm._exp.qty.eq > 0) {
+                    frm.set_value('qty', frm._exp.qty.eq);
                     frm.toggle_enable('qty', 0);
-                } else if (flt(ret.min_qty) > 0 || flt(ret.max_qty) > 0) {
-                    frm._expense.qty = {min: flt(ret.min_qty), max: flt(ret.max_qty)};
                 }
             },
-            function() {
-                this.error(
-                    __(frm.doctype),
-                    __('Failed to get the expense data for item "{0}".', [item])
-                );
+            function(e) {
+                this.error(e.self ? e.message : __('Expense item "{0}" doesn\'t have an expense account linked to company "{1}".', [item, company]));
             }
         );
     },
     update_total: function(frm) {
-        if (!frm._expense.is_draft) return;
         let cost = flt(frm.doc.cost),
         qty = flt(frm.doc.qty);
         frm.set_value('total', flt(cost * qty));
+    },
+    clean_attachments: function(frm) {
+        if (!frm._exp.table.status || !frm._exp.table.data.length) return;
+        let tkey = 'attachments';
+        if (frappe.exp().$isArrVal(frm.doc[tkey])) {
+            for (let i = 0, l = frm.doc[tkey].length; i < l; i++)
+                frm._exp.table.data.del(frm.doc[tkey][i].file);
+            if (!frm._exp.table.data.length) return;
+        }
+        frappe.exp().request(
+            'delete_attach_files',
+            {
+                doctype: cstr(frm.doctype),
+                name: cstr(frm.docname),
+                files: frm._exp.table.data.col(),
+            },
+            function() { frm._exp.table.data.clear(); }
+        );
     },
 });
 
 
 frappe.ui.form.on('Expense Attachment', {
     before_attachments_remove: function(frm, cdt, cdn) {
-        if (!frm._expense.is_draft && !frm._expense.is_pending && !frm._expense.is_requested)
-            return frappe.exp().error(__(frm.doctype), __('Removing attachments is not allowed.'));
-        
-        let file = cstr(locals[cdt][cdn].file);
-        if (file.length) frm._expense.files.add(file);
+        if (!frm._exp.table.status)
+            frappe.exp().fatal(__('Removing attachments isn\'t allowed.'));
+        else if (frm._exp.table.lock && frm._exp.table.lock.has(cdn))
+            frappe.exp().fatal(__('Removing attachment isn\'t allowed.'));
     },
     file: function(frm, cdt, cdn) {
         let file = cstr(locals[cdt][cdn].file);
-        if (file.length) frm._expense.files.del(file);
+        file.length && frm._exp.table.data.add(file);
     }
 });

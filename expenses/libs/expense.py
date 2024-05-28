@@ -7,18 +7,18 @@
 import frappe
 
 
-# [EXP Expense, Internal]
+# [E Expense, Internal]
 ExpenseStatus = frappe._dict({
-    "Draft": "Draft",
-    "Pending": "Pending",
-    "Requested": "Requested",
-    "Approved": "Approved",
-    "Rejected": "Rejected",
-    "Cancelled": "Cancelled"
+    "d": "Draft",
+    "p": "Pending",
+    "r": "Requested",
+    "a": "Approved",
+    "j": "Rejected",
+    "c": "Cancelled"
 })
 
 
-# [EXP Expense, EXP Expense Form]
+# [E Expense, E Expense Form]
 @frappe.whitelist(methods=["POST"])
 def item_expense_data(item, company):
     if (
@@ -32,28 +32,37 @@ def item_expense_data(item, company):
     return get_item_company_account(item, company)
 
 
-# [EXP Expense Form]
-@frappe.whitelist()
-def expense_form_setup():
-    return {
-        "is_moderator": is_expense_moderator(),
-        "has_expense_claim": has_expense_claim()
-    }
-
-
-# [EXP Expense, Internal]
+# [E Expense, Internal]
 def is_expense_moderator():
     return 1 if "Expense Moderator" in frappe.get_roles() else 0
 
 
-# [EXP Expense, Internal]
+# [E Entry, E Expense, Entry, Internal]
 def has_expense_claim():
     from .check import can_use_expense_claim
     
     return 1 if can_use_expense_claim() else 0
 
 
-# [EXP Entry, EXP Expense]
+# [E Entry, E Expense, Entry, Internal]
+def expense_claim_reqd_if_paid():
+    from .system import settings
+    
+    return 1 if settings()._reqd_expense_claim_if_paid else 0
+
+
+# [E Expense Form]
+@frappe.whitelist()
+def expense_form_setup():
+    has_claim = has_expense_claim()
+    return {
+        "is_moderator": is_expense_moderator(),
+        "has_expense_claim": has_claim,
+        "expense_claim_reqd": expense_claim_reqd_if_paid() if has_claim else 0
+    }
+
+
+# [E Expense]
 def is_valid_claim(expense_claim: str, paid_by: str, company: str):
     from .check import expense_claim_exists
     
@@ -66,14 +75,14 @@ def is_valid_claim(expense_claim: str, paid_by: str, company: str):
     })
 
 
-# [EXP Expense]
+# [E Expense]
 def expense_requests_exists(name: str):
     from .request_details import get_expense_requests
     
     return 1 if get_expense_requests(name) else 0
 
 
-# [EXP Expense]
+# [E Expense]
 def expense_entries_exists(name: str):
     from .entry_details import get_expense_entries
     
@@ -104,24 +113,30 @@ def set_expenses_restored(names: list):
 
 # [Request]
 def set_expenses_requested(names: list):
-    enqueue_expenses_status_change(names, ExpenseStatus.Requested)
+    enqueue_expenses_status_change(names, ExpenseStatus.r)
 
 
 # [Request]
 def set_expenses_approved(names: list):
-    enqueue_expenses_status_change(names, ExpenseStatus.Approved)
+    enqueue_expenses_status_change(names, ExpenseStatus.a)
 
 
 # [Request]
 def set_expenses_rejected(names: list):
-    enqueue_expenses_status_change(names, ExpenseStatus.Rejected)
+    enqueue_expenses_status_change(names, ExpenseStatus.j)
 
 
 # [Request]
 def get_expenses(names: list):
-    from pypika.terms import Criterion
+    from .background import uuid_key
+    from .cache import get_cache
     
     dt = "Expense"
+    key = uuid_key(names)
+    data = get_cache(dt, key)
+    if data and isinstance(data, list):
+        return data
+    
     doc = frappe.qb.DocType(dt)
     data = (
         frappe.qb.from_(doc)
@@ -141,11 +156,12 @@ def get_expenses(names: list):
             doc.project
         )
         .where(doc.name.isin(names))
-        .where(doc.status.isin([ExpenseStatus.Pending, ExpenseStatus.Requested]))
-        #.where(doc.owner == frappe.session.user)
+        .where(doc.status.isin([ExpenseStatus.p, ExpenseStatus.r]))
         .where(doc.docstatus == 1)
     ).run(as_dict=True)
     if not data or not isinstance(data, list):
+        from frappe import _
+        
         return {"error": _("Unable to get the expenses data.")}
     
     from .attachment import get_files_by_parents
@@ -156,6 +172,9 @@ def get_expenses(names: list):
             if v["name"] in attachments:
                 v["attachments"] = attachments[v["name"]]
     
+    from .cache import set_cache
+    
+    set_cache(dt, key, data)
     return data
 
 
@@ -176,7 +195,7 @@ def search_expenses_by_company(company, filters, search=None, as_dict=False):
             doc.required_by
         )
         .where(doc.company == company)
-        .where(doc.status == ExpenseStatus.Pending)
+        .where(doc.status == ExpenseStatus.p)
         .where(doc.docstatus == 1)
     )
     qry = filter_search(doc, qry, dt, search, doc.name, "name")
@@ -195,16 +214,18 @@ def search_expenses_by_company(company, filters, search=None, as_dict=False):
 def enqueue_expenses_status_change(names: list, status: str):
     from .background import (
         uuid_key,
-        is_job_running,
-        enqueue_job
+        is_job_running
     )
     
     key = uuid_key([names, status])
     job_name = f"exp-set-expenses-status-{key}"
     if not is_job_running(job_name):
+        from .background import enqueue_job
+        
         enqueue_job(
             "expenses.libs.expense.set_expenses_status",
             job_name,
+            timeout=len(names) * 5,
             names=names,
             status=status
         )
@@ -217,11 +238,77 @@ def set_expenses_status(names: list, status: str):
     for name in names:
         if expense_exists(name):
             doc = frappe.get_doc("Expense", name)
-            if status == ExpenseStatus.Requested:
+            if status == ExpenseStatus.r:
                 doc.request()
-            elif status == ExpenseStatus.Approved:
+            elif status == ExpenseStatus.a:
                 doc.approve()
-            elif status == ExpenseStatus.Rejected:
+            elif status == ExpenseStatus.j:
                 doc.reject()
             elif status == "restore":
                 doc.restore()
+
+
+# [E Entry]
+def get_expenses_data(names: list, company: str):
+    from .background import uuid_key
+    from .cache import get_cache
+    
+    dt = "Expense"
+    key = uuid_key([names, company])
+    data = get_cache(dt, key)
+    if data and isinstance(data, dict):
+        return data
+    
+    doc = frappe.qb.DocType(dt)
+    data = (
+        frappe.qb.from_(doc)
+        .select(
+            doc.name,
+            doc.expense_account,
+            doc.required_by,
+            doc.description,
+            doc.currency,
+            doc.total,
+            doc.is_advance,
+            doc.is_paid,
+            doc.paid_by,
+            doc.expense_claim,
+            doc.party_type,
+            doc.party,
+            doc.project
+        )
+        .where(doc.name.isin(names))
+        .where(doc.company == company)
+        .where(doc.status == ExpenseStatus.a)
+        .where(doc.docstatus == 1)
+    ).run(as_dict=True)
+    if not data or not isinstance(data, list):
+        return {}
+    
+    from frappe.utils import cint, flt
+    
+    ret = {}
+    str_keys = [
+        "expense_account", "required_by",
+        "description", "currency",
+        "paid_by", "party_type",
+        "party", "expense_claim", "project"
+    ]
+    int_keys = ["is_advance", "is_paid"]
+    for v in data:
+        for k in str_keys:
+            if not v[k]:
+                v[k] = None
+        
+        for k in int_keys:
+            v[k] = 1 if cint(v[k]) > 0 else 0
+        
+        v["account"] = v.pop("expense_account")
+        v["account_currency"] = v.pop("currency")
+        v["cost_in_account_currency"] = flt(v.pop("total"))
+        ret[v.pop("name")] = v
+    
+    from .cache import set_cache
+    
+    set_cache(dt, key, ret)
+    return ret
