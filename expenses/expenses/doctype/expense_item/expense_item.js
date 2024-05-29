@@ -192,7 +192,10 @@ frappe.ui.form.on('Expense Item Account', {
         err;
         if (!val.length) {
             frm._item.table.del(cdn);
-        } else if (frm._item.table.has(val, 1)) {
+        } else if (
+            frm._item.table.has(val, 1)
+            && frm._item.table.val(val, 1) !== cdn
+        ) {
             val = '';
             frm._item.table.del(cdn);
             err = __('Company has already been selected.');
@@ -219,7 +222,10 @@ frappe.ui.form.on('Expense Item Account', {
         if (!frappe.exp().$isStrVal(row.company)) return;
         if (!val.length) {
             err = __('A valid expense account is required.');
-        } else if (frm._item.table.has(val, 2)) {
+        } else if (
+            frm._item.table.has(val, 2)
+            && frm._item.table.val(val, 2) !== cdn
+        ) {
             err = __('Expense account has already been selected.');
         }
         frm._item.table.add(cdn, null, val);

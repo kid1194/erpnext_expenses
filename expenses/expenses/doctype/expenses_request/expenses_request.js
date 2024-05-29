@@ -378,7 +378,10 @@ frappe.ui.form.on('Expenses Request Details', {
         if (!val.length) {
             frm._req.table.data.del(cdn);
             err = __('A valid expense is required.');
-        } else if (frm._req.table.data.has(val, 1)) {
+        } else if (
+            frm._req.table.data.has(val, 1)
+            && frm._req.table.data.val(val, 1) !== cdn
+        ) {
             frm._req.table.data.del(cdn);
             frm._req.ignore++;
             frappe.model.set_value(cdt, cdn, key, '');

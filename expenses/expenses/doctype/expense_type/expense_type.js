@@ -298,7 +298,10 @@ frappe.ui.form.on('Expense Type Account', {
                 frappe.model.set_value(cdt, cdn, 'account', '');
                 frm._type.ignore--;
             }
-        } else if (frm._type.table.has(val, 1)) {
+        } else if (
+            frm._type.table.has(val, 1)
+            && frm._type.table.val(val, 1) !== cdn
+        ) {
             frm._type.table.del(cdn);
             frm._type.ignore++;
             frappe.model.set_value(cdt, cdn, key, '');
@@ -319,7 +322,10 @@ frappe.ui.form.on('Expense Type Account', {
         if (!frappe.exp().$isStrVal(row.company)) return;
         if (!val.length) {
             err = __('A valid expense account is required.');
-        } else if (frm._type.table.has(val, 2)) {
+        } else if (
+            frm._type.table.has(val, 2)
+            && frm._type.table.val(val, 2) !== cdn
+        ) {
             val = '';
             frm._type.ignore++;
             frappe.model.set_value(cdt, cdn, key, val);
