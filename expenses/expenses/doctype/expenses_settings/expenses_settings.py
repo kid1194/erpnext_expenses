@@ -62,7 +62,10 @@ class ExpensesSettings(Document):
     
     
     def _check_receivers(self):
-        if self.update_notification_receivers:
+        if (
+            self.update_notification_receivers and
+            self.has_value_changed("update_notification_receivers")
+        ):
             from expenses.libs import users_filter
             
             users = users_filter([v.user for v in self.update_notification_receivers])

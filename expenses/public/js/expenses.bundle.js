@@ -113,11 +113,12 @@
             return tm != null ? setTimeout(this.$afn(fn, a, o), tm) : ((fn && clearTimeout(fn)) || this);
         },
         $proxy(fn, tm) {
+            var me = this;
             return {
-                _fn(a, d) { this.cancel() || (d ? (this._r = LU.$timeout(fn, tm, a)) : LU.$call(fn, a)); },
+                _fn(a, d) { this.cancel() || (d ? (this._r = me.$timeout(fn, tm, a)) : me.$call(fn, a)); },
                 call() { this._fn(arguments); },
                 delay() { this._fn(arguments, 1); },
-                cancel() { LU.$timeout(this._r); delete this._r; },
+                cancel() { me.$timeout(this._r); delete this._r; },
             };
         },
         $def(v, o) { return this.$ext(v, o, 0); },
@@ -166,7 +167,7 @@
     
     
     class LevelUpBase extends LevelUpCore {
-        constructor(mod, key, doc, ns, prod) {
+        constructor(mod, key, doc, ns) {
             super();
             this._mod = mod;
             this._key = key;
@@ -175,7 +176,7 @@
             this._real = this._key + '_';
             this._pfx = '[' + this._key.toUpperCase() + ']';
             this._ns = ns + (!ns.endsWith('.') ? '.' : '');
-            this._prod = prod;
+            this._prod = 0;
             this._events = {
                 list: {},
                 real: {},
@@ -184,6 +185,7 @@
         }
         get module() { return this._mod; }
         get key() { return this._key; }
+        get is_debug() { return !this._prod; }
         $alert(t, m, i, x) {
             m == null && (m = t) && (t = this._mod);
             t = this.$assign({title: t, indicator: i}, this.$isBaseObj(m) ? m : {message: m, as_list: this.$isArr(m)});
@@ -191,8 +193,8 @@
             (x === 'fatal' && (this._err = 1) ? frappe.throw : frappe.msgprint)(t);
             return this;
         }
-        debug(t, m) { return this._prod ? this : this.$alert(t, m, 'gray', 'debug'); }
-        log(t, m) { return this._prod ? this : this.$alert(t, m, 'cyan', 'log'); }
+        debug(t, m) { return !this.is_debug ? this : this.$alert(t, m, 'gray', 'debug'); }
+        log(t, m) { return !this.is_debug ? this : this.$alert(t, m, 'cyan', 'log'); }
         info(t, m) { return this.$alert(t, m, 'light-blue', 'info'); }
         warn(t, m) { return this.$alert(t, m, 'orange', 'warn'); }
         error(t, m) { return this.$alert(t, m, 'red', 'error'); }
@@ -207,7 +209,7 @@
         warn_(m, s, a) { return this.$toast(m, 'orange', s, a); }
         error_(m, s, a) { return this.$toast(m, 'red', s, a); }
         $console(fn, a) {
-            if (this._prod) return this;
+            if (!this.is_debug) return this;
             !this.$isStr(a[0]) ? Array.prototype.unshift.call(a, this._pfx)
                 : (a[0] = (this._pfx + ' ' + a[0]).trim());
             (console[fn] || console.log).apply(null, a);
@@ -571,8 +573,8 @@
     
     
     class LevelUp extends LevelUpBase {
-        constructor(mod, key, doc, ns, prod) {
-            super(mod, key, doc, ns, prod);
+        constructor(mod, key, doc, ns) {
+            super(mod, key, doc, ns);
             this.$xdef({is_enabled: true});
             this._router = {obj: null, old: 0, val: null};
             this._win = {
@@ -916,20 +918,21 @@
     
     class Expenses extends LevelUp {
         constructor() {
-            super(__('Expenses'), 'exp', 'Expense', 'expenses.libs', 0);
-            this.$xdef({is_ready: false, is_enabled: false});
+            super(__('Expenses'), 'exp', 'Expense', 'expenses.libs');
+            this.$xdef({is_ready: 0, is_enabled: 0});
             this.is_doctype('Expenses Settings') ? this._init() : this.request(
                 'get_settings', null, this._init,
                 function() { this.fatal(__('Failed to get the module settings.')); }
             );
         }
         _init(ret) {
-            this._is_ready = true;
+            this._is_ready = 1;
             this.$xdef(ret)
             this.xreal('settings_changed', function(ret) {
-                if (!this.$isDataObj(ret)) return this.fatal(__('Invalid settings change event data.'));
+                if (!this.$isDataObj(ret)) return this._error('Invalid settings change event.', ret);
                 let old = this._is_enabled;
-                this.$xdef(ret) && this._is_enabled != old && this.emit('changed', true);
+                this.$xdef(ret);
+                if (this._is_enabled != old) this.emit('changed', true);
             })
             .emit('ready');
         }

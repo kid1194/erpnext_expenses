@@ -1,6 +1,6 @@
 # ERPNext Expenses
 
-![v1.0.0-Alpha4](https://img.shields.io/badge/v1.0.0-Alpha4-blue?style=plastic)
+![v1.0.0-Alpha4](https://img.shields.io/badge/v1.0.0-Alpha4-2024/06/01-blue?style=plastic)
 
 An expenses management module for ERPNext.
 

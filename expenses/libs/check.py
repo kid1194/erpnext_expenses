@@ -106,8 +106,9 @@ def _exists(
         params[status_col] = ["=", status_val]
     elif enabled == False:
         params[status_col] = ["!=", status_val]
-    
-    return frappe.db.exists(params) != None
+    if frappe.db.exists(params) is None:
+        return False
+    return True
 
 
 # [Internal]
