@@ -932,7 +932,7 @@
                 if (!this.$isDataObj(ret)) return this._error('Invalid settings change event.', ret);
                 let old = this._is_enabled;
                 this.$xdef(ret);
-                if (this._is_enabled !== old) this.emit('change');
+                if (this._is_enabled !== old) this.emit('changed');
             })
             .emit('ready');
         }
