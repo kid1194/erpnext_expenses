@@ -928,11 +928,11 @@
         _init(ret) {
             this._is_ready = 1;
             this.$xdef(ret)
-            this.xreal('settings_changed', function(ret) {
+                this.xreal('settings_changed', function(ret) {
                 if (!this.$isDataObj(ret)) return this._error('Invalid settings change event.', ret);
                 let old = this._is_enabled;
                 this.$xdef(ret);
-                if (this._is_enabled != old) this.emit('changed', true);
+                if (this._is_enabled !== old) this.emit('change');
             })
             .emit('ready');
         }
