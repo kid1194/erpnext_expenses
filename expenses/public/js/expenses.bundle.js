@@ -278,7 +278,6 @@
         off(e, fn, rl) {
             if (e == null) return this._off();
             if (this.$isBoolLike(e)) return this._off(0, 1);
-            fn = this.$isFunc(fn) && fn;
             e = e.trim().split(' ');
             for (let i = 0, l = e.length, ev; i < l; i++)
                 (ev = (rl ? this._real : '') + e[i]) && this._events.list[ev] && this._off(ev, fn);
@@ -298,16 +297,15 @@
         }
         _on(ev, fn, o, s, r) {
             ev = ev.trim().split(' ');
-            fn = this.$fn(fn);
-            let rd;
+            let rd = [];
             for (let es = this._events, i = 0, l = ev.length, e; i < l; i++) {
                 e = (r ? this._real : '') + ev[i];
-                e === es.once[0] && this._is_ready && (rd = es.once[0]);
+                e === es.once[0] && this._is_ready && rd.push(es.once[0]);
                 es.once.includes(e) && (o = 1);
                 !es.list[e] && (es.list[e] = []) && (!r || frappe.realtime.on(e, (es.real[e] = this._rfn(e))));
                 es.list[e].push({f: fn, o, s});
             }
-            return rd ? this.emit(rd) : this;
+            return rd.length ? this.emit(rd.join(' ')) : this;
         }
         _rfn(e) {
             return this.$fn(function(r) {
@@ -316,7 +314,7 @@
         }
         _off(e, fn) {
             if (e && fn) this._del(e, fn);
-            else if (!e) for (let ev in this._events.list) { (fn ? this._off : this._del)(ev, fn); }
+            else if (!e && fn) for (let ev in this._events.list) { this._del(ev); }
             else {
                 let es = this._events;
                 es.real[e] && frappe.realtime.off(e, es.real[e]);
