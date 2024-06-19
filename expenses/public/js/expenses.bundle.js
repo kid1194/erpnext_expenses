@@ -108,7 +108,7 @@
                 : (l < 4 ? fn.call(o, a[0], a[1], a[2]) : fn.apply(o, a))));
         },
         $try(fn, a, o) { try { return this.$call(fn, a, o); } catch(e) { console.error(e.message, e.stack); } },
-        $xtry(fn, a, o) { return this.$afn(this.$try, [fn, a, o]); },
+        $xtry(fn, a, o) { return this.$fn(function() { return this.$try(fn, a, o); }); },
         $timeout(fn, tm, a, o) {
             return tm != null ? setTimeout(this.$afn(fn, a, o), tm) : ((fn && clearTimeout(fn)) || this);
         },
@@ -250,11 +250,13 @@
                     r = (this.$isBaseObj(r) && r.message) || r;
                     if (!this.$isBaseObj(r) || !r.error) return s && s(r);
                     if (!this.$isBaseObj(r)) r = {};
-                    r = (this.$isArrVal(r.list) ? this.$map(r.list, function(v) { return __(v); }).join('\n')
-                        : (this.$isStrVal(r.message) ? __(r.message)
-                        : (this.$isStrVal(r.error) ? __(r.error) : '')));
-                    if (!r.trim().length) r = __('The request sent returned an invalid response.');
-                    f ? f({message: r, self: 1}) : this._error(r);
+                    var k = ['list', 'message', 'error', 'self'];
+                    let m = (this.$isArrVal(r[k[0]]) ? this.$map(r[k[0]], function(v) { return __(v); }).join('\n')
+                        : (this.$isStrVal(r[k[1]]) ? __(r[k[1]])
+                        : (this.$isStrVal(r[k[2]]) ? __(r[k[2]]) : '')));
+                    if (!m.trim().length) m = __('The request sent returned an invalid response.');
+                    if (f) r = this.$assign({message: m, self: 1}, this.$filter(r, function(_, x) { return !k.includes(x); }));
+                    f ? f(r) : this._error(m);
                 }),
                 error: this.$fn(function(r, t) {
                     r = this.$isStrVal(r) ? __(r) : (this.$isStrVal(t) ? __(t) : __('The request sent raised an error.'));

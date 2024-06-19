@@ -59,7 +59,6 @@ class Expense(Document):
     def before_submit(self):
         self._check_app_status()
         clear_doc_cache(self.doctype, self.name)
-        self._clean_flags()
         self.status = ExpenseStatus.p
     
     

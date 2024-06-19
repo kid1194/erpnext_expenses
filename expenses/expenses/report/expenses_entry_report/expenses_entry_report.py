@@ -29,7 +29,7 @@ def execute(filters=None):
     return columns, data, None, chart, summary
 
 
-def validate_filters(filters, account_details):
+def validate_filters(filters):
     if not filters.get("company"):
         throw(_("{0} is mandatory").format(_("Company")))
     
