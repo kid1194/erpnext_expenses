@@ -17,7 +17,6 @@ from .entry import (
     get_mode_of_payment_data,
     is_entry_moderator,
     entry_form_setup,
-    get_current_exchange_rate,
     get_request_data
 )
 from .exchange import get_exchange_rate
